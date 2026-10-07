@@ -3,5 +3,10 @@ services:
     build: .
     image: zito1950:latest
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:3001"
     restart: unless-stopped
+    env_file: .env
+    volumes:
+      - shop-data:/app/data
+volumes:
+  shop-data:

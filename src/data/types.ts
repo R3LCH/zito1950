@@ -18,6 +18,7 @@ export interface Variant {
   codes: string[]
   /** Exactly as printed on the price card. */
   price: string
+  priceCents?: number
   specs?: string[]
   images: Img[]
 }
@@ -28,6 +29,8 @@ export interface Model {
   name: string
   /** Exactly as printed on the price card, e.g. "3.890 EUR". */
   price: string
+  priceCents?: number
+  buyEnabled?: boolean
   quote?: Quote
   description?: string
   specs: string[]
@@ -110,6 +113,7 @@ export interface Profumo {
   code: string
   name: string
   price: string
+  priceCents?: number
   quote: Quote
   paragraphs: string[]
   specs: string[]

@@ -1,24 +1,25 @@
 import { site } from '../data/content'
 import { useReveal } from '../lib/useReveal'
 import Picture from './Picture'
+import { useShop } from '../lib/shop'
 
 export default function Hero() {
   const textRef = useReveal<HTMLDivElement>()
+  const { catalog } = useShop()
 
   return (
     <section id="home" aria-labelledby="hero-title" className="pb-[var(--section-y)] pt-6 md:pt-10">
       <div className="container-site">
-        {/* Wide product photo (1600×617). On phones it is cropped to 16:10 around the two watches. */}
         <Picture
-          src={site.hero.image.src}
-          alt={site.hero.image.alt}
+          src={catalog.hero.src}
+          alt={catalog.hero.alt}
           loading="eager"
           fetchPriority="high"
           sizes="(min-width: 1368px) 1240px, calc(100vw - 2 * clamp(1.25rem, 4vw, 4rem))"
-          width={1600}
-          height={617}
-          pictureClassName="block"
-          className="aspect-[16/10] w-full object-cover object-[42%_50%] sm:aspect-[1600/617] sm:object-center"
+          width={1024}
+          height={1024}
+          pictureClassName="flex justify-center"
+          className="max-h-[70vh] w-auto max-w-full object-contain"
         />
 
         <div

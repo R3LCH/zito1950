@@ -20,8 +20,8 @@ export const site: Site = {
   },
   hero: {
     image: {
-      src: 'img/hero/hero.jpg',
-      alt: 'Due orologi ZITO 1950 40.000 µm, quadrante argentato e nero, su cinturino pied-de-poule',
+      src: 'img/hero/new_hero.jpg',
+      alt: 'La boutique OROincenso&mirra ZITO 1950, facciata e ingresso in bianco e nero',
     },
   },
   labels: {

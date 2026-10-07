@@ -3,3 +3,7 @@ dist
 .git
 research
 docs
+data
+.env
+.env.*
+!.env.example

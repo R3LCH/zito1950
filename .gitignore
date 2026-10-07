@@ -10,3 +10,7 @@ research/raw/
 research/.venv/
 __pycache__/
 research/old-site-images/
+/data/
+.env
+.env.*
+!.env.example

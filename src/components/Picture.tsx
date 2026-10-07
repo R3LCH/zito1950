@@ -1,5 +1,6 @@
 import { img } from '../lib/asset'
 import { dims } from '../lib/imageMeta'
+import { useShop } from '../lib/shop'
 
 interface PictureProps {
   /** Public path to the JPG, e.g. "img/storia/scalea-borgo.jpg"; the .webp sibling is used when supported. */
@@ -26,15 +27,18 @@ export default function Picture({
   width,
   height,
 }: PictureProps) {
-  const s = img(src)
+  const { catalog } = useShop()
+  const replacement = catalog.imageOverrides[src]
+  const resolved = replacement?.src ?? src
+  const s = img(resolved)
   // Intrinsic size reserves layout space before load, so anchor scrolling doesn't drift.
-  const d = dims(src)
+  const d = dims(resolved)
   return (
     <picture className={pictureClassName}>
       <source type="image/webp" srcSet={s.webp} sizes={sizes} />
       <img
         src={s.src}
-        alt={alt}
+        alt={replacement?.alt ?? alt}
         sizes={sizes}
         className={className}
         loading={loading}

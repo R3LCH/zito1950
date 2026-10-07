@@ -3,6 +3,7 @@ import Picture from './Picture'
 import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
 import { contatti, orologi, site } from '../data/content'
 import type { Model } from '../data/types'
+import { BuyButton } from './Cart'
 
 /** mailto link for an information request about a model (codes of the chosen variant). */
 export function infoHref(model: Model, codes: string[] = model.codes): string {
@@ -91,6 +92,7 @@ export default function ModelCard({ model, onOpen }: Props) {
           >
             <span>{orologi.catalog.details}</span>
           </button>
+          <BuyButton modelId={model.id} variant={variant} />
           <a
             href={infoHref(model, view.codes)}
             aria-describedby={titleId}

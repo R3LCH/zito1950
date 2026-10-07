@@ -5,6 +5,7 @@ import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
 import { orologi, site } from '../data/content'
 import type { Model } from '../data/types'
 import { dims } from '../lib/imageMeta'
+import { BuyButton } from './Cart'
 
 interface Props {
   model: Model | null
@@ -165,6 +166,7 @@ export default function ModelDialog({ model, trigger, initialVariant, initialIma
                     </li>
                   ))}
                 </ul>
+                <BuyButton modelId={model.id} variant={variant} beforeOpen={onClose} />
                 <a href={infoHref(model, view!.codes)} className="btn mt-8 w-full sm:w-auto">
                   {site.cta.info}
                 </a>

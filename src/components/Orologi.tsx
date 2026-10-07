@@ -1,14 +1,16 @@
 import { useCallback, useState } from 'react'
 import ModelCard from './ModelCard'
 import ModelDialog from './ModelDialog'
-import { models, orologi } from '../data/content'
+import { orologi } from '../data/content'
 import type { Model } from '../data/types'
 import { useReveal } from '../lib/useReveal'
+import { useShop } from '../lib/shop'
 
 export default function Orologi() {
   const introRef = useReveal<HTMLDivElement>()
   const pillarsRef = useReveal<HTMLUListElement>()
   const [open, setOpen] = useState<{ model: Model; trigger: HTMLElement; variant: number; image: number } | null>(null)
+  const { catalog, error } = useShop()
 
   const handleOpen = useCallback(
     (model: Model, trigger: HTMLElement, variant: number, image: number) => setOpen({ model, trigger, variant, image }),
@@ -46,11 +48,12 @@ export default function Orologi() {
           </h2>
         </div>
 
+        {error && <p role="status" className="mt-6 text-small">{error}</p>}
         <ul
           aria-labelledby="catalogo-title"
           className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-3 lg:gap-x-10 lg:gap-y-20"
         >
-          {models.map((m) => (
+          {catalog.models.map((m) => (
             <li key={m.id}>
               <ModelCard model={m} onOpen={handleOpen} />
             </li>
