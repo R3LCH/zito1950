@@ -8,6 +8,20 @@ export interface Quote {
   author?: string
 }
 
+/** A colour or finish of the same model; overrides the model's codes, price, specs and photos. */
+export interface Variant {
+  id: string
+  /** Colour/finish name, taken from the specs text. */
+  label: string
+  /** 1–2 CSS colours drawn as a split swatch (e.g. case + strap). */
+  swatch: string[]
+  codes: string[]
+  /** Exactly as printed on the price card. */
+  price: string
+  specs?: string[]
+  images: Img[]
+}
+
 export interface Model {
   id: string
   codes: string[]
@@ -18,7 +32,8 @@ export interface Model {
   description?: string
   specs: string[]
   images: Img[]
-  group?: string
+  /** First variant is the default view. */
+  variants?: Variant[]
 }
 
 export interface Site {
@@ -81,6 +96,10 @@ export interface Orologi {
     title: string
     details: string
     viewImage: string
+    prevImage: string
+    nextImage: string
+    /** Label of the colour picker radio group. */
+    colors: string
     mailSubject: string
   }
 }

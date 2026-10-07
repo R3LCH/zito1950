@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { site } from '../data/content'
 import { asset } from '../lib/asset'
+import { lockScroll } from '../lib/smooth'
 
 const MENU_ID = 'menu-mobile'
 
@@ -42,9 +43,7 @@ export default function Header() {
   // Mobile menu: scroll lock, Escape, focus trap, focus restore.
   useEffect(() => {
     if (!open) return
-    const root = document.documentElement
-    const prevOverflow = root.style.overflow
-    root.style.overflow = 'hidden'
+    lockScroll(true)
     panelRef.current?.querySelector<HTMLElement>('a')?.focus()
 
     const onKey = (e: KeyboardEvent) => {
@@ -75,7 +74,7 @@ export default function Header() {
     document.addEventListener('keydown', onKey)
     mq.addEventListener('change', onMq)
     return () => {
-      root.style.overflow = prevOverflow
+      lockScroll(false)
       document.removeEventListener('keydown', onKey)
       mq.removeEventListener('change', onMq)
     }
@@ -91,7 +90,7 @@ export default function Header() {
       </a>
 
       <header
-        className={`sticky top-0 z-50 bg-bg transition-[border-color] duration-300 ease-out-quint border-b ${
+        className={`fixed inset-x-0 top-0 z-50 bg-bg transition-[border-color] duration-300 ease-out-quint border-b ${
           scrolled || open ? 'border-line' : 'border-transparent'
         }`}
       >

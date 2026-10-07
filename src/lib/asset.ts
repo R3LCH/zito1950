@@ -4,8 +4,6 @@ export const asset = (p: string) => import.meta.env.BASE_URL + p.replace(/^\//, 
 export interface ImgSources {
   src: string
   webp: string
-  w?: number
-  h?: number
 }
 
 /**

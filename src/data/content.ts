@@ -1,4 +1,4 @@
-import type { Contatti, Model, Orologi, Profumo, Site, Storia } from './types'
+import type { Contatti, Img, Model, Orologi, Profumo, Site, Storia } from './types'
 
 export const site: Site = {
   name: 'ZITO 1950',
@@ -40,7 +40,12 @@ export const site: Site = {
   footer: { copyright: '© Granalida s.r.l. – P. IVA 03012360784' },
 }
 
-const img = (id: string, alt: string) => [{ src: `img/models/${id}.jpg`, alt }]
+/** Photo set `img/models/{id}.jpg`, `{id}-2.jpg`, … (count = number of files on disk). */
+const img = (id: string, alt: string, count = 3): Img[] =>
+  Array.from({ length: count }, (_, i) => ({
+    src: `img/models/${id}${i ? `-${i + 1}` : ''}.jpg`,
+    alt: i ? `${alt} – dettaglio ${i}` : alt,
+  }))
 
 export const models: Model[] = [
   {
@@ -121,7 +126,6 @@ export const models: Model[] = [
     codes: [id === 'n5' ? 'ZP0513' : 'ZP0613'],
     name: id === 'n5' ? 'N°5' : 'N°6',
     price: '550 EUR',
-    group: 'n5-n6',
     quote:
       id === 'n5'
         ? { text: "Divenire uomo è un'arte", author: 'Novalis' }
@@ -158,7 +162,31 @@ export const models: Model[] = [
       'Fondello a vite',
       'Impermeabile 10 atm',
     ],
-    images: img('n7', 'Orologio N°7 con giorno e data, bracciale in acciaio, quadrante blu o bianco'),
+    images: [],
+    variants: [
+      {
+        id: 'n7-blu',
+        label: 'Blu',
+        swatch: ['#2b3f73'],
+        codes: ['ZP0713'],
+        price: '630 EUR',
+        images: [
+          { src: 'img/models/n7-2.jpg', alt: 'Orologio N°7 con quadrante in smalto blu e bracciale in acciaio' },
+          { src: 'img/models/n7.jpg', alt: 'Orologi N°7 con quadrante bianco e blu, bracciale in acciaio' },
+        ],
+      },
+      {
+        id: 'n7-bianco',
+        label: 'Bianco',
+        swatch: ['#f4f2ec'],
+        codes: ['ZP0713'],
+        price: '630 EUR',
+        images: [
+          { src: 'img/models/n7-3.jpg', alt: 'Orologio N°7 con quadrante in smalto bianco, giorno e data, bracciale in acciaio' },
+          { src: 'img/models/n7.jpg', alt: 'Orologi N°7 con quadrante bianco e blu, bracciale in acciaio' },
+        ],
+      },
+    ],
   },
   {
     id: 'n9',
@@ -203,7 +231,6 @@ export const models: Model[] = [
     codes: ['ZP9016L'],
     name: "'900 Donna",
     price: '420 EUR',
-    group: '900',
     quote: { text: 'Nel futuro ognuno sarà famoso per quindici minuti', author: 'Andy Warhol' },
     specs: [
       'Movimento al quarzo svizzero ETA 902.002',
@@ -219,7 +246,6 @@ export const models: Model[] = [
     codes: ['ZP9016'],
     name: "'900 Uomo",
     price: '600 EUR',
-    group: '900',
     quote: { text: 'Nel futuro ognuno sarà famoso per quindici minuti', author: 'Andy Warhol' },
     specs: [
       'Movimento ETA 277.001',
@@ -256,20 +282,26 @@ export const models: Model[] = [
     ],
     images: img('n20', 'Orologio subacqueo N°20 in acciaio con quadrante nero e bracciale in acciaio'),
   },
-  ...(
-    [
-      ['shockproof-16', 'ZPSP16', '325 EUR', 'Cassa in acciaio spazzolato', 'Cinturino acciaio e caucciù', 'cassa in acciaio spazzolato e cinturino in caucciù nero'],
-      ['shockproof-16b', 'ZPSP16B', '385 EUR', 'Cassa in acciaio spazzolato', 'Cinturino acciaio maglia rolò', 'cassa in acciaio spazzolato e bracciale a maglia'],
-      ['shockproof-16p', 'ZPSP16P', '325 EUR', 'Cassa in acciaio PVD nero', 'Cinturino caucciù', 'cassa in acciaio PVD nero e cinturino in caucciù'],
-    ] as const
-  ).map(
-    ([id, code, price, cassa, cinturino, alt]): Model => ({
+  {
+    id: 'shockproof-1970',
+    codes: ['ZPSP16', 'ZPSP16B', 'ZPSP16P'],
+    name: 'Shockproof 1970',
+    price: '325 EUR',
+    quote: { text: 'Il tempo che ti piace buttare non è buttato', author: 'John Lennon' },
+    specs: [],
+    images: [],
+    variants: (
+      [
+        ['shockproof-16', 'Acciaio, caucciù', ['#c9c9c6', '#141414'], 'ZPSP16', '325 EUR', 'Cassa in acciaio spazzolato', 'Cinturino acciaio e caucciù', 'cassa in acciaio spazzolato e cinturino in caucciù nero'],
+        ['shockproof-16b', 'Acciaio, maglia', ['#c9c9c6'], 'ZPSP16B', '385 EUR', 'Cassa in acciaio spazzolato', 'Cinturino acciaio maglia rolò', 'cassa in acciaio spazzolato e bracciale a maglia'],
+        ['shockproof-16p', 'PVD nero', ['#141414'], 'ZPSP16P', '325 EUR', 'Cassa in acciaio PVD nero', 'Cinturino caucciù', 'cassa in acciaio PVD nero e cinturino in caucciù'],
+      ] as const
+    ).map(([id, label, swatch, code, price, cassa, cinturino, alt]) => ({
       id,
+      label,
+      swatch: [...swatch],
       codes: [code],
-      name: 'Shockproof 1970',
       price,
-      group: 'shockproof-1970',
-      quote: { text: 'Il tempo che ti piace buttare non è buttato', author: 'John Lennon' },
       specs: [
         cassa,
         'Corona a vite',
@@ -283,9 +315,9 @@ export const models: Model[] = [
         'Diametro cassa 45 mm',
         'Spessore cassa 13,5 mm',
       ],
-      images: img(id, `Orologio Shockproof 1970 ${code} con ${alt}`),
-    }),
-  ),
+      images: img(id, `Orologio Shockproof 1970 ${code} con ${alt}`, id === 'shockproof-16' ? 2 : 3),
+    })),
+  },
   {
     id: 'italy',
     codes: ['ZPIT15'],
@@ -365,34 +397,44 @@ export const models: Model[] = [
     images: img('casuale', 'Orologi Casuale in acciaio con quadrante bianco e nero e cinturino nero'),
   },
   {
-    id: 'high-flight-16b',
-    codes: ['ZPHF16B'],
-    name: 'High Flight',
-    price: '260 EUR',
-    group: 'high-flight',
-    specs: [
-      'Cassa in acciaio 40mm laminata in oro rosa',
-      'Spessore 13mm',
-      'Vetro in esalite',
-      'Movimenti al quarzo Myota 2115',
-      'Cinturino in acciaio laminato in oro rosa',
-    ],
-    images: img('high-flight-16b', 'Orologio High Flight laminato in oro rosa con quadrante bianco e bracciale a maglia'),
-  },
-  {
-    id: 'high-flight-16',
-    codes: ['ZPHF16'],
+    id: 'high-flight',
+    codes: ['ZPHF16', 'ZPHF16B'],
     name: 'High Flight',
     price: '220 EUR',
-    group: 'high-flight',
-    specs: [
-      'Cassa in acciaio 40mm',
-      'Spessore 13mm',
-      'Vetro in esalite',
-      'Movimenti al quarzo Myota 2115',
-      'Cinturino in cordura',
+    specs: [],
+    images: [],
+    variants: [
+      {
+        id: 'high-flight-16',
+        label: 'Acciaio, cordura',
+        swatch: ['#c9c9c6', '#141414'],
+        codes: ['ZPHF16'],
+        price: '220 EUR',
+        specs: [
+          'Cassa in acciaio 40mm',
+          'Spessore 13mm',
+          'Vetro in esalite',
+          'Movimenti al quarzo Myota 2115',
+          'Cinturino in cordura',
+        ],
+        images: img('high-flight-16', 'Orologio High Flight in acciaio con quadrante bianco e cinturino in cordura nero'),
+      },
+      {
+        id: 'high-flight-16b',
+        label: 'Oro rosa',
+        swatch: ['#d9a982'],
+        codes: ['ZPHF16B'],
+        price: '260 EUR',
+        specs: [
+          'Cassa in acciaio 40mm laminata in oro rosa',
+          'Spessore 13mm',
+          'Vetro in esalite',
+          'Movimenti al quarzo Myota 2115',
+          'Cinturino in acciaio laminato in oro rosa',
+        ],
+        images: img('high-flight-16b', 'Orologio High Flight laminato in oro rosa con quadrante bianco e bracciale a maglia'),
+      },
     ],
-    images: img('high-flight-16', 'Orologio High Flight in acciaio con quadrante bianco e cinturino in cordura nero'),
   },
   {
     id: 'tasca',
@@ -406,7 +448,30 @@ export const models: Model[] = [
       'Cassa laminata in oro 36 mm (ZTOR0013) o cassa in acciaio 36 mm (ZTAR0013)',
       'Vetro zaffiro',
     ],
-    images: img('tasca', 'Orologio da tasca N°0 rettangolare con numeri romani e fasi lunari'),
+    images: [],
+    variants: [
+      {
+        id: 'tasca-oro',
+        label: 'Oro',
+        swatch: ['#d4b26a'],
+        codes: ['ZTOR0013'],
+        price: '380 EUR',
+        specs: ['Movimento meccanico a carica manuale', 'Frequenza 21600 A/O 33 rubini', 'Cassa laminata in oro 36 mm', 'Vetro zaffiro'],
+        images: [
+          { src: 'img/models/tasca.jpg', alt: 'Orologio da tasca N°0 laminato in oro, rettangolare, con numeri romani e fasi lunari' },
+          { src: 'img/models/tasca-3.jpg', alt: 'Dettaglio del quadrante del Tasca N°0 in oro con fasi lunari' },
+        ],
+      },
+      {
+        id: 'tasca-acciaio',
+        label: 'Acciaio',
+        swatch: ['#c9c9c6'],
+        codes: ['ZTAR0013'],
+        price: '380 EUR',
+        specs: ['Movimento meccanico a carica manuale', 'Frequenza 21600 A/O 33 rubini', 'Cassa in acciaio 36 mm', 'Vetro zaffiro'],
+        images: [{ src: 'img/models/tasca-2.jpg', alt: 'Orologio da tasca N°0 in acciaio, rettangolare, con numeri romani e fasi lunari' }],
+      },
+    ],
   },
   {
     id: 'bauletto',
@@ -563,6 +628,9 @@ export const orologi: Orologi = {
     title: 'I modelli',
     details: 'Dettagli',
     viewImage: 'Mostra immagine',
+    prevImage: 'Foto precedente',
+    nextImage: 'Foto successiva',
+    colors: 'Colori disponibili',
     mailSubject: 'Richiesta informazioni – ',
   },
 }

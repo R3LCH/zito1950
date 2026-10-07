@@ -1,4 +1,5 @@
 import { img } from '../lib/asset'
+import { dims } from '../lib/imageMeta'
 
 interface PictureProps {
   /** Public path to the JPG, e.g. "img/storia/scalea-borgo.jpg"; the .webp sibling is used when supported. */
@@ -26,6 +27,8 @@ export default function Picture({
   height,
 }: PictureProps) {
   const s = img(src)
+  // Intrinsic size reserves layout space before load, so anchor scrolling doesn't drift.
+  const d = dims(src)
   return (
     <picture className={pictureClassName}>
       <source type="image/webp" srcSet={s.webp} sizes={sizes} />
@@ -37,8 +40,8 @@ export default function Picture({
         loading={loading}
         decoding="async"
         fetchPriority={fetchPriority}
-        width={width ?? s.w}
-        height={height ?? s.h}
+        width={width ?? d?.w}
+        height={height ?? d?.h}
       />
     </picture>
   )

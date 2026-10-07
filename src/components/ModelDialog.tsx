@@ -1,37 +1,46 @@
 import { useEffect, useRef, useState } from 'react'
 import Picture from './Picture'
 import { infoHref, priceClass } from './ModelCard'
+import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
 import { orologi, site } from '../data/content'
 import type { Model } from '../data/types'
 import { dims } from '../lib/imageMeta'
+import { lockScroll } from '../lib/smooth'
 
 interface Props {
   model: Model | null
   /** Element focused again once the dialog closes. */
   trigger: HTMLElement | null
+  /** Variant and photo shown on the card when it was opened. */
+  initialVariant: number
+  initialImage: number
   onClose: () => void
 }
 
-export default function ModelDialog({ model, trigger, onClose }: Props) {
+export default function ModelDialog({ model, trigger, initialVariant, initialImage, onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const [active, setActive] = useState(0)
+  const [variant, setVariant] = useState(0)
 
   useEffect(() => {
-    setActive(0)
+    setActive(initialImage)
+    setVariant(initialVariant)
     const dialog = ref.current
     if (!dialog || !model) return
     if (!dialog.open) dialog.showModal()
-    const { overflow } = document.documentElement.style
-    document.documentElement.style.overflow = 'hidden'
+    lockScroll(true)
     return () => {
-      document.documentElement.style.overflow = overflow
+      lockScroll(false)
       if (dialog.open) dialog.close()
       trigger?.focus()
     }
-  }, [model, trigger])
+  }, [model, trigger, initialVariant, initialImage])
 
+  const view = model ? resolveView(model, variant) : null
+  const count = view?.images.length ?? 0
+  const swipe = useSwipe((dir) => setActive((i) => (i + dir + count) % count))
   const titleId = 'model-dialog-title'
-  const image = model?.images[active] ?? model?.images[0]
+  const image = view?.images[active] ?? view?.images[0]
   const size = image && dims(image.src)
   // Wide photos stack above the text so the grid doesn't leave an empty block under them.
   const wide = !!size && size.w / size.h > 1.3
@@ -65,10 +74,10 @@ export default function ModelDialog({ model, trigger, onClose }: Props) {
           <div className={`grid gap-8 px-5 pb-10 md:gap-12 md:p-12 ${wide ? '' : 'md:grid-cols-2'}`}>
             <div>
               {image && (
-                <div className="flex justify-center">
+                <div className="flex justify-center" {...swipe}>
                   {/* Natural aspect ratio, capped in height and never wider than the file's pixel width. */}
                   <div
-                    className="w-full"
+                    className="relative w-full"
                     style={
                       size && {
                         aspectRatio: `${size.w} / ${size.h}`,
@@ -87,21 +96,22 @@ export default function ModelDialog({ model, trigger, onClose }: Props) {
                       pictureClassName="block h-full w-full"
                       className="h-full w-full object-contain"
                     />
+                    <Arrows count={count} index={active} onChange={setActive} label={model.name} />
                   </div>
                 </div>
               )}
-              {model.images.length > 1 && (
+              {count > 1 && view && (
                 <ul className="mt-3 flex flex-wrap gap-2">
-                  {model.images.map((im, i) => (
+                  {view.images.map((im, i) => (
                     <li key={im.src}>
                       <button
                         type="button"
                         onClick={() => setActive(i)}
                         aria-pressed={i === active}
                         aria-label={`${orologi.catalog.viewImage} ${i + 1}: ${im.alt}`}
-                        className={`block h-16 w-14 cursor-pointer bg-well ${i === active ? 'outline outline-1 outline-ink' : ''}`}
+                        className={`block h-14 w-14 cursor-pointer bg-bg ${i === active ? 'outline outline-1 outline-ink' : 'outline outline-1 outline-line'}`}
                       >
-                        <Picture src={im.src} alt="" sizes="56px" pictureClassName="block h-full w-full" className="h-full w-full object-contain p-1" />
+                        <Picture src={im.src.replace('img/models/', 'img/cards/')} alt="" sizes="56px" pictureClassName="block h-full w-full" className="h-full w-full object-contain" />
                       </button>
                     </li>
                   ))}
@@ -114,12 +124,25 @@ export default function ModelDialog({ model, trigger, onClose }: Props) {
                   {model.name}
                 </h2>
                 <p className="mt-2 text-small text-muted">
-                  {model.codes.length > 1 ? site.labels.codes : site.labels.code}: {model.codes.join(' · ')}
+                  {view!.codes.length > 1 ? site.labels.codes : site.labels.code}: {view!.codes.join(' · ')}
                 </p>
                 <p className={`mt-4 ${priceClass}`}>
                   <span className="sr-only">{site.labels.price}: </span>
-                  {model.price}
+                  {view!.price}
                 </p>
+                {model.variants && model.variants.length > 1 && (
+                  <div className="-ml-3 mt-3">
+                    <Swatches
+                      model={model}
+                      value={variant}
+                      size="md"
+                      onChange={(i) => {
+                        setVariant(i)
+                        setActive(0)
+                      }}
+                    />
+                  </div>
+                )}
                 {model.quote && (
                   <figure className="mt-8 border-l border-line pl-5">
                     <blockquote className="font-serif text-xl italic leading-snug">“{model.quote.text}”</blockquote>
@@ -136,13 +159,13 @@ export default function ModelDialog({ model, trigger, onClose }: Props) {
                   {site.labels.specs}
                 </h3>
                 <ul className="mt-3 border-t border-line">
-                  {model.specs.map((s) => (
+                  {view!.specs.map((s) => (
                     <li key={s} className="border-b border-line py-2.5 text-small">
                       {s}
                     </li>
                   ))}
                 </ul>
-                <a href={infoHref(model)} className="btn mt-8 w-full sm:w-auto">
+                <a href={infoHref(model, view!.codes)} className="btn mt-8 w-full sm:w-auto">
                   {site.cta.info}
                 </a>
               </div>

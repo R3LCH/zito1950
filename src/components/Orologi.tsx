@@ -8,9 +8,12 @@ import { useReveal } from '../lib/useReveal'
 export default function Orologi() {
   const introRef = useReveal<HTMLDivElement>()
   const pillarsRef = useReveal<HTMLUListElement>()
-  const [open, setOpen] = useState<{ model: Model; trigger: HTMLElement } | null>(null)
+  const [open, setOpen] = useState<{ model: Model; trigger: HTMLElement; variant: number; image: number } | null>(null)
 
-  const handleOpen = useCallback((model: Model, trigger: HTMLElement) => setOpen({ model, trigger }), [])
+  const handleOpen = useCallback(
+    (model: Model, trigger: HTMLElement, variant: number, image: number) => setOpen({ model, trigger, variant, image }),
+    [],
+  )
   const handleClose = useCallback(() => setOpen(null), [])
 
   return (
@@ -55,7 +58,13 @@ export default function Orologi() {
         </ul>
       </div>
 
-      <ModelDialog model={open?.model ?? null} trigger={open?.trigger ?? null} onClose={handleClose} />
+      <ModelDialog
+        model={open?.model ?? null}
+        trigger={open?.trigger ?? null}
+        initialVariant={open?.variant ?? 0}
+        initialImage={open?.image ?? 0}
+        onClose={handleClose}
+      />
     </section>
   )
 }
