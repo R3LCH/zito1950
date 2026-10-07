@@ -5,7 +5,6 @@ import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
 import { orologi, site } from '../data/content'
 import type { Model } from '../data/types'
 import { dims } from '../lib/imageMeta'
-import { lockScroll } from '../lib/smooth'
 
 interface Props {
   model: Model | null
@@ -28,9 +27,10 @@ export default function ModelDialog({ model, trigger, initialVariant, initialIma
     const dialog = ref.current
     if (!dialog || !model) return
     if (!dialog.open) dialog.showModal()
-    lockScroll(true)
+    const { overflow } = document.documentElement.style
+    document.documentElement.style.overflow = 'hidden'
     return () => {
-      lockScroll(false)
+      document.documentElement.style.overflow = overflow
       if (dialog.open) dialog.close()
       trigger?.focus()
     }

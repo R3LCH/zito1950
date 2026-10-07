@@ -1,9 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Picture from './Picture'
 import { dims } from '../lib/imageMeta'
-import { smoothActive } from '../lib/smooth'
 import { useReveal } from '../lib/useReveal'
 import { contatti, profumo, site } from '../data/content'
 
@@ -13,34 +9,14 @@ const mailHref = `mailto:${contatti.pec}?subject=${encodeURIComponent(
 
 export default function Profumi() {
   const ref = useReveal<HTMLDivElement>()
-  const figRef = useRef<HTMLElement>(null)
   const [image] = profumo.images
   const size = image && dims(image.src)
-
-  // CSS sticky doesn't work inside the ScrollSmoother layer, so pin the photo with ScrollTrigger instead.
-  useEffect(() => {
-    const fig = figRef.current
-    const grid = ref.current
-    if (!fig || !grid || !smoothActive()) return
-    const mm = gsap.matchMedia()
-    mm.add('(min-width: 768px)', () => {
-      ScrollTrigger.create({
-        trigger: fig,
-        pin: true,
-        pinSpacing: false,
-        start: 'top top+=104',
-        end: () => `+=${Math.max(0, grid.offsetHeight - fig.offsetHeight)}`,
-        invalidateOnRefresh: true,
-      })
-    })
-    return () => mm.revert()
-  }, [ref])
 
   return (
     <section id="profumi" aria-labelledby="profumi-title" className="py-(--section-y)">
       <div ref={ref} className="reveal container-site grid gap-10 md:grid-cols-2 md:items-start md:gap-16 lg:gap-24">
         {image && (
-          <figure ref={figRef} className="md:sticky md:top-[calc(var(--header-h)+2rem)]">
+          <figure className="md:sticky md:top-[calc(var(--header-h)+2rem)]">
             {/* Natural ratio (landscape 1536x1024), full column width, no well. */}
             <Picture
               src={image.src}

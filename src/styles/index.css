@@ -41,6 +41,7 @@
     color-scheme: light;
   }
   html {
+    scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
   }
   body {
@@ -129,6 +130,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
