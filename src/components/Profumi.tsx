@@ -1,12 +1,13 @@
 import Picture from './Picture'
 import { dims } from '../lib/imageMeta'
 import { useReveal } from '../lib/useReveal'
-import { contatti, site } from '../data/content'
+import { useContent } from '../lib/i18n'
 import { useShop } from '../lib/shop'
 
 export default function Profumi() {
+  const { contatti, site } = useContent()
   const ref = useReveal<HTMLDivElement>()
-  const { catalog } = useShop()
+  const { localizedCatalog: catalog } = useShop()
   const profumo = catalog.perfume
   if (!profumo) return null
   const mailHref = `mailto:${contatti.pec}?subject=${encodeURIComponent(

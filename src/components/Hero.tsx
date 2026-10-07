@@ -1,11 +1,12 @@
-import { site } from '../data/content'
+import { useContent } from '../lib/i18n'
 import { useReveal } from '../lib/useReveal'
 import Picture from './Picture'
 import { useShop } from '../lib/shop'
 
 export default function Hero() {
+  const { site } = useContent()
   const textRef = useReveal<HTMLDivElement>()
-  const { catalog } = useShop()
+  const { localizedCatalog: catalog } = useShop()
 
   return (
     <section id="home" aria-labelledby="hero-title" className="pb-[var(--section-y)] pt-6 md:pt-10">

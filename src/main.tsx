@@ -6,9 +6,10 @@ import '@fontsource/eb-garamond/400-italic.css'
 import '@fontsource-variable/manrope'
 import './styles/index.css'
 import App from './App.tsx'
+import { LocaleProvider } from './lib/i18n'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <LocaleProvider><App /></LocaleProvider>
   </StrictMode>,
 )

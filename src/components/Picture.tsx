@@ -27,7 +27,7 @@ export default function Picture({
   width,
   height,
 }: PictureProps) {
-  const { catalog } = useShop()
+  const { localizedCatalog: catalog } = useShop()
   const replacement = catalog.imageOverrides[src]
   const resolved = replacement?.src ?? src
   const s = img(resolved)

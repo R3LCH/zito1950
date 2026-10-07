@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, euro, lineKey, useShop, type CartLine } from '../lib/shop'
+import { t } from '../lib/i18n'
 
 export function BuyButton({
   modelId,
@@ -14,20 +15,16 @@ export function BuyButton({
   const model = catalog.models.find((m) => m.id === modelId)
   if (!model?.buyEnabled || error) return null
   return (
-    <button
-      type="button"
-      className="btn mt-3 w-full"
-      onClick={() => {
-        beforeOpen?.()
-        add(model, variant)
-      }}
-    >
-      Acquista
-    </button>
+    <button type="button"
+    className="btn mt-3 w-full"
+    onClick={() => {
+      beforeOpen?.()
+      add(model, variant)
+    }}>{t('Acquista')}</button>
   )
 }
 export default function Cart() {
-  const { catalog, cart, setCart, cartOpen, setCartOpen, error: shopError } = useShop()
+  const { localizedCatalog: catalog, cart, setCart, cartOpen, setCartOpen, error: shopError } = useShop()
   const ref = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLElement | null>(null)
   const [busy, setBusy] = useState(false)
@@ -120,7 +117,7 @@ export default function Cart() {
       sessionStorage.removeItem('zito-paypal-order')
       sessionStorage.removeItem('zito-checkout-request')
       history.replaceState(null, '', location.pathname)
-      setMessage(`Pagamento completato. Riferimento ordine: ${result.id}. Conserva questo riferimento.`)
+      setMessage(t('Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.', { id: result.id }))
     } catch (error) {
       setMessage((error as Error).message)
     } finally {
@@ -141,7 +138,7 @@ export default function Cart() {
         }}
         aria-haspopup="dialog"
       >
-        Carrello ({cart.reduce((sum, line) => sum + line.quantity, 0)})
+        {t('Carrello ({count})', { count: cart.reduce((sum, line) => sum + line.quantity, 0) })}
       </button>
       <dialog
         ref={ref}
@@ -154,31 +151,31 @@ export default function Cart() {
       >
         <div className="flex items-center justify-between gap-6 border-b border-line pb-5">
           <div>
-            <p className="eyebrow">ZITO 1950 · Boutique</p>
+            <p className="eyebrow">{t("ZITO 1950 · Boutique")}</p>
             <h2 id="cart-title" className="mt-2 text-h2">
-              Il tuo carrello
+              {t("Il tuo carrello")}
             </h2>
           </div>
           <button type="button" className="btn" disabled={busy} onClick={() => setCartOpen(false)}>
-            Chiudi
+            {t("Chiudi")}
           </button>
         </div>
-        {!paid && rows.length === 0 && <p className="py-10">Il carrello è vuoto. Scopri la nostra collezione.</p>}
+        {!paid && rows.length === 0 && <p className="py-10">{t("Il carrello è vuoto. Scopri la nostra collezione.")}</p>}
         {!paid && (
           <ul>
             {rows.map(({ line, model, variant, available, price }) => (
               <li key={lineKey(line)} className="grid gap-4 border-b border-line py-6 sm:grid-cols-[1fr_auto]">
                 <div>
                   <h3 className="text-h3">
-                    {model?.name ?? 'Prodotto rimosso'}
+                    {model?.name ?? t('Prodotto rimosso')}
                     {variant ? ` · ${variant.label}` : ''}
                   </h3>
-                  <p className="text-small">{euro(price)} / pezzo</p>
-                  {!available && <p className="text-small">Non più acquistabile. Rimuovi l’articolo per procedere.</p>}
+                  <p className="text-small">{euro(price)}{' ' + t("/ pezzo")}</p>
+                  {!available && <p className="text-small">{t("Non più acquistabile. Rimuovi l’articolo per procedere.")}</p>}
                 </div>
                 <div className="flex items-center gap-4">
                   <label className="text-small">
-                    Quantità
+                    {t("Quantità")}
                     <select
                       className="shop-input ml-2"
                       disabled={busy || !!pendingToken}
@@ -196,7 +193,7 @@ export default function Cart() {
                     disabled={busy || !!pendingToken}
                     onClick={() => setCart(cart.filter((item) => lineKey(item) !== lineKey(line)))}
                   >
-                    Rimuovi
+                    {t("Rimuovi")}
                   </button>
                 </div>
               </li>
@@ -205,25 +202,25 @@ export default function Cart() {
         )}
         {!!cart.length && !paid && (
           <div className="mt-6 flex justify-between text-xl">
-            <span>Totale</span>
+            <span>{t("Totale")}</span>
             <strong className="font-medium">{euro(total)}</strong>
           </div>
         )}
         {!!cart.length && !paid && (
           <p className="mt-3 text-small text-muted">
-            Prezzi in EUR. Nessun costo di spedizione aggiunto. Indirizzo di consegna selezionato su PayPal.
+            {t("Prezzi in EUR. Nessun costo di spedizione aggiunto. Indirizzo di consegna selezionato su PayPal.")}
           </p>
         )}
         {payments?.environment === 'sandbox' && payments.enabled && (
-          <p className="mt-4 text-small">Modalità test PayPal: nessun pagamento reale.</p>
+          <p className="mt-4 text-small">{t("Modalità test PayPal: nessun pagamento reale.")}</p>
         )}
         <p role="status" aria-live="polite" className="mt-5 text-small">
-          {shopError || message}
+          {t(shopError || message)}
         </p>
         {pendingToken && !paid ? (
           <div className="mt-6 flex flex-wrap gap-4">
             <button type="button" className="btn" disabled={busy} onClick={() => void capture()}>
-              {busy ? 'Verifica in corso…' : 'Conferma / verifica pagamento'}
+              {busy ? t('Verifica in corso…') : t('Conferma / verifica pagamento')}
             </button>
             <button
               type="button"
@@ -237,7 +234,7 @@ export default function Cart() {
                 setMessage('Carrello modificabile. Se hai già approvato PayPal, verifica prima l’ordine precedente.')
               }}
             >
-              Torna al carrello
+              {t("Torna al carrello")}
             </button>
           </div>
         ) : (
@@ -249,12 +246,12 @@ export default function Cart() {
               disabled={busy || unavailable || !!shopError || !payments?.enabled}
               onClick={() => void checkout()}
             >
-              {busy ? 'Connessione a PayPal…' : 'Paga con PayPal'}
+              {busy ? t('Connessione a PayPal…') : t('Paga con PayPal')}
             </button>
           )
         )}
         {payments && !payments.enabled && !!cart.length && (
-          <p className="mt-4 text-small">Pagamenti online non ancora attivi. Contattaci per acquistare.</p>
+          <p className="mt-4 text-small">{t("Pagamenti online non ancora attivi. Contattaci per acquistare.")}</p>
         )}
       </dialog>
     </>

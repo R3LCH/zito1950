@@ -41,6 +41,23 @@ Open **`/admin`** on the same origin as the website. All write APIs require a se
 
 Changes publish immediately and persist in SQLite. Revision checks prevent one admin tab from silently overwriting another; on a conflict, reload the catalog and reapply the edit. All user-supplied text is rendered as text, not HTML. Purchase availability and prices are checked on the server, never trusted from local cart storage.
 
+## Languages and translated product content
+
+The language selector provides Italian (default), Russian, English, Ukrainian, German and Polish. It updates the storefront, story, product specifications, perfume, contacts, cart, admin interface, accessible labels and document metadata. The selection is saved in browser storage; `?lang=ru` (or `it`, `en`, `uk`, `de`, `pl`) opens a shareable language-specific view.
+
+In **Prodotti** or **Profumo**, use the **Lingua dei contenuti** tabs:
+
+1. Enter the Italian source text and shared product name, codes, EUR price and photographs.
+2. Switch to each language and edit descriptions, specifications, quotation text, variant labels/specifications and photograph alternative text. Perfume descriptions use paragraphs separated by a blank line.
+3. Switching tabs preserves unsaved text in every language. **Salva prodotto / Salva profumo** publishes all language versions in one revision-checked save. The same workflow applies to new products.
+
+Product names, codes, prices, quotation authors, ingredients and image files remain shared. Interface language and content-editing language are independent, so an English-speaking admin can edit Ukrainian copy without changing the admin labels. Missing required translations are marked with `!` and listed for the selected language; blank translated fields fall back to Italian on the storefront. The photograph panel also provides alternative text in all five added languages for the hero.
+
+Translations are bundled in `src/data/translations.json`; no runtime translation service is used. On the first backend start after this update, recognised original public content receives the bundled translations. Existing custom Italian text and existing translations are preserved. Newly entered admin text is never automatically translated or sent to an external service: the admin supplies each language version. Translation maps permit only the supported language keys and text fields; translated product names are rejected.
+
+GitHub Pages exposes these controls in the public UI preview, but cannot save language edits. Durable publishing still requires the authenticated Node/SQLite backend.
+
+
 ## PayPal
 
 Create a REST app in the [PayPal developer dashboard](https://developer.paypal.com/dashboard/applications). Configure **server-only** `.env` values:
@@ -105,3 +122,6 @@ Build-time public settings remain `VITE_BASE` (use `/` for the server deployment
 - Added styled `/admin`, persistent catalog/media management and per-watch purchase toggles. Previously all product data was hard-coded; browser-only administration was rejected because it cannot enforce access control or publish durable changes.
 - Added a persistent cart and server-side PayPal order/capture integration with price validation and duplicate-charge protection. Previously the site only offered information requests.
 - Replaced the static-only Docker runtime with a non-root Node service and persistent volume; added build/test CI and a separate Pages-only public UI preview. Static hosting cannot safely implement real admin edits or payments, so the preview makes no API calls and disables publication rather than simulating a successful backend. Added isolated regressions for authorization, CSRF, concurrent edits, uploads, payment totals, disabled products, capture recovery and amount verification.
+- Added Russian, English, Ukrainian, German and Polish alongside Italian across the storefront, admin, cart and accessibility/metadata; product names stay shared. Added remembered language selection and shareable language queries. Previously all content was Italian.
+- Added independent product-content language tabs, shared pricing/media, multilingual variant and photograph text, missing-translation feedback and Italian fallback. Bundled public-copy translations seed once; admin edits are not sent to a translation service. Kept all locales in one catalog revision to avoid language-specific saves overwriting each other, and added persistence/validation/fallback regressions.
+- Fixed admin product-editor intrinsic sizing for narrow screens; multilingual controls wrap without horizontal scrolling.

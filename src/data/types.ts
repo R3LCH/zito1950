@@ -1,6 +1,18 @@
+import type { TranslationLocale } from './localization'
+
+export interface TextTranslation {
+  description?: string
+  specs?: string[]
+  quoteText?: string
+  label?: string
+  paragraphs?: string[]
+}
+export type TextTranslations = Partial<Record<TranslationLocale, TextTranslation>>
+
 export interface Img {
   src: string
   alt: string
+  altTranslations?: Partial<Record<TranslationLocale, string>>
 }
 
 export interface Quote {
@@ -21,6 +33,7 @@ export interface Variant {
   priceCents?: number
   specs?: string[]
   images: Img[]
+  translations?: TextTranslations
 }
 
 export interface Model {
@@ -37,6 +50,7 @@ export interface Model {
   images: Img[]
   /** First variant is the default view. */
   variants?: Variant[]
+  translations?: TextTranslations
 }
 
 export interface Site {
@@ -124,6 +138,7 @@ export interface Profumo {
     /** Prefix of the mailto subject; name and code are appended. */
     mailSubject: string
   }
+  translations?: TextTranslations
 }
 
 export interface Contatti {

@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { orologi } from '../data/content'
+import { useContent } from '../lib/i18n'
 import type { Img, Model, Variant } from '../data/types'
 
 /** Codes, price, specs and photos for the chosen variant (or the model itself). */
@@ -23,6 +23,7 @@ interface ArrowsProps {
  * Wraps around. Renders nothing for a single photo.
  */
 export function Arrows({ count, index, onChange, label, className = '' }: ArrowsProps) {
+  const { orologi } = useContent()
   if (count < 2) return null
   // Dark icon with a soft white halo: readable on both white product shots and dark close-ups.
   const btn =
@@ -88,6 +89,7 @@ interface SwatchesProps {
 
 /** Colour picker as a radio group; each swatch shows 1–2 colours split diagonally. */
 export function Swatches({ model, value, onChange, size = 'sm' }: SwatchesProps) {
+  const { orologi } = useContent()
   if (!model.variants || model.variants.length < 2) return null
   const dot = size === 'sm' ? 'h-5 w-5' : 'h-7 w-7'
   return (

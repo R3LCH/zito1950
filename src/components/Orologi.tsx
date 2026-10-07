@@ -1,16 +1,17 @@
 import { useCallback, useState } from 'react'
 import ModelCard from './ModelCard'
 import ModelDialog from './ModelDialog'
-import { orologi } from '../data/content'
+import { t, useContent } from '../lib/i18n'
 import type { Model } from '../data/types'
 import { useReveal } from '../lib/useReveal'
 import { useShop } from '../lib/shop'
 
 export default function Orologi() {
+  const { orologi } = useContent()
   const introRef = useReveal<HTMLDivElement>()
   const pillarsRef = useReveal<HTMLUListElement>()
   const [open, setOpen] = useState<{ model: Model; trigger: HTMLElement; variant: number; image: number } | null>(null)
-  const { catalog, error } = useShop()
+  const { localizedCatalog: catalog, error } = useShop()
 
   const handleOpen = useCallback(
     (model: Model, trigger: HTMLElement, variant: number, image: number) => setOpen({ model, trigger, variant, image }),
@@ -48,7 +49,7 @@ export default function Orologi() {
           </h2>
         </div>
 
-        {error && <p role="status" className="mt-6 text-small">{error}</p>}
+        {error && <p role="status" className="mt-6 text-small">{t(error)}</p>}
         <ul
           aria-labelledby="catalogo-title"
           className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-3 lg:gap-x-10 lg:gap-y-20"
@@ -62,7 +63,7 @@ export default function Orologi() {
       </div>
 
       <ModelDialog
-        model={open?.model ?? null}
+        model={open ? catalog.models.find(model => model.id === open.model.id) ?? null : null}
         trigger={open?.trigger ?? null}
         initialVariant={open?.variant ?? 0}
         initialImage={open?.image ?? 0}

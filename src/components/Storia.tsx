@@ -1,4 +1,4 @@
-import { storia } from '../data/content'
+import { useContent } from '../lib/i18n'
 import type { StoriaChapter } from '../data/types'
 import { useReveal } from '../lib/useReveal'
 import Picture from './Picture'
@@ -56,6 +56,7 @@ function Chapter({ chapter, index }: { chapter: StoriaChapter; index: number }) 
 }
 
 export default function Storia() {
+  const { storia } = useContent()
   const introRef = useReveal<HTMLDivElement>()
   const quoteRef = useReveal<HTMLElement>()
 

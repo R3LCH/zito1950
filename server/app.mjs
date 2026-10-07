@@ -9,6 +9,7 @@ import { mkdirSync, existsSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { z } from 'zod'
 import { models, site, storia, profumo } from '../src/data/content.ts'
+import { TRANSLATION_LOCALES, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../src/data/localization.ts'
 
 const digest = (value) => createHash('sha256').update(value).digest('hex')
 const money = (cents) => (cents / 100).toFixed(2)
@@ -27,9 +28,18 @@ const fail = (status, message) => {
 const text = z.string().trim().max(12000)
 const id = z.string().regex(/^[a-z0-9-]{1,80}$/)
 const cents = z.number().int().min(1).max(100000000)
+const textTranslation = z.object({
+  description: text.optional(),
+  specs: z.array(text).max(50).optional(),
+  quoteText: text.optional(),
+  label: text.max(120).optional(),
+  paragraphs: z.array(text).max(50).optional(),
+}).strict()
+const translations = z.partialRecord(z.enum(TRANSLATION_LOCALES), textTranslation).optional()
 const image = z.object({
   src: z.string().regex(/^(img\/[a-zA-Z0-9/_-]+\.(jpg|jpeg|png|webp)|uploads\/[a-f0-9-]+\.webp)$/),
   alt: text.max(500),
+  altTranslations: z.partialRecord(z.enum(TRANSLATION_LOCALES), text.max(500)).optional(),
 })
 const variantSchema = z.object({
   id,
@@ -42,6 +52,7 @@ const variantSchema = z.object({
   priceCents: cents,
   images: z.array(image).max(30),
   specs: z.array(text).max(50).optional(),
+  translations,
 })
 const modelSchema = z.object({
   id,
@@ -54,6 +65,7 @@ const modelSchema = z.object({
   specs: z.array(text).max(50),
   images: z.array(image).max(30),
   variants: z.array(variantSchema).max(20).optional(),
+  translations,
 })
 const perfumeSchema = z.object({
   name: text.min(1).max(120),
@@ -64,6 +76,7 @@ const perfumeSchema = z.object({
   ingredients: z.array(text).max(100),
   quote: z.object({ text, author: text.optional() }),
   images: z.array(image).max(30),
+  translations,
 })
 const cartSchema = z
   .array(z.object({ modelId: id, variantId: id.nullable(), quantity: z.number().int().min(1).max(10) }))
@@ -99,6 +112,16 @@ export function createApp(options = {}) {
   if (!Object.hasOwn(existing, 'perfume')) {
     existing.perfume = { ...profumo, priceCents: initialPrice(profumo.price) }
     db.prepare('UPDATE catalog SET body=? WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.localizationVersion !== 1) {
+    existing.models = existing.models.map(seedModelTranslations)
+    if (existing.perfume) existing.perfume = seedPerfumeTranslations(existing.perfume)
+    existing.hero = seedImageTranslations(existing.hero)
+    existing.photos = existing.photos.map(seedImageTranslations)
+    existing.siteImages = existing.siteImages.map(seedImageTranslations)
+    existing.imageOverrides = Object.fromEntries(Object.entries(existing.imageOverrides).map(([source, image]) => [source, seedImageTranslations(image)]))
+    existing.localizationVersion = 1
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   const catalog = () => {
     const row = db.prepare('SELECT * FROM catalog WHERE id=1').get()

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { site } from '../data/content'
+import { LanguageSelector, useContent } from '../lib/i18n'
 import { asset } from '../lib/asset'
 
 const MENU_ID = 'menu-mobile'
 
 export default function Header() {
+  const { site } = useContent()
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState<string | null>(null)
@@ -54,7 +55,8 @@ export default function Header() {
         return
       }
       if (e.key !== 'Tab' || !panelRef.current || !buttonRef.current) return
-      const focusables = [buttonRef.current, ...panelRef.current.querySelectorAll<HTMLElement>('a')]
+      const languageSelect = document.querySelector<HTMLElement>('header select[data-language-selector]')
+      const focusables = [...(languageSelect ? [languageSelect] : []), buttonRef.current, ...panelRef.current.querySelectorAll<HTMLElement>('a')]
       const first = focusables[0]
       const last = focusables[focusables.length - 1]
       if (e.shiftKey && document.activeElement === first) {
@@ -95,9 +97,9 @@ export default function Header() {
           scrolled || open ? 'border-line' : 'border-transparent'
         }`}
       >
-        <div className="container-site flex h-[var(--header-h)] items-center justify-between gap-6">
+        <div className="container-site flex h-[var(--header-h)] items-center justify-between gap-2 md:gap-6">
           <a href="#home" className="-ml-1 flex min-h-11 items-center px-1" onClick={() => setOpen(false)}>
-            <img src={asset('logo.svg')} alt={site.labels.home} width={341} height={100} className="h-7 w-auto md:h-8" />
+            <img src={asset('logo.svg')} alt={site.labels.home} width={341} height={100} className="h-6 w-auto sm:h-7 md:h-8" />
           </a>
 
           <nav aria-label={site.labels.mainNav} className="hidden md:block">
@@ -120,6 +122,7 @@ export default function Header() {
               })}
             </ul>
           </nav>
+          <LanguageSelector compact />
 
           <button
             ref={buttonRef}

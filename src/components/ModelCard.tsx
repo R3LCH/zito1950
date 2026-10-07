@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react'
 import Picture from './Picture'
 import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
-import { contatti, orologi, site } from '../data/content'
+import { contatti, orologi } from '../data/content'
+import { t, useContent } from '../lib/i18n'
 import type { Model } from '../data/types'
 import { BuyButton } from './Cart'
 
 /** mailto link for an information request about a model (codes of the chosen variant). */
 export function infoHref(model: Model, codes: string[] = model.codes): string {
-  const subject = `${orologi.catalog.mailSubject}${model.name} (${codes.join(', ')})`
+  const subject = `${t(orologi.catalog.mailSubject)}${model.name} (${codes.join(', ')})`
   return `mailto:${contatti.pec}?subject=${encodeURIComponent(subject)}`
 }
 
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function ModelCard({ model, onOpen }: Props) {
+  const { orologi, site } = useContent()
   const [variant, setVariant] = useState(0)
   const [index, setIndex] = useState(0)
   const view = resolveView(model, variant)

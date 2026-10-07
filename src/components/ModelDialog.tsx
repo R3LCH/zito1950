@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Picture from './Picture'
 import { infoHref, priceClass } from './ModelCard'
 import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
-import { orologi, site } from '../data/content'
+import { useContent } from '../lib/i18n'
 import type { Model } from '../data/types'
 import { dims } from '../lib/imageMeta'
 import { BuyButton } from './Cart'
@@ -18,6 +18,7 @@ interface Props {
 }
 
 export default function ModelDialog({ model, trigger, initialVariant, initialImage, onClose }: Props) {
+  const { orologi, site } = useContent()
   const ref = useRef<HTMLDialogElement>(null)
   const [active, setActive] = useState(0)
   const [variant, setVariant] = useState(0)

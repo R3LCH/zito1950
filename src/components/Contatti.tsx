@@ -1,7 +1,8 @@
 import { useReveal } from '../lib/useReveal'
-import { contatti, site } from '../data/content'
+import { contatti as baseContacts } from '../data/content'
+import { useContent } from '../lib/i18n'
 
-const fullAddress = `${contatti.address}, ${contatti.city}`
+const fullAddress = `${baseContacts.address}, ${baseContacts.city}`
 const mapEmbed = `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`
 
 /** Large, calm link row: label on top, value below; whole row is the tap target. */
@@ -16,6 +17,7 @@ function ContactLink({
   href: string
   external?: boolean
 }) {
+  const { contatti } = useContent()
   return (
     <li className="border-b border-line">
       <a
@@ -39,6 +41,7 @@ function ContactLink({
 }
 
 export default function Contatti() {
+  const { contatti, site } = useContent()
   const ref = useReveal<HTMLDivElement>()
 
   return (

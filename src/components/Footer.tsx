@@ -1,7 +1,8 @@
-import { contatti, site } from '../data/content'
+import { useContent } from '../lib/i18n'
 import { asset } from '../lib/asset'
 
 export default function Footer() {
+  const { contatti, site } = useContent()
   const year = new Date().getFullYear()
   const social = [
     { href: contatti.instagram, label: contatti.labels.instagram },

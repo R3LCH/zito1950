@@ -1,34 +1,48 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import type { Img, Model, Profumo, Variant } from '../data/types'
+import type { Img, Model, Profumo, Variant, TextTranslation } from '../data/types'
 import { api, euro, getSession, STATIC_PREVIEW, useShop, type Catalog } from '../lib/shop'
 import { profumo as originalPerfume } from '../data/content'
 import { asset } from '../lib/asset'
+import { t, LanguageSelector, useLocale } from '../lib/i18n'
+import { LOCALES, LANGUAGE_NAMES, LANGUAGE_TAGS, missingTranslationFields, type Locale } from '../data/localization'
 
+function TextLanguages({ language, onChange, product }: { language: Locale; onChange: (language: Locale) => void; product: Model | Profumo }) {
+  return <section className="space-y-3 border-y border-line py-5">
+    <p className="eyebrow">{t('Lingua dei contenuti')}</p>
+    <div className="flex flex-wrap gap-2" role="group" aria-label={t('Lingua dei contenuti')}>
+      {LOCALES.map(code => <button type="button" key={code} aria-pressed={language === code} className={`border border-line px-3 py-2 text-small ${language === code ? 'bg-ink text-bg' : ''}`} onClick={() => onChange(code)}>{LANGUAGE_NAMES[code]}{code !== 'it' && missingTranslationFields(product, code).length > 0 ? ' · !' : ''}</button>)}
+    </div>
+    <p className="text-small text-muted">{t('Nomi prodotto, codici, prezzi e fotografie sono condivisi. I testi si salvano insieme per tutte le lingue. Le traduzioni mancanti usano il testo italiano.')}</p>
+    {language !== 'it' && missingTranslationFields(product, language).length > 0 && <p role="status" className="text-small">{t('Traduzioni mancanti:')} {missingTranslationFields(product, language).map(field => t(field)).join(', ')}</p>}
+  </section>
+}
 function PhotoEditor({
   images,
   onChange,
   library,
+  language = 'it',
 }: {
   images: Img[]
   onChange: (images: Img[]) => void
   library: Img[]
+  language?: Locale
 }) {
   const [selected, setSelected] = useState('')
   return (
     <div className="space-y-4">
-      <p className="eyebrow">Fotografie</p>
+      <p className="eyebrow">{t("Fotografie")}</p>
       <ul className="space-y-3">
         {images.map((im, index) => (
           <li key={`${im.src}-${index}`} className="grid grid-cols-[64px_1fr] gap-3 border-b border-line pb-3">
             <img src={asset(im.src)} alt="" className="h-16 w-16 object-contain" />
             <div>
               <label className="text-small">
-                Descrizione foto
+                {t("Descrizione foto")}
                 <input
                   className="shop-input w-full"
-                  value={im.alt}
+                  value={language === 'it' ? im.alt : im.altTranslations?.[language] ?? ''}
                   onChange={(e) =>
-                    onChange(images.map((item, i) => (i === index ? { ...item, alt: e.target.value } : item)))
+                    onChange(images.map((item, i) => i === index ? language === 'it' ? { ...item, alt: e.target.value } : { ...item, altTranslations: { ...item.altTranslations, [language]: e.target.value } } : item))
                   }
                 />
               </label>
@@ -43,14 +57,14 @@ function PhotoEditor({
                     onChange(reordered)
                   }}
                 >
-                  Sposta prima
+                  {t("Sposta prima")}
                 </button>
                 <button
                   type="button"
                   className="underline"
                   onClick={() => onChange(images.filter((_, i) => i !== index))}
                 >
-                  Rimuovi foto
+                  {t("Rimuovi foto")}
                 </button>
               </div>
             </div>
@@ -59,12 +73,12 @@ function PhotoEditor({
       </ul>
       <div className="flex flex-wrap gap-3">
         <select
-          aria-label="Foto dalla libreria"
+          aria-label={t("Foto dalla libreria")}
           className="shop-input min-w-0 flex-1"
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
         >
-          <option value="">Seleziona dalla libreria</option>
+          <option value="">{t("Seleziona dalla libreria")}</option>
           {library.map((im) => (
             <option key={im.src} value={im.src}>
               {im.alt || im.src}
@@ -81,7 +95,7 @@ function PhotoEditor({
             setSelected('')
           }}
         >
-          Aggiungi foto
+          {t("Aggiungi foto")}
         </button>
       </div>
     </div>
@@ -99,7 +113,7 @@ function PriceInput({
   const [raw, setRaw] = useState((value / 100).toFixed(2))
   return (
     <label className="shop-label">
-      {label}
+      {t(label)}
       <input
         className="shop-input"
         type="number"
@@ -130,6 +144,9 @@ function ProductEditor({
   onDelete: () => void
 }) {
   const [draft, setDraft] = useState<Model>(() => structuredClone(model))
+  const [language, setLanguage] = useState<Locale>('it')
+  const text = language === 'it' ? { description: draft.description, specs: draft.specs, quoteText: draft.quote?.text } : draft.translations?.[language] ?? {}
+  const setText = (patch: TextTranslation) => setDraft(language === 'it' ? { ...draft, ...(patch.description !== undefined ? { description: patch.description } : {}), ...(patch.specs !== undefined ? { specs: patch.specs } : {}), ...(patch.quoteText !== undefined ? { quote: { ...draft.quote, text: patch.quoteText } } : {}) } : { ...draft, translations: { ...draft.translations, [language]: { ...draft.translations?.[language], ...patch } } })
   const setVariant = (index: number, patch: Partial<Variant>) =>
     setDraft({ ...draft, variants: draft.variants?.map((v, i) => (i === index ? { ...v, ...patch } : v)) })
   return (
@@ -138,12 +155,12 @@ function ProductEditor({
         e.preventDefault()
         onSave(draft)
       }}
-      className="space-y-7"
+      className="min-w-0 space-y-7"
     >
-      <fieldset disabled={busy} className="space-y-7">
-        <div className="grid gap-5 sm:grid-cols-2">
+      <fieldset disabled={busy} className="min-w-0 space-y-7">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <label className="shop-label">
-            Nome
+            {t("Nome")}
             <input
               className="shop-input"
               required
@@ -154,7 +171,7 @@ function ProductEditor({
           </label>
           <PriceInput value={draft.priceCents ?? 1} onChange={(priceCents) => setDraft({ ...draft, priceCents })} />
           <label className="shop-label">
-            Codici (separati da virgola)
+            {t("Codici (separati da virgola)")}
             <input
               className="shop-input"
               defaultValue={draft.codes.join(', ')}
@@ -175,36 +192,37 @@ function ProductEditor({
               checked={!!draft.buyEnabled}
               onChange={(e) => setDraft({ ...draft, buyEnabled: e.target.checked })}
             />{' '}
-            Abilita acquisto e pulsante Acquista
+            {t("Abilita acquisto e pulsante Acquista")}
           </label>
         </div>
+        <TextLanguages language={language} onChange={setLanguage} product={draft} />
         <label className="shop-label">
-          Descrizione
+          {t("Descrizione")}
           <textarea
             className="shop-input min-h-32"
-            value={draft.description ?? ''}
-            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            value={text.description ?? ''}
+            onChange={(e) => setText({ description: e.target.value })}
           />
         </label>
         <label className="shop-label">
-          Caratteristiche (una per riga)
+          {t("Caratteristiche (una per riga)")}
           <textarea
             className="shop-input min-h-32"
-            value={draft.specs.join('\n')}
-            onChange={(e) => setDraft({ ...draft, specs: e.target.value.split('\n') })}
+            value={text.specs?.join('\n') ?? ''}
+            onChange={(e) => setText({ specs: e.target.value.split('\n') })}
           />
         </label>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="shop-label">
-            Citazione
+            {t("Citazione")}
             <input
               className="shop-input"
-              value={draft.quote?.text ?? ''}
-              onChange={(e) => setDraft({ ...draft, quote: { ...draft.quote, text: e.target.value } })}
+              value={text.quoteText ?? ''}
+              onChange={(e) => setText({ quoteText: e.target.value })}
             />
           </label>
           <label className="shop-label">
-            Autore
+            {t("Autore")}
             <input
               className="shop-input"
               value={draft.quote?.author ?? ''}
@@ -212,24 +230,24 @@ function ProductEditor({
             />
           </label>
         </div>
-        <PhotoEditor images={draft.images} library={library} onChange={(images) => setDraft({ ...draft, images })} />
+        <PhotoEditor language={language} images={draft.images} library={library} onChange={(images) => setDraft({ ...draft, images })} />
         <div className="space-y-6 border-t border-line pt-6">
-          <h3 className="text-h3">Varianti / colori</h3>
+          <h3 className="text-h3">{t("Varianti / colori")}</h3>
           {draft.variants?.map((v, index) => (
             <section key={v.id} className="space-y-4 border border-line p-5">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="shop-label">
-                  Nome variante
+                  {t("Nome variante")}
                   <input
                     className="shop-input"
-                    required
-                    value={v.label}
-                    onChange={(e) => setVariant(index, { label: e.target.value })}
+                    required={language === 'it'}
+                    value={language === 'it' ? v.label : v.translations?.[language]?.label ?? ''}
+                    onChange={(e) => setVariant(index, language === 'it' ? { label: e.target.value } : { translations: { ...v.translations, [language]: { ...v.translations?.[language], label: e.target.value } } })}
                   />
                 </label>
                 <PriceInput value={v.priceCents ?? 1} onChange={(priceCents) => setVariant(index, { priceCents })} />
                 <label className="shop-label">
-                  Codici variante
+                  {t("Codici variante")}
                   <input
                     className="shop-input"
                     defaultValue={v.codes.join(', ')}
@@ -244,7 +262,7 @@ function ProductEditor({
                   />
                 </label>
                 <label className="shop-label">
-                  Colore
+                  {t("Colore")}
                   <input
                     className="shop-input w-full"
                     type="color"
@@ -254,22 +272,20 @@ function ProductEditor({
                 </label>
               </div>
               <label className="shop-label">
-                Caratteristiche variante (una per riga; vuoto usa quelle del prodotto)
+                {t("Caratteristiche variante (una per riga; vuoto usa quelle del prodotto)")}
                 <textarea
                   className="shop-input"
-                  value={v.specs?.join('\n') ?? ''}
-                  onChange={(e) =>
-                    setVariant(index, { specs: e.target.value ? e.target.value.split('\n') : undefined })
-                  }
+                  value={(language === 'it' ? v.specs : v.translations?.[language]?.specs)?.join('\n') ?? ''}
+                  onChange={(e) => setVariant(index, language === 'it' ? { specs: e.target.value ? e.target.value.split('\n') : undefined } : { translations: { ...v.translations, [language]: { ...v.translations?.[language], specs: e.target.value.split('\n') } } })}
                 />
               </label>
-              <PhotoEditor images={v.images} library={library} onChange={(images) => setVariant(index, { images })} />
+              <PhotoEditor language={language} images={v.images} library={library} onChange={(images) => setVariant(index, { images })} />
               <button
                 type="button"
                 className="underline text-small"
                 onClick={() => setDraft({ ...draft, variants: draft.variants?.filter((_, i) => i !== index) })}
               >
-                Elimina variante
+                {t("Elimina variante")}
               </button>
             </section>
           ))}
@@ -294,15 +310,15 @@ function ProductEditor({
               })
             }
           >
-            Aggiungi variante
+            {t("Aggiungi variante")}
           </button>
         </div>
         <div className="flex flex-wrap gap-5 border-t border-line pt-6">
           <button type="submit" className="btn" disabled={STATIC_PREVIEW}>
-            {busy ? 'Salvataggio…' : 'Salva prodotto'}
+            {busy ? t('Salvataggio…') : t('Salva prodotto')}
           </button>
           <button type="button" className="underline text-small" disabled={STATIC_PREVIEW} onClick={onDelete}>
-            Elimina prodotto
+            {t("Elimina prodotto")}
           </button>
         </div>
       </fieldset>
@@ -325,6 +341,9 @@ function PerfumeEditor({
   const [draft, setDraft] = useState<Profumo>(() =>
     structuredClone(product ?? { ...originalPerfume, priceCents: 12000 }),
   )
+  const [language, setLanguage] = useState<Locale>('it')
+  const text = language === 'it' ? { paragraphs: draft.paragraphs, specs: draft.specs, quoteText: draft.quote.text } : draft.translations?.[language] ?? {}
+  const setText = (patch: TextTranslation) => setDraft(language === 'it' ? { ...draft, ...(patch.paragraphs !== undefined ? { paragraphs: patch.paragraphs } : {}), ...(patch.specs !== undefined ? { specs: patch.specs } : {}), ...(patch.quoteText !== undefined ? { quote: { ...draft.quote, text: patch.quoteText } } : {}) } : { ...draft, translations: { ...draft.translations, [language]: { ...draft.translations?.[language], ...patch } } })
   return (
     <form
       className="max-w-3xl space-y-6"
@@ -333,11 +352,11 @@ function PerfumeEditor({
         onSave(draft)
       }}
     >
-      <h2 className="text-h2">{product ? 'Il profumo' : 'Aggiungi il profumo'}</h2>
-      <fieldset disabled={busy} className="space-y-6">
-        <div className="grid gap-5 sm:grid-cols-2">
+      <h2 className="text-h2">{product ? t('Il profumo') : t('Aggiungi il profumo')}</h2>
+      <fieldset disabled={busy} className="min-w-0 space-y-6">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <label className="shop-label">
-            Nome
+            {t("Nome")}
             <input
               className="shop-input"
               required
@@ -347,7 +366,7 @@ function PerfumeEditor({
           </label>
           <PriceInput value={draft.priceCents ?? 12000} onChange={(priceCents) => setDraft({ ...draft, priceCents })} />
           <label className="shop-label">
-            Codice
+            {t("Codice")}
             <input
               className="shop-input"
               value={draft.code}
@@ -355,24 +374,25 @@ function PerfumeEditor({
             />
           </label>
         </div>
+        <TextLanguages language={language} onChange={setLanguage} product={draft} />
         <label className="shop-label">
-          Descrizione (paragrafi separati da una riga vuota)
+          {t("Descrizione (paragrafi separati da una riga vuota)")}
           <textarea
             className="shop-input min-h-48"
-            value={draft.paragraphs.join('\n\n')}
-            onChange={(event) => setDraft({ ...draft, paragraphs: event.target.value.split('\n\n') })}
+            value={text.paragraphs?.join('\n\n') ?? ''}
+            onChange={(event) => setText({ paragraphs: event.target.value.split('\n\n') })}
           />
         </label>
         <label className="shop-label">
-          Caratteristiche (una per riga)
+          {t("Caratteristiche (una per riga)")}
           <textarea
             className="shop-input"
-            value={draft.specs.join('\n')}
-            onChange={(event) => setDraft({ ...draft, specs: event.target.value.split('\n') })}
+            value={text.specs?.join('\n') ?? ''}
+            onChange={(event) => setText({ specs: event.target.value.split('\n') })}
           />
         </label>
         <label className="shop-label">
-          Ingredienti (uno per riga)
+          {t("Ingredienti (uno per riga)")}
           <textarea
             className="shop-input"
             value={draft.ingredients.join('\n')}
@@ -380,29 +400,29 @@ function PerfumeEditor({
           />
         </label>
         <label className="shop-label">
-          Citazione
+          {t("Citazione")}
           <input
             className="shop-input"
-            value={draft.quote.text}
-            onChange={(event) => setDraft({ ...draft, quote: { ...draft.quote, text: event.target.value } })}
+            value={text.quoteText ?? ''}
+            onChange={(event) => setText({ quoteText: event.target.value })}
           />
         </label>
         <label className="shop-label">
-          Autore
+          {t("Autore")}
           <input
             className="shop-input"
             value={draft.quote.author ?? ''}
             onChange={(event) => setDraft({ ...draft, quote: { ...draft.quote, author: event.target.value } })}
           />
         </label>
-        <PhotoEditor images={draft.images} library={library} onChange={(images) => setDraft({ ...draft, images })} />
+        <PhotoEditor language={language} images={draft.images} library={library} onChange={(images) => setDraft({ ...draft, images })} />
         <div className="flex gap-5">
           <button className="btn" type="submit" disabled={STATIC_PREVIEW}>
-            Salva profumo
+            {t("Salva profumo")}
           </button>
           {product && (
             <button className="underline text-small" type="button" disabled={STATIC_PREVIEW} onClick={onDelete}>
-              Elimina profumo
+              {t("Elimina profumo")}
             </button>
           )}
         </div>
@@ -424,6 +444,7 @@ interface Order {
   } | null
 }
 export default function Admin() {
+  const { locale } = useLocale()
   const { catalog, setCatalog, reload } = useShop()
   const [authenticated, setAuthenticated] = useState(STATIC_PREVIEW)
   const [checking, setChecking] = useState(!STATIC_PREVIEW)
@@ -438,6 +459,7 @@ export default function Admin() {
   const [photoAlt, setPhotoAlt] = useState('')
   const [heroSrc, setHeroSrc] = useState('')
   const [heroAlt, setHeroAlt] = useState('')
+  const [heroTranslations, setHeroTranslations] = useState<Img['altTranslations']>({})
   const [source, setSource] = useState('')
   const [replacement, setReplacement] = useState('')
   useEffect(() => {
@@ -450,6 +472,7 @@ export default function Admin() {
   useEffect(() => {
     setHeroSrc(catalog.hero.src)
     setHeroAlt(catalog.hero.alt)
+    setHeroTranslations(catalog.hero.altTranslations ?? {})
   }, [catalog.hero])
   const library = [
     ...new Map(
@@ -489,20 +512,18 @@ export default function Admin() {
   return (
     <main className="container-site py-10 md:py-16">
       {STATIC_PREVIEW && <aside className="mb-8 border border-line p-5 text-small">
-        <strong className="font-medium">Anteprima pubblica dell’interfaccia · GitHub Pages</strong>
-        <p className="mt-2">Puoi esplorare i pannelli e modificare i campi per provare il layout.
-        Salvataggio, eliminazione, caricamenti, accesso e pagamenti sono disattivati.
-        Le modifiche ai campi vengono perse quando cambi prodotto o ricarichi la pagina.
-        Nessun dato privato o ordine reale è caricato.</p>
+        <strong className="font-medium">{t("Anteprima pubblica dell’interfaccia · GitHub Pages")}</strong>
+        <p className="mt-2">{t("Puoi esplorare i pannelli e modificare i campi per provare il layout. Salvataggio, eliminazione, caricamenti, accesso e pagamenti sono disattivati. Le modifiche ai campi vengono perse quando cambi prodotto o ricarichi la pagina. Nessun dato privato o ordine reale è caricato.")}</p>
       </aside>}
       <header className="flex flex-wrap items-end justify-between gap-6 border-b border-line pb-8">
         <div>
-          <p className="eyebrow">ZITO 1950 · {STATIC_PREVIEW ? 'Anteprima UI' : 'Area riservata'}</p>
-          <h1 className="mt-3 text-display">Amministrazione</h1>
+          <p className="eyebrow">ZITO 1950 · {STATIC_PREVIEW ? t('Anteprima UI') : t('Area riservata')}</p>
+          <h1 className="mt-3 text-display">{t("Amministrazione")}</h1>
         </div>
         <div className="flex gap-5">
+          <LanguageSelector />
           <a href={import.meta.env.BASE_URL} className="link-arrow">
-            <span>Visita il sito</span>
+            <span>{t("Visita il sito")}</span>
           </a>
           {authenticated && !STATIC_PREVIEW && (
             <button
@@ -516,22 +537,22 @@ export default function Admin() {
                 }, 'Sessione chiusa.')
               }
             >
-              Esci
+              {t("Esci")}
             </button>
           )}
         </div>
       </header>
       <p role="status" aria-live="polite" className="my-6 text-small">
-        {checking ? 'Verifica della sessione…' : status}
+        {checking ? t('Verifica della sessione…') : t(status)}
       </p>
       {!checking && !authenticated && (
         <form className="max-w-md space-y-6 py-10" onSubmit={(event) => void login(event)}>
-          <h2 className="text-h2">Accesso amministratore</h2>
+          <h2 className="text-h2">{t("Accesso amministratore")}</h2>
           <p className="text-small text-muted">
-            Sessione protetta, scadenza dopo un’ora. Nessuna registrazione pubblica.
+            {t("Sessione protetta, scadenza dopo un’ora. Nessuna registrazione pubblica.")}
           </p>
           <label className="shop-label">
-            Password
+            {t("Password")}
             <input
               className="shop-input"
               type="password"
@@ -543,19 +564,19 @@ export default function Admin() {
             />
           </label>
           <button type="submit" className="btn" disabled={busy}>
-            {busy ? 'Accesso…' : 'Accedi'}
+            {busy ? t('Accesso…') : t('Accedi')}
           </button>
         </form>
       )}
       {authenticated && (
         <>
-          <nav aria-label="Amministrazione" className="mb-10 flex flex-wrap gap-6 border-b border-line pb-5">
+          <nav aria-label={t("Amministrazione")} className="mb-10 flex flex-wrap gap-6 border-b border-line pb-5">
             {(
               [
-                ['products', 'Prodotti'],
-                ['perfume', 'Profumo'],
-                ['photos', 'Fotografie'],
-                ['orders', 'Ordini'],
+                ['products', t('Prodotti')],
+                ['perfume', t('Profumo')],
+                ['photos', t('Fotografie')],
+                ['orders', t('Ordini')],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -585,7 +606,7 @@ export default function Admin() {
                 }, 'Catalogo aggiornato.')
               }
             >
-              Ricarica catalogo
+              {t("Ricarica catalogo")}
             </button>
           </nav>
           {tab === 'perfume' && (
@@ -595,26 +616,20 @@ export default function Admin() {
               library={library}
               busy={busy}
               onSave={(product) =>
-                void perform(
-                  async () =>
-                    setCatalog(await api<Catalog>('/admin/perfume', 'PUT', { product, revision: catalog.revision })),
-                  'Profumo salvato e pubblicato.',
-                )
+                void perform(async () =>
+                  setCatalog(await api<Catalog>('/admin/perfume', 'PUT', { product, revision: catalog.revision })), 'Profumo salvato e pubblicato.')
               }
               onDelete={() => {
-                if (window.confirm('Eliminare il profumo dal sito?'))
-                  void perform(
-                    async () =>
-                      setCatalog(
-                        await api<Catalog>('/admin/perfume', 'PUT', { product: null, revision: catalog.revision }),
-                      ),
-                    'Profumo eliminato.',
-                  )
+                if (window.confirm(t('Eliminare il profumo dal sito?')))
+                  void perform(async () =>
+                    setCatalog(
+                      await api<Catalog>('/admin/perfume', 'PUT', { product: null, revision: catalog.revision }),
+                    ), 'Profumo eliminato.')
               }}
             />
           )}
           {tab === 'products' && (
-            <div className="grid gap-10 md:grid-cols-[250px_1fr]">
+            <div className="grid grid-cols-1 gap-10 md:grid-cols-[250px_minmax(0,1fr)]">
               <aside>
                 <button
                   type="button"
@@ -634,7 +649,7 @@ export default function Admin() {
                     })
                   }}
                 >
-                  Aggiungi prodotto
+                  {t("Aggiungi prodotto")}
                 </button>
                 <ul className="max-h-[70vh] overflow-y-auto">
                   {catalog.models.map((m) => (
@@ -646,7 +661,7 @@ export default function Admin() {
                         onClick={() => {
                           if (
                             model &&
-                            !window.confirm('Aprire un altro prodotto? Le modifiche non salvate saranno perse.')
+                            !window.confirm(t('Aprire un altro prodotto? Le modifiche non salvate saranno perse.'))
                           )
                             return
                           setSelected(m.id)
@@ -654,7 +669,7 @@ export default function Admin() {
                         }}
                       >
                         <span className="block font-serif text-xl">{m.name}</span>
-                        <span className="text-xs text-muted">{m.buyEnabled ? 'Acquisto attivo' : 'Solo vetrina'}</span>
+                        <span className="text-xs text-muted">{m.buyEnabled ? t('Acquisto attivo') : t('Solo vetrina')}</span>
                       </button>
                     </li>
                   ))}
@@ -684,7 +699,7 @@ export default function Admin() {
                         setNewProduct(null)
                         return
                       }
-                      if (window.confirm(`Eliminare ${model.name} dal catalogo?`))
+                      if (window.confirm(t('Eliminare {name} dal catalogo?', { name: model.name })))
                         void perform(async () => {
                           setCatalog(
                             await api<Catalog>(`/admin/products/${model.id}`, 'DELETE', { revision: catalog.revision }),
@@ -695,10 +710,9 @@ export default function Admin() {
                   />
                 ) : (
                   <div className="border-t border-line pt-8">
-                    <h2 className="text-h2">La collezione</h2>
+                    <h2 className="text-h2">{t("La collezione")}</h2>
                     <p className="mt-4 text-ink-2">
-                      Seleziona un orologio per modificare descrizioni, prezzi, varianti e fotografie. L’acquisto può
-                      essere attivato per ogni prodotto.
+                      {t("Seleziona un orologio per modificare descrizioni, prezzi, varianti e fotografie. L’acquisto può essere attivato per ogni prodotto.")}
                     </p>
                   </div>
                 )}
@@ -723,13 +737,12 @@ export default function Admin() {
                   }, 'Foto caricata. Ora puoi associarla a un prodotto o al sito.')
                 }}
               >
-                <h2 className="text-h2">Carica fotografie</h2>
+                <h2 className="text-h2">{t("Carica fotografie")}</h2>
                 <p className="text-small text-muted">
-                  JPG, PNG e WebP, massimo 12 MB. Le foto vengono ridimensionate, private dei metadati e convertite in
-                  WebP.
+                  {t("JPG, PNG e WebP, massimo 12 MB. Le foto vengono ridimensionate, private dei metadati e convertite in WebP.")}
                 </p>
                 <label className="shop-label">
-                  File
+                  {t("File")}
                   <input
                     type="file"
                     className="shop-input"
@@ -740,7 +753,7 @@ export default function Admin() {
                   />
                 </label>
                 <label className="shop-label">
-                  Descrizione accessibile
+                  {t("Descrizione accessibile")}
                   <input
                     className="shop-input"
                     required
@@ -750,30 +763,32 @@ export default function Admin() {
                   />
                 </label>
                 <button type="submit" className="btn" disabled={busy || !photo || STATIC_PREVIEW}>
-                  Carica foto
+                  {t("Carica foto")}
                 </button>
               </form>
               <form
                 className="max-w-2xl space-y-5 border-t border-line pt-8"
                 onSubmit={(e) => {
                   e.preventDefault()
-                  void perform(
-                    async () =>
-                      setCatalog(
-                        await api<Catalog>('/admin/hero', 'PUT', {
-                          image: { src: heroSrc, alt: heroAlt },
-                          revision: catalog.revision,
-                        }),
-                      ),
-                    'Foto principale aggiornata.',
-                  )
+                  void perform(async () =>
+                    setCatalog(
+                      await api<Catalog>('/admin/hero', 'PUT', {
+                        image: { src: heroSrc, alt: heroAlt, altTranslations: heroTranslations },
+                        revision: catalog.revision,
+                      }),
+                    ), 'Foto principale aggiornata.')
                 }}
               >
-                <h2 className="text-h2">Foto principale</h2>
+                <h2 className="text-h2">{t("Foto principale")}</h2>
                 <img src={asset(heroSrc)} alt={heroAlt} className="max-h-64 w-full object-contain" />
                 <label className="shop-label">
-                  Fotografia
-                  <select className="shop-input" value={heroSrc} onChange={(e) => setHeroSrc(e.target.value)}>
+                  {t("Fotografia")}
+                  <select className="shop-input" value={heroSrc} onChange={(e) => {
+                    const image = [catalog.hero, ...library].find(image => image.src === e.target.value)
+                    setHeroSrc(e.target.value)
+                    setHeroAlt(image?.alt ?? '')
+                    setHeroTranslations(image?.altTranslations ?? {})
+                  }}>
                     {[...new Map([catalog.hero, ...library].map((im) => [im.src, im])).values()].map((im) => (
                       <option key={im.src} value={im.src}>
                         {im.alt || im.src}
@@ -782,11 +797,15 @@ export default function Admin() {
                   </select>
                 </label>
                 <label className="shop-label">
-                  Descrizione
+                  {t("Descrizione")}
                   <input className="shop-input" required value={heroAlt} onChange={(e) => setHeroAlt(e.target.value)} />
                 </label>
+                {LOCALES.filter(language => language !== 'it').map(language => <label key={language} className="shop-label">
+                  {LANGUAGE_NAMES[language]} · {t('Descrizione foto')}
+                  <input className="shop-input" maxLength={500} value={heroTranslations?.[language] ?? ''} onChange={event => setHeroTranslations({ ...heroTranslations, [language]: event.target.value })} />
+                </label>)}
                 <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW}>
-                  Salva foto principale
+                  {t("Salva foto principale")}
                 </button>
               </form>
               <form
@@ -795,20 +814,17 @@ export default function Admin() {
                   e.preventDefault()
                   const im = library.find((im) => im.src === replacement)
                   if (!im) return
-                  void perform(
-                    async () =>
-                      setCatalog(
-                        await api<Catalog>('/admin/image', 'PUT', { source, image: im, revision: catalog.revision }),
-                      ),
-                    'Fotografia del sito sostituita.',
-                  )
+                  void perform(async () =>
+                    setCatalog(
+                      await api<Catalog>('/admin/image', 'PUT', { source, image: im, revision: catalog.revision }),
+                    ), 'Fotografia del sito sostituita.')
                 }}
               >
-                <h2 className="text-h2">Fotografie del sito</h2>
+                <h2 className="text-h2">{t("Fotografie del sito")}</h2>
                 <label className="shop-label">
-                  Foto da sostituire
+                  {t("Foto da sostituire")}
                   <select required className="shop-input" value={source} onChange={(e) => setSource(e.target.value)}>
-                    <option value="">Seleziona</option>
+                    <option value="">{t("Seleziona")}</option>
                     {catalog.siteImages
                       .filter((im) => im.src !== catalog.hero.src)
                       .map((im) => (
@@ -819,14 +835,14 @@ export default function Admin() {
                   </select>
                 </label>
                 <label className="shop-label">
-                  Nuova foto
+                  {t("Nuova foto")}
                   <select
                     required
                     className="shop-input"
                     value={replacement}
                     onChange={(e) => setReplacement(e.target.value)}
                   >
-                    <option value="">Seleziona</option>
+                    <option value="">{t("Seleziona")}</option>
                     {library.map((im) => (
                       <option key={im.src} value={im.src}>
                         {im.alt || im.src}
@@ -842,11 +858,11 @@ export default function Admin() {
                   />
                 )}
                 <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW}>
-                  Sostituisci foto
+                  {t("Sostituisci foto")}
                 </button>
               </form>
               <section className="border-t border-line pt-8">
-                <h2 className="text-h2">Libreria caricamenti</h2>
+                <h2 className="text-h2">{t("Libreria caricamenti")}</h2>
                 <ul className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                   {catalog.photos.map((im) => (
                     <li key={im.src}>
@@ -857,21 +873,18 @@ export default function Admin() {
                         className="mt-3 underline text-small"
                         disabled={busy || STATIC_PREVIEW}
                         onClick={() => {
-                          if (window.confirm('Rimuovere la foto dalla libreria?'))
-                            void perform(
-                              async () =>
-                                setCatalog(
-                                  await api<Catalog>(
-                                    `/admin/photos/${im.src.split('/')[1].replace('.webp', '')}`,
-                                    'DELETE',
-                                    { revision: catalog.revision },
-                                  ),
+                          if (window.confirm(t('Rimuovere la foto dalla libreria?')))
+                            void perform(async () =>
+                              setCatalog(
+                                await api<Catalog>(
+                                  `/admin/photos/${im.src.split('/')[1].replace('.webp', '')}`,
+                                  'DELETE',
+                                  { revision: catalog.revision },
                                 ),
-                              'Foto rimossa dalla libreria.',
-                            )
+                              ), 'Foto rimossa dalla libreria.')
                         }}
                       >
-                        Elimina foto
+                        {t("Elimina foto")}
                       </button>
                     </li>
                   ))}
@@ -881,11 +894,11 @@ export default function Admin() {
           )}
           {tab === 'orders' && (
             <section>
-              <h2 className="text-h2">Ordini recenti</h2>
+              <h2 className="text-h2">{t("Ordini recenti")}</h2>
               <p className="mt-3 text-small text-muted">
-                Spedisci solo ordini COMPLETED. Gli ordini in attesa non confermano un pagamento.
+                {t("Spedisci solo ordini COMPLETED. Gli ordini in attesa non confermano un pagamento.")}
               </p>
-              {!orders.length && <p className="mt-8">{STATIC_PREVIEW ? 'Gli ordini reali richiedono il backend; nessun ordine è caricato nell’anteprima.' : 'Nessun ordine.'}</p>}
+              {!orders.length && <p className="mt-8">{STATIC_PREVIEW ? t('Gli ordini reali richiedono il backend; nessun ordine è caricato nell’anteprima.') : t('Nessun ordine.')}</p>}
               <ul className="mt-8 space-y-8">
                 {orders.map((order) => (
                   <li key={order.id} className="border-t border-line pt-5">
@@ -893,10 +906,10 @@ export default function Admin() {
                       <h3 className="text-h3">
                         {euro(order.total)} · {order.status}
                       </h3>
-                      <span className="text-small">{new Date(order.created).toLocaleString('it-IT')}</span>
+                      <span className="text-small">{new Date(order.created).toLocaleString(LANGUAGE_TAGS[locale])}</span>
                     </div>
                     <p className="mt-2 break-all text-small">
-                      Riferimento: {order.id} · PayPal: {order.paypal_id ?? 'in preparazione'}
+                      {t('Riferimento:')} {order.id} · PayPal: {order.paypal_id ?? t('in preparazione')}
                     </p>
                     <ul className="mt-3 text-small">
                       {order.items.map((item, index) => (
@@ -907,7 +920,7 @@ export default function Admin() {
                     </ul>
                     {order.receipt && (
                       <div className="mt-4 text-small">
-                        <p>Pagamento: {order.receipt.captureId}</p>
+                        <p>{t("Pagamento:") + ' '}{order.receipt.captureId}</p>
                         <p>{order.receipt.email}</p>
                         <p>{order.receipt.shipping?.name?.full_name}</p>
                         <p>{Object.values(order.receipt.shipping?.address ?? {}).join(', ')}</p>

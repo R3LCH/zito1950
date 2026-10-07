@@ -171,6 +171,43 @@ test('catalog mutations persist, reject stale revisions, and protect used upload
   assert.equal((await admin.request('/admin/photos', 'POST', invalid)).status, 400)
 })
 
+test('multilingual products retain shared identity, reject unsupported locales and fall back to Italian', async (t) => {
+  const { admin, application } = await fixture(t)
+  const { localizeModel } = await import('../src/data/localization.ts')
+  let catalog = (await admin.request('/catalog')).body
+  const product = structuredClone(catalog.models[0])
+  const originalName = product.name
+  product.id = 'multilingual-new'
+  product.description = 'Descrizione italiana personalizzata'
+  delete product.quote
+  product.translations = { en: { description: 'Custom English description', specs: ['English specification'], quoteText: 'English-only quotation' }, uk: { description: 'Український опис' } }
+  product.images[0].altTranslations = { de: 'Deutsche Bildbeschreibung' }
+  const created = await admin.request(`/admin/products/${product.id}`, 'PUT', { product, revision: catalog.revision })
+  assert.equal(created.status, 200)
+  catalog = created.body
+  const saved = JSON.parse(application.db.prepare('SELECT body FROM catalog').get().body).models.find(model => model.id === product.id)
+  assert.equal(localizeModel(saved, 'en').name, originalName)
+  assert.equal(localizeModel(saved, 'en').description, 'Custom English description')
+  assert.equal(localizeModel(saved, 'uk').description, 'Український опис')
+  assert.equal(localizeModel(saved, 'pl').description, product.description)
+  assert.equal(localizeModel(saved, 'de').images[0].alt, 'Deutsche Bildbeschreibung')
+  assert.equal(localizeModel(saved, 'en').quote.text, 'English-only quotation')
+  assert.equal(localizeModel(saved, 'it').quote, undefined)
+  product.translations.fr = { description: 'Unsupported' }
+  assert.equal((await admin.request(`/admin/products/${product.id}`, 'PUT', { product, revision: catalog.revision })).status, 400)
+  delete product.translations.fr
+  product.translations.en.name = 'Forbidden translated product name'
+  assert.equal((await admin.request(`/admin/products/${product.id}`, 'PUT', { product, revision: catalog.revision })).status, 400)
+  delete product.translations.en.name
+  product.translations.en.description = 'Updated English only'
+  const updated = await admin.request(`/admin/products/${product.id}`, 'PUT', { product, revision: catalog.revision })
+  assert.equal(updated.status, 200)
+  const result = updated.body.models.find(model => model.id === product.id)
+  assert.equal(result.description, 'Descrizione italiana personalizzata')
+  assert.equal(result.translations.uk.description, 'Український опис')
+  assert.equal(result.translations.en.description, 'Updated English only')
+})
+
 test('checkout uses server variant price, rejects disabled products and foreign sessions', async (t) => {
   const { buyer, admin, enable, seen, client } = await fixture(t, true)
   const items = [{ modelId: 'n7', variantId: 'blu', quantity: 2, priceCents: 1 }]
