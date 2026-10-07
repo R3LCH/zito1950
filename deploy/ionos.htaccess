@@ -1,0 +1,21 @@
+# Static ZITO 1950 site on IONOS managed Apache webspace.
+# Connect the future domain to /public/zito1950 (SFTP).
+# No domain or HTTPS redirect until the domain and certificate are configured.
+Options -Indexes
+DirectoryIndex index.html
+
+# dist/ contains only public docs as Markdown (design/DESIGN.md), so .md is served, not denied.
+<FilesMatch "(?i)(^\.|\.(?:env|ini|log|bak|sql|map|ya?ml|pem|key)$|^(?:package(?:-lock)?\.json|CNAME)$)">
+    Require all denied
+</FilesMatch>
+
+AddType "text/markdown; charset=utf-8" .md
+AddType "text/plain; charset=utf-8" .txt
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    <FilesMatch "\.(?:html|json)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>

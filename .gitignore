@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+*.log
+.DS_Store
+.idea/
+.vscode/
+research/raw/
+research/.venv/
+__pycache__/
+research/old-site-images/

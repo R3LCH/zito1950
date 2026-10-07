@@ -1,0 +1,43 @@
+{
+  "$description": "ZITO 1950 design tokens (DTCG). Mirrored in src/styles/index.css @theme.",
+  "color": {
+    "$type": "color",
+    "bg": { "$value": "#FFFFFF", "$description": "All surfaces, footer included" },
+    "ink": { "$value": "#141414", "$description": "Titles, body, controls, focus" },
+    "ink-2": { "$value": "#3A3A3A", "$description": "Secondary prose" },
+    "muted": { "$value": "#6B6B6B", "$description": "Captions, meta; 5.33:1 on white" },
+    "line": { "$value": "#E7E7E5", "$description": "Hairline dividers" },
+    "well": { "$value": "#F5F5F3", "$description": "Image wells behind isolated products" }
+  },
+  "font": {
+    "$type": "fontFamily",
+    "serif": { "$value": ["EB Garamond", "Garamond", "serif"] },
+    "sans": { "$value": ["Manrope Variable", "Manrope", "system-ui", "sans-serif"] }
+  },
+  "type": {
+    "display": { "$type": "typography", "$value": { "fontFamily": "{font.serif}", "fontSize": "clamp(2.5rem,5vw,4.5rem)", "lineHeight": 1.08, "fontWeight": 400 } },
+    "h2": { "$type": "typography", "$value": { "fontFamily": "{font.serif}", "fontSize": "clamp(2rem,3.6vw,3rem)", "lineHeight": 1.15, "fontWeight": 400 } },
+    "h3": { "$type": "typography", "$value": { "fontFamily": "{font.serif}", "fontSize": "1.5rem", "lineHeight": 1.25, "fontWeight": 400 } },
+    "body": { "$type": "typography", "$value": { "fontFamily": "{font.sans}", "fontSize": "1.0625rem", "lineHeight": 1.7, "fontWeight": 400 } },
+    "small": { "$type": "typography", "$value": { "fontFamily": "{font.sans}", "fontSize": "0.875rem", "lineHeight": 1.5, "fontWeight": 400 } },
+    "eyebrow": { "$type": "typography", "$value": { "fontFamily": "{font.sans}", "fontSize": "0.75rem", "lineHeight": 1.5, "fontWeight": 500, "letterSpacing": "0.18em" }, "$description": "Uppercase" }
+  },
+  "space": {
+    "$type": "dimension",
+    "1": { "$value": "4px" }, "2": { "$value": "8px" }, "3": { "$value": "12px" }, "4": { "$value": "16px" },
+    "6": { "$value": "24px" }, "8": { "$value": "32px" }, "10": { "$value": "40px" }, "12": { "$value": "48px" },
+    "16": { "$value": "64px" }, "24": { "$value": "96px" }, "32": { "$value": "128px" }
+  },
+  "layout": {
+    "container": { "$type": "dimension", "$value": "1240px" },
+    "gutter": { "$value": "clamp(1.25rem,4vw,4rem)" },
+    "section-y": { "$value": "clamp(3.5rem,8vw,8rem)" },
+    "header-h": { "$type": "dimension", "$value": "72px" }
+  },
+  "radius": { "$type": "dimension", "none": { "$value": "0px" } },
+  "motion": {
+    "ease": { "$type": "cubicBezier", "$value": [0.16, 1, 0.3, 1] },
+    "duration": { "$type": "duration", "$value": "500ms" },
+    "reveal-distance": { "$type": "dimension", "$value": "8px" }
+  }
+}

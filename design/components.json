@@ -1,0 +1,14 @@
+{
+  "$description": "Component contracts for the ZITO 1950 site. Visual spec: design/DESIGN.md; tokens: design/zito.tokens.json. All copy from src/data/content.ts (types in src/data/types.ts).",
+  "components": [
+    { "name": "Header", "path": "src/components/Header.tsx", "props": {}, "behaviour": "Sticky white bar 72px, logo.svg left, anchor nav (#storia, #orologi, #profumo, #contatti); hairline bottom border after scroll; mobile menu dialog." },
+    { "name": "Hero", "path": "src/components/Hero.tsx", "props": { "site": "typeof site" }, "behaviour": "Editorial split: display title + short source text left, img/hero/hero.jpg right (eager, fetchpriority high)." },
+    { "name": "StoriaChapter", "path": "src/components/StoriaChapter.tsx", "props": { "title": "string", "text": "string[]", "image?": "{src,alt}", "reverse?": "boolean" }, "behaviour": "Narrow reading column with optional image; alternating sides on desktop, single column below 768px." },
+    { "name": "Pillar", "path": "src/components/Pillar.tsx", "props": { "title": "string", "text": "string" }, "behaviour": "Text-only value block separated by hairlines; no icons." },
+    { "name": "ModelCard", "path": "src/components/ModelCard.tsx", "props": { "model": "Model", "onOpen": "(id: string) => void" }, "behaviour": "Button: image in well (object-fit contain), name in serif, codes + price in small. Opens ModelDialog." },
+    { "name": "ModelDialog", "path": "src/components/ModelDialog.tsx", "props": { "model": "Model | null", "onClose": "() => void" }, "behaviour": "Native <dialog> modal: image views, name, codes, price, quote, description, specs list. Esc/backdrop closes, focus returns to card." },
+    { "name": "Profumo", "path": "src/components/Profumo.tsx", "props": { "profumo": "typeof profumo" }, "behaviour": "N°7 Oud section: image + source text, exactly as printed." },
+    { "name": "Contatti", "path": "src/components/Contatti.tsx", "props": { "contatti": "typeof contatti" }, "behaviour": "Address, Numero Verde as tel: link, website, social links; <address> element." },
+    { "name": "Footer", "path": "src/components/Footer.tsx", "props": {}, "behaviour": "White footer, hairline top, logo-mark, legal name GRANALIDA s.r.l., nav repeat." }
+  ]
+}

@@ -1,0 +1,350 @@
+{
+ "img/hero/hero.jpg": {
+  "w": 1600,
+  "h": 617
+ },
+ "img/hero/slide01.jpg": {
+  "w": 1600,
+  "h": 617
+ },
+ "img/hero/slide03.jpg": {
+  "w": 1600,
+  "h": 617
+ },
+ "img/hero/slide06.jpg": {
+  "w": 1600,
+  "h": 617
+ },
+ "img/models/40000um-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/40000um-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/40000um.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/900-donna-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/900-donna-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/900-donna.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/900-uomo-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/900-uomo-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/900-uomo.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/bauletto-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/bauletto-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/bauletto.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/cafe-racer-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/cafe-racer-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/cafe-racer.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/casuale-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/casuale-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/casuale.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/gentleman-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/gentleman-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/gentleman.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/high-flight-16-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/high-flight-16-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/high-flight-16.jpg": {
+  "w": 252,
+  "h": 340
+ },
+ "img/models/high-flight-16b-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/high-flight-16b-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/high-flight-16b.jpg": {
+  "w": 270,
+  "h": 340
+ },
+ "img/models/italy-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/italy-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/italy.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/n12-tourbillon-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n12-tourbillon-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n12-tourbillon.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/n2-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n2-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n2.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/n20-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n20-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n20.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n3-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n3-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n3.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/n5-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n5-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n5.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n6-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n6-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n6.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n7-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n7-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n7.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/n9-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n9-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/n9.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/shockproof-16-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/shockproof-16.jpg": {
+  "w": 196,
+  "h": 400
+ },
+ "img/models/shockproof-16b-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/shockproof-16b-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/shockproof-16b.jpg": {
+  "w": 300,
+  "h": 400
+ },
+ "img/models/shockproof-16p-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/shockproof-16p-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/shockproof-16p.jpg": {
+  "w": 190,
+  "h": 400
+ },
+ "img/models/takimo-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/takimo-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/takimo.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/tasca-2.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/tasca-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/tasca.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/tutus-ab-uno-2.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/tutus-ab-uno-3.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/tutus-ab-uno.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/vintage-2.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/models/vintage-3.jpg": {
+  "w": 952,
+  "h": 400
+ },
+ "img/models/vintage.jpg": {
+  "w": 666,
+  "h": 400
+ },
+ "img/profumo/n7-oud-journal.jpg": {
+  "w": 800,
+  "h": 960
+ },
+ "img/profumo/n7-oud.jpg": {
+  "w": 1536,
+  "h": 1024
+ },
+ "img/storia/francesco-zito-1955-laboratorio.jpg": {
+  "w": 1110,
+  "h": 817
+ },
+ "img/storia/francesco-zito-scooter.jpg": {
+  "w": 855,
+  "h": 1260
+ },
+ "img/storia/luigi-antonio-zito-cavaliere.jpg": {
+  "w": 1075,
+  "h": 1445
+ },
+ "img/storia/luigi-antonio-zito.jpg": {
+  "w": 1067,
+  "h": 1462
+ },
+ "img/storia/scalea-borgo.jpg": {
+  "w": 900,
+  "h": 1250
+ },
+ "img/storia/scalea-palazzo.jpg": {
+  "w": 600,
+  "h": 360
+ },
+ "img/storia/vittorio-zito-ducati-1957.jpg": {
+  "w": 864,
+  "h": 1312
+ }
+}

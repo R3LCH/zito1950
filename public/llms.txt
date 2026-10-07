@@ -1,0 +1,16 @@
+# ZITO 1950
+
+> Sito vetrina (in italiano) del marchio di orologi di famiglia ZITO 1950, GRANALIDA s.r.l., via Michele Bianchi 23, Scalea (CS), Italia. Numero Verde 800 58 67 08. www.zito1950.it
+
+Pagina unica con sezioni ad ancora:
+
+- #storia: la storia della famiglia e del marchio, dai testi del catalogo.
+- #orologi: la collezione di modelli con codici, prezzi come stampati sul listino, specifiche e immagini; scheda di dettaglio per ogni modello.
+- #profumo: il profumo N°7 Oud.
+- #contatti: indirizzo, Numero Verde, Instagram (zito1950lifestyle) e Facebook (zito1950).
+
+## Design
+
+- [DESIGN.md](design/DESIGN.md): sistema visivo vincolante
+- [zito.tokens.json](design/zito.tokens.json): token DTCG
+- [components.json](design/components.json): contratti dei componenti
