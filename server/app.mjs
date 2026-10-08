@@ -9,7 +9,8 @@ import { mkdirSync, existsSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { z } from 'zod'
 import { models, site, storia, profumo } from '../src/data/content.ts'
-import { TRANSLATION_LOCALES, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../src/data/localization.ts'
+import { LOCALES, TRANSLATION_LOCALES, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../src/data/localization.ts'
+import { createTranslator } from './translate.mjs'
 
 const digest = (value) => createHash('sha256').update(value).digest('hex')
 const money = (cents) => (cents / 100).toFixed(2)
@@ -229,6 +230,22 @@ export function createApp(options = {}) {
     res.json({ ok: true })
   })
   app.get('/api/catalog', (req, res) => res.json(catalog()))
+  const translateText = createTranslator({ fetch: options.translateFetch ?? fetch, email: env.MYMEMORY_EMAIL })
+  const translateRequest = z.object({
+    source: z.enum(LOCALES),
+    target: z.enum(LOCALES),
+    texts: z.array(z.string().max(5000)).min(1).max(50),
+  }).strict()
+  app.post('/api/admin/translate', admin, csrf, async (req, res) => {
+    const { source, target, texts } = translateRequest.parse(req.body)
+    if (source === target) fail(400, 'Lingue di traduzione non valide.')
+    try {
+      // Blank lines stay blank so line/paragraph structure survives the round trip.
+      res.json({ texts: await Promise.all(texts.map((text) => (text.trim() ? translateText(text, source, target) : text))) })
+    } catch {
+      fail(502, 'Servizio di traduzione non disponibile. Riprova più tardi.')
+    }
+  })
   const revision = (req) => z.number().int().positive().parse(req.body.revision)
   const validImage = (im) => {
     if (!existsSync(join(im.src.startsWith('uploads/') ? dataDir : join(root, 'public'), im.src)))

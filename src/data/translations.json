@@ -530,7 +530,16 @@
     "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Оплата завершена. Номер заказа: {id}. Сохраните этот номер.",
     "Ingredienti": "Ингредиенты",
     "Indirizzo": "Адрес",
-    "Codici": "Коды"
+    "Codici": "Коды",
+    "Invio traduce il testo nei campi vuoti delle altre lingue; nei campi a più righe usa Ctrl+Invio (⌘+Invio su Mac).": "Enter переводит текст в пустые поля других языков; в многострочных полях используйте Ctrl+Enter (⌘+Enter на Mac).",
+    "La traduzione automatica non è disponibile nell’anteprima.": "Автоматический перевод недоступен в режиме предпросмотра.",
+    "Scrivi prima il testo da tradurre.": "Сначала введите текст для перевода.",
+    "Nessun campo vuoto da tradurre in altre lingue.": "Нет пустых полей для перевода на другие языки.",
+    "Traduzione in corso…": "Идёт перевод…",
+    "Tradotto in: {languages}": "Переведено на: {languages}",
+    "Traduzione non riuscita per: {languages}": "Не удалось перевести на: {languages}",
+    "Lingue di traduzione non valide.": "Недопустимые языки перевода.",
+    "Servizio di traduzione non disponibile. Riprova più tardi.": "Сервис перевода недоступен. Попробуйте позже."
   },
   "en": {
     "1957": "1957",
@@ -1063,7 +1072,16 @@
     "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Payment completed. Order reference: {id}. Keep this reference.",
     "Ingredienti": "Ingredients",
     "Indirizzo": "Address",
-    "Codici": "Codes"
+    "Codici": "Codes",
+    "Invio traduce il testo nei campi vuoti delle altre lingue; nei campi a più righe usa Ctrl+Invio (⌘+Invio su Mac).": "Enter translates the text into the empty fields of the other languages; in multi-line fields use Ctrl+Enter (⌘+Enter on Mac).",
+    "La traduzione automatica non è disponibile nell’anteprima.": "Automatic translation is not available in the preview.",
+    "Scrivi prima il testo da tradurre.": "Enter the text to translate first.",
+    "Nessun campo vuoto da tradurre in altre lingue.": "No empty fields to translate in other languages.",
+    "Traduzione in corso…": "Translating…",
+    "Tradotto in: {languages}": "Translated into: {languages}",
+    "Traduzione non riuscita per: {languages}": "Translation failed for: {languages}",
+    "Lingue di traduzione non valide.": "Invalid translation languages.",
+    "Servizio di traduzione non disponibile. Riprova più tardi.": "Translation service unavailable. Please try again later."
   },
   "uk": {
     "1957": "1957",
@@ -1596,7 +1614,16 @@
     "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Оплату завершено. Номер замовлення: {id}. Збережіть цей номер.",
     "Ingredienti": "Інгредієнти",
     "Indirizzo": "Адреса",
-    "Codici": "Коди"
+    "Codici": "Коди",
+    "Invio traduce il testo nei campi vuoti delle altre lingue; nei campi a più righe usa Ctrl+Invio (⌘+Invio su Mac).": "Enter перекладає текст у порожні поля інших мов; у багаторядкових полях використовуйте Ctrl+Enter (⌘+Enter на Mac).",
+    "La traduzione automatica non è disponibile nell’anteprima.": "Автоматичний переклад недоступний у режимі попереднього перегляду.",
+    "Scrivi prima il testo da tradurre.": "Спочатку введіть текст для перекладу.",
+    "Nessun campo vuoto da tradurre in altre lingue.": "Немає порожніх полів для перекладу іншими мовами.",
+    "Traduzione in corso…": "Триває переклад…",
+    "Tradotto in: {languages}": "Перекладено: {languages}",
+    "Traduzione non riuscita per: {languages}": "Не вдалося перекласти: {languages}",
+    "Lingue di traduzione non valide.": "Неприпустимі мови перекладу.",
+    "Servizio di traduzione non disponibile. Riprova più tardi.": "Сервіс перекладу недоступний. Спробуйте пізніше."
   },
   "de": {
     "1957": "1957",
@@ -2129,7 +2156,16 @@
     "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Zahlung abgeschlossen. Bestellreferenz: {id}. Bewahren Sie diese Referenz auf.",
     "Ingredienti": "Inhaltsstoffe",
     "Indirizzo": "Adresse",
-    "Codici": "Codes"
+    "Codici": "Codes",
+    "Invio traduce il testo nei campi vuoti delle altre lingue; nei campi a più righe usa Ctrl+Invio (⌘+Invio su Mac).": "Enter übersetzt den Text in die leeren Felder der anderen Sprachen; in mehrzeiligen Feldern Strg+Enter verwenden (⌘+Enter auf dem Mac).",
+    "La traduzione automatica non è disponibile nell’anteprima.": "Die automatische Übersetzung ist in der Vorschau nicht verfügbar.",
+    "Scrivi prima il testo da tradurre.": "Bitte zuerst den zu übersetzenden Text eingeben.",
+    "Nessun campo vuoto da tradurre in altre lingue.": "Keine leeren Felder zum Übersetzen in anderen Sprachen.",
+    "Traduzione in corso…": "Übersetzung läuft…",
+    "Tradotto in: {languages}": "Übersetzt in: {languages}",
+    "Traduzione non riuscita per: {languages}": "Übersetzung fehlgeschlagen für: {languages}",
+    "Lingue di traduzione non valide.": "Ungültige Übersetzungssprachen.",
+    "Servizio di traduzione non disponibile. Riprova più tardi.": "Übersetzungsdienst nicht verfügbar. Bitte später erneut versuchen."
   },
   "pl": {
     "1957": "1957",
@@ -2662,6 +2698,15 @@
     "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Płatność zakończona. Numer zamówienia: {id}. Zachowaj ten numer.",
     "Ingredienti": "Składniki",
     "Indirizzo": "Adres",
-    "Codici": "Kody"
+    "Codici": "Kody",
+    "Invio traduce il testo nei campi vuoti delle altre lingue; nei campi a più righe usa Ctrl+Invio (⌘+Invio su Mac).": "Enter tłumaczy tekst na puste pola pozostałych języków; w polach wielowierszowych użyj Ctrl+Enter (⌘+Enter na Macu).",
+    "La traduzione automatica non è disponibile nell’anteprima.": "Automatyczne tłumaczenie nie jest dostępne w podglądzie.",
+    "Scrivi prima il testo da tradurre.": "Najpierw wpisz tekst do przetłumaczenia.",
+    "Nessun campo vuoto da tradurre in altre lingue.": "Brak pustych pól do przetłumaczenia w innych językach.",
+    "Traduzione in corso…": "Trwa tłumaczenie…",
+    "Tradotto in: {languages}": "Przetłumaczono na: {languages}",
+    "Traduzione non riuscita per: {languages}": "Tłumaczenie nie powiodło się dla: {languages}",
+    "Lingue di traduzione non valide.": "Nieprawidłowe języki tłumaczenia.",
+    "Servizio di traduzione non disponibile. Riprova più tardi.": "Usługa tłumaczenia niedostępna. Spróbuj ponownie później."
   }
 }

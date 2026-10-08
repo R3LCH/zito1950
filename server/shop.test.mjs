@@ -53,7 +53,9 @@ async function fixture(t, paypal = false) {
     ADMIN_PASSWORD_HASH: hashPassword('a-long-test-password'),
     ...(paypal ? { PAYPAL_CLIENT_ID: 'test', PAYPAL_CLIENT_SECRET: 'test' } : {}),
   }
-  const application = createApp({ env, dataDir: dir, fetch: transport })
+  const translateFetch = async (url, init) =>
+    Response.json([[[`[${new URL(url).searchParams.get('tl')}] ${new URLSearchParams(init.body).get('q')}`, 'x']]])
+  const application = createApp({ env, dataDir: dir, fetch: transport, translateFetch })
   const server = application.app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const base = `http://127.0.0.1:${server.address().port}`
@@ -130,6 +132,18 @@ test('admin authorization, CSRF, session rotation and revocation', async (t) => 
   assert.equal((await guest.request('/admin/orders', 'GET', undefined, { Cookie: previous.cookie })).status, 401)
   await admin.request('/admin/logout', 'POST', {})
   assert.equal((await admin.request('/admin/orders')).status, 401)
+})
+
+test('translation route requires admin session and CSRF, keeps blank lines', async (t) => {
+  const { admin, buyer } = await fixture(t)
+  const payload = { source: 'it', target: 'en', texts: ['Ciao', ''] }
+  assert.equal((await buyer.request('/admin/translate', 'POST', payload)).status, 401)
+  assert.equal((await admin.request('/admin/translate', 'POST', payload, { 'X-CSRF-Token': 'bad' })).status, 403)
+  assert.equal((await admin.request('/admin/translate', 'POST', { ...payload, target: 'it' })).status, 400)
+  const ok = await admin.request('/admin/translate', 'POST', payload)
+  assert.equal(ok.status, 200)
+  // MyMemory gets the Google-shaped fake body, rejects it, and the fallback answers.
+  assert.deepEqual(ok.body.texts, ['[en] Ciao', ''])
 })
 
 test('catalog mutations persist, reject stale revisions, and protect used uploads', async (t) => {

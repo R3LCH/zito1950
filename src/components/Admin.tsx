@@ -5,8 +5,34 @@ import { profumo as originalPerfume } from '../data/content'
 import { asset } from '../lib/asset'
 import { t, LanguageSelector, useLocale } from '../lib/i18n'
 import { LOCALES, LANGUAGE_NAMES, LANGUAGE_TAGS, missingTranslationFields, type Locale } from '../data/localization'
+import { AUTO_TRANSLATE_SUPPORTED, isBlank, useAutoTranslate, type TextValue, type TranslatableField, type TranslateKeyHandler } from '../lib/autoTranslate'
 
-function TextLanguages({ language, onChange, product }: { language: Locale; onChange: (language: Locale) => void; product: Model | Profumo }) {
+// The translate route returns the source's shape, so a list field always receives a list and a line a string.
+const textPatch = (key: keyof TextTranslation, value: TextValue): TextTranslation => ({ [key]: value })
+
+// Italian lives in the base fields; every other language lives in `translations` / `altTranslations`.
+const altOf = (image: Img, locale: Locale) => (locale === 'it' ? image.alt : image.altTranslations?.[locale])
+const withAlt = (image: Img, locale: Locale, alt: string): Img => (locale === 'it' ? { ...image, alt } : { ...image, altTranslations: { ...image.altTranslations, [locale]: alt } })
+const modelText = (d: Model, locale: Locale): TextTranslation => (locale === 'it' ? { description: d.description, specs: d.specs, quoteText: d.quote?.text } : d.translations?.[locale] ?? {})
+function withModelText(d: Model, locale: Locale, patch: TextTranslation): Model {
+  if (locale !== 'it') return { ...d, translations: { ...d.translations, [locale]: { ...d.translations?.[locale], ...patch } } }
+  return { ...d, ...(patch.description !== undefined ? { description: patch.description } : {}), ...(patch.specs !== undefined ? { specs: patch.specs } : {}), ...(patch.quoteText !== undefined ? { quote: { ...d.quote, text: patch.quoteText } } : {}) }
+}
+const variantText = (v: Variant, locale: Locale): TextTranslation => (locale === 'it' ? { label: v.label, specs: v.specs } : v.translations?.[locale] ?? {})
+const withVariantText = (v: Variant, locale: Locale, patch: Pick<TextTranslation, 'label' | 'specs'>): Variant => (locale === 'it' ? { ...v, ...patch } : { ...v, translations: { ...v.translations, [locale]: { ...v.translations?.[locale], ...patch } } })
+const perfumeText = (d: Profumo, locale: Locale): TextTranslation => (locale === 'it' ? { paragraphs: d.paragraphs, specs: d.specs, quoteText: d.quote.text } : d.translations?.[locale] ?? {})
+function withPerfumeText(d: Profumo, locale: Locale, patch: TextTranslation): Profumo {
+  if (locale !== 'it') return { ...d, translations: { ...d.translations, [locale]: { ...d.translations?.[locale], ...patch } } }
+  return { ...d, ...(patch.paragraphs !== undefined ? { paragraphs: patch.paragraphs } : {}), ...(patch.specs !== undefined ? { specs: patch.specs } : {}), ...(patch.quoteText !== undefined ? { quote: { ...d.quote, text: patch.quoteText } } : {}) }
+}
+
+function AutoTranslateHint({ status }: { status: string }) {
+  return <>
+    <p className="text-small text-muted">{AUTO_TRANSLATE_SUPPORTED ? t('Invio traduce il testo nei campi vuoti delle altre lingue; nei campi a più righe usa Ctrl+Invio (⌘+Invio su Mac).') : t('La traduzione automatica non è disponibile nell’anteprima.')}</p>
+    <p role="status" aria-live="polite" className="text-small">{status}</p>
+  </>
+}
+function TextLanguages({ language, onChange, product, translationStatus }: { language: Locale; onChange: (language: Locale) => void; product: Model | Profumo; translationStatus: string }) {
   return <section className="space-y-3 border-y border-line py-5">
     <p className="eyebrow">{t('Lingua dei contenuti')}</p>
     <div className="flex flex-wrap gap-2" role="group" aria-label={t('Lingua dei contenuti')}>
@@ -14,16 +40,20 @@ function TextLanguages({ language, onChange, product }: { language: Locale; onCh
     </div>
     <p className="text-small text-muted">{t('Nomi prodotto, codici, prezzi e fotografie sono condivisi. I testi si salvano insieme per tutte le lingue. Le traduzioni mancanti usano il testo italiano.')}</p>
     {language !== 'it' && missingTranslationFields(product, language).length > 0 && <p role="status" className="text-small">{t('Traduzioni mancanti:')} {missingTranslationFields(product, language).map(field => t(field)).join(', ')}</p>}
+    <AutoTranslateHint status={translationStatus} />
   </section>
 }
 function PhotoEditor({
   images,
   onChange,
+  onTranslateKey,
   library,
   language = 'it',
 }: {
   images: Img[]
-  onChange: (images: Img[]) => void
+  /** Receives an updater so asynchronous translations apply to the latest photos. */
+  onChange: (update: (images: Img[]) => Img[]) => void
+  onTranslateKey: TranslateKeyHandler
   library: Img[]
   language?: Locale
 }) {
@@ -40,10 +70,13 @@ function PhotoEditor({
                 {t("Descrizione foto")}
                 <input
                   className="shop-input w-full"
-                  value={language === 'it' ? im.alt : im.altTranslations?.[language] ?? ''}
-                  onChange={(e) =>
-                    onChange(images.map((item, i) => i === index ? language === 'it' ? { ...item, alt: e.target.value } : { ...item, altTranslations: { ...item.altTranslations, [language]: e.target.value } } : item))
-                  }
+                  value={altOf(im, language) ?? ''}
+                  onChange={(e) => onChange(current => current.map((item, i) => (i === index ? withAlt(item, language, e.target.value) : item)))}
+                  onKeyDown={(e) => onTranslateKey(e, language, {
+                    read: locale => altOf(im, locale),
+                    // Match by position and file: the photo may have been moved or removed while translating.
+                    fill: (locale, value) => typeof value === 'string' && onChange(current => current.map((item, i) => (i === index && item.src === im.src && isBlank(altOf(item, locale)) ? withAlt(item, locale, value) : item))),
+                  })}
                 />
               </label>
               <div className="mt-2 flex gap-4 text-small">
@@ -51,18 +84,18 @@ function PhotoEditor({
                   type="button"
                   className="underline"
                   disabled={index === 0}
-                  onClick={() => {
-                    const reordered = [...images]
+                  onClick={() => onChange(current => {
+                    const reordered = [...current]
                     ;[reordered[index - 1], reordered[index]] = [reordered[index], reordered[index - 1]]
-                    onChange(reordered)
-                  }}
+                    return reordered
+                  })}
                 >
                   {t("Sposta prima")}
                 </button>
                 <button
                   type="button"
                   className="underline"
-                  onClick={() => onChange(images.filter((_, i) => i !== index))}
+                  onClick={() => onChange(current => current.filter((_, i) => i !== index))}
                 >
                   {t("Rimuovi foto")}
                 </button>
@@ -91,7 +124,7 @@ function PhotoEditor({
           disabled={!selected}
           onClick={() => {
             const photo = library.find((im) => im.src === selected)
-            if (photo) onChange([...images, { ...photo }])
+            if (photo) onChange(current => [...current, { ...photo }])
             setSelected('')
           }}
         >
@@ -145,10 +178,22 @@ function ProductEditor({
 }) {
   const [draft, setDraft] = useState<Model>(() => structuredClone(model))
   const [language, setLanguage] = useState<Locale>('it')
-  const text = language === 'it' ? { description: draft.description, specs: draft.specs, quoteText: draft.quote?.text } : draft.translations?.[language] ?? {}
-  const setText = (patch: TextTranslation) => setDraft(language === 'it' ? { ...draft, ...(patch.description !== undefined ? { description: patch.description } : {}), ...(patch.specs !== undefined ? { specs: patch.specs } : {}), ...(patch.quoteText !== undefined ? { quote: { ...draft.quote, text: patch.quoteText } } : {}) } : { ...draft, translations: { ...draft.translations, [language]: { ...draft.translations?.[language], ...patch } } })
+  const { status: translationStatus, handle: onTranslateKey } = useAutoTranslate()
+  const text = modelText(draft, language)
+  const setText = (patch: TextTranslation) => setDraft(d => withModelText(d, language, patch))
+  // Functional updates throughout: translations land asynchronously and must not overwrite newer edits.
   const setVariant = (index: number, patch: Partial<Variant>) =>
-    setDraft({ ...draft, variants: draft.variants?.map((v, i) => (i === index ? { ...v, ...patch } : v)) })
+    setDraft(d => ({ ...d, variants: d.variants?.map((v, i) => (i === index ? { ...v, ...patch } : v)) }))
+  const setVariantText = (id: string, patch: Pick<TextTranslation, 'label' | 'specs'>) =>
+    setDraft(d => ({ ...d, variants: d.variants?.map(item => (item.id === id ? withVariantText(item, language, patch) : item)) }))
+  const modelField = (key: 'description' | 'specs' | 'quoteText'): TranslatableField => ({
+    read: locale => modelText(draft, locale)[key],
+    fill: (locale, value) => setDraft(d => (isBlank(modelText(d, locale)[key]) ? withModelText(d, locale, textPatch(key, value)) : d)),
+  })
+  const variantField = (variant: Variant, key: 'label' | 'specs'): TranslatableField => ({
+    read: locale => variantText(variant, locale)[key],
+    fill: (locale, value) => setDraft(d => ({ ...d, variants: d.variants?.map(item => (item.id === variant.id && isBlank(variantText(item, locale)[key]) ? withVariantText(item, locale, textPatch(key, value)) : item)) })),
+  })
   return (
     <form
       onSubmit={(e) => {
@@ -195,13 +240,14 @@ function ProductEditor({
             {t("Abilita acquisto e pulsante Acquista")}
           </label>
         </div>
-        <TextLanguages language={language} onChange={setLanguage} product={draft} />
+        <TextLanguages language={language} onChange={setLanguage} product={draft} translationStatus={translationStatus} />
         <label className="shop-label">
           {t("Descrizione")}
           <textarea
             className="shop-input min-h-32"
             value={text.description ?? ''}
             onChange={(e) => setText({ description: e.target.value })}
+            onKeyDown={(e) => onTranslateKey(e, language, modelField('description'))}
           />
         </label>
         <label className="shop-label">
@@ -210,6 +256,7 @@ function ProductEditor({
             className="shop-input min-h-32"
             value={text.specs?.join('\n') ?? ''}
             onChange={(e) => setText({ specs: e.target.value.split('\n') })}
+            onKeyDown={(e) => onTranslateKey(e, language, modelField('specs'))}
           />
         </label>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -219,6 +266,7 @@ function ProductEditor({
               className="shop-input"
               value={text.quoteText ?? ''}
               onChange={(e) => setText({ quoteText: e.target.value })}
+              onKeyDown={(e) => onTranslateKey(e, language, modelField('quoteText'))}
             />
           </label>
           <label className="shop-label">
@@ -230,7 +278,7 @@ function ProductEditor({
             />
           </label>
         </div>
-        <PhotoEditor language={language} images={draft.images} library={library} onChange={(images) => setDraft({ ...draft, images })} />
+        <PhotoEditor language={language} images={draft.images} library={library} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, images: update(d.images) }))} />
         <div className="space-y-6 border-t border-line pt-6">
           <h3 className="text-h3">{t("Varianti / colori")}</h3>
           {draft.variants?.map((v, index) => (
@@ -242,7 +290,8 @@ function ProductEditor({
                     className="shop-input"
                     required={language === 'it'}
                     value={language === 'it' ? v.label : v.translations?.[language]?.label ?? ''}
-                    onChange={(e) => setVariant(index, language === 'it' ? { label: e.target.value } : { translations: { ...v.translations, [language]: { ...v.translations?.[language], label: e.target.value } } })}
+                    onChange={(e) => setVariantText(v.id, { label: e.target.value })}
+                    onKeyDown={(e) => onTranslateKey(e, language, variantField(v, 'label'))}
                   />
                 </label>
                 <PriceInput value={v.priceCents ?? 1} onChange={(priceCents) => setVariant(index, { priceCents })} />
@@ -276,10 +325,11 @@ function ProductEditor({
                 <textarea
                   className="shop-input"
                   value={(language === 'it' ? v.specs : v.translations?.[language]?.specs)?.join('\n') ?? ''}
-                  onChange={(e) => setVariant(index, language === 'it' ? { specs: e.target.value ? e.target.value.split('\n') : undefined } : { translations: { ...v.translations, [language]: { ...v.translations?.[language], specs: e.target.value.split('\n') } } })}
+                  onChange={(e) => setVariantText(v.id, { specs: language === 'it' && !e.target.value ? undefined : e.target.value.split('\n') })}
+                  onKeyDown={(e) => onTranslateKey(e, language, variantField(v, 'specs'))}
                 />
               </label>
-              <PhotoEditor language={language} images={v.images} library={library} onChange={(images) => setVariant(index, { images })} />
+              <PhotoEditor language={language} images={v.images} library={library} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, variants: d.variants?.map(item => (item.id === v.id ? { ...item, images: update(item.images) } : item)) }))} />
               <button
                 type="button"
                 className="underline text-small"
@@ -342,8 +392,13 @@ function PerfumeEditor({
     structuredClone(product ?? { ...originalPerfume, priceCents: 12000 }),
   )
   const [language, setLanguage] = useState<Locale>('it')
-  const text = language === 'it' ? { paragraphs: draft.paragraphs, specs: draft.specs, quoteText: draft.quote.text } : draft.translations?.[language] ?? {}
-  const setText = (patch: TextTranslation) => setDraft(language === 'it' ? { ...draft, ...(patch.paragraphs !== undefined ? { paragraphs: patch.paragraphs } : {}), ...(patch.specs !== undefined ? { specs: patch.specs } : {}), ...(patch.quoteText !== undefined ? { quote: { ...draft.quote, text: patch.quoteText } } : {}) } : { ...draft, translations: { ...draft.translations, [language]: { ...draft.translations?.[language], ...patch } } })
+  const { status: translationStatus, handle: onTranslateKey } = useAutoTranslate()
+  const text = perfumeText(draft, language)
+  const setText = (patch: TextTranslation) => setDraft(d => withPerfumeText(d, language, patch))
+  const perfumeField = (key: 'paragraphs' | 'specs' | 'quoteText'): TranslatableField => ({
+    read: locale => perfumeText(draft, locale)[key],
+    fill: (locale, value) => setDraft(d => (isBlank(perfumeText(d, locale)[key]) ? withPerfumeText(d, locale, textPatch(key, value)) : d)),
+  })
   return (
     <form
       className="max-w-3xl space-y-6"
@@ -374,13 +429,14 @@ function PerfumeEditor({
             />
           </label>
         </div>
-        <TextLanguages language={language} onChange={setLanguage} product={draft} />
+        <TextLanguages language={language} onChange={setLanguage} product={draft} translationStatus={translationStatus} />
         <label className="shop-label">
           {t("Descrizione (paragrafi separati da una riga vuota)")}
           <textarea
             className="shop-input min-h-48"
             value={text.paragraphs?.join('\n\n') ?? ''}
             onChange={(event) => setText({ paragraphs: event.target.value.split('\n\n') })}
+            onKeyDown={(event) => onTranslateKey(event, language, perfumeField('paragraphs'))}
           />
         </label>
         <label className="shop-label">
@@ -389,6 +445,7 @@ function PerfumeEditor({
             className="shop-input"
             value={text.specs?.join('\n') ?? ''}
             onChange={(event) => setText({ specs: event.target.value.split('\n') })}
+            onKeyDown={(event) => onTranslateKey(event, language, perfumeField('specs'))}
           />
         </label>
         <label className="shop-label">
@@ -405,6 +462,7 @@ function PerfumeEditor({
             className="shop-input"
             value={text.quoteText ?? ''}
             onChange={(event) => setText({ quoteText: event.target.value })}
+            onKeyDown={(event) => onTranslateKey(event, language, perfumeField('quoteText'))}
           />
         </label>
         <label className="shop-label">
@@ -415,7 +473,7 @@ function PerfumeEditor({
             onChange={(event) => setDraft({ ...draft, quote: { ...draft.quote, author: event.target.value } })}
           />
         </label>
-        <PhotoEditor language={language} images={draft.images} library={library} onChange={(images) => setDraft({ ...draft, images })} />
+        <PhotoEditor language={language} images={draft.images} library={library} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, images: update(d.images) }))} />
         <div className="flex gap-5">
           <button className="btn" type="submit" disabled={STATIC_PREVIEW}>
             {t("Salva profumo")}
@@ -462,6 +520,14 @@ export default function Admin() {
   const [heroTranslations, setHeroTranslations] = useState<Img['altTranslations']>({})
   const [source, setSource] = useState('')
   const [replacement, setReplacement] = useState('')
+  const { status: heroTranslationStatus, handle: onHeroTranslateKey } = useAutoTranslate()
+  const heroAltField: TranslatableField = {
+    read: language => (language === 'it' ? heroAlt : heroTranslations?.[language]),
+    // Alt text is a single line, so the translation is always a string.
+    fill: (language, value) => typeof value === 'string' && (language === 'it'
+      ? setHeroAlt(current => (current.trim() ? current : value))
+      : setHeroTranslations(current => (isBlank(current?.[language]) ? { ...current, [language]: value } : current))),
+  }
   useEffect(() => {
     if (STATIC_PREVIEW) return
     void getSession()
@@ -798,12 +864,13 @@ export default function Admin() {
                 </label>
                 <label className="shop-label">
                   {t("Descrizione")}
-                  <input className="shop-input" required value={heroAlt} onChange={(e) => setHeroAlt(e.target.value)} />
+                  <input className="shop-input" required value={heroAlt} onChange={(e) => setHeroAlt(e.target.value)} onKeyDown={(e) => onHeroTranslateKey(e, 'it', heroAltField)} />
                 </label>
                 {LOCALES.filter(language => language !== 'it').map(language => <label key={language} className="shop-label">
                   {LANGUAGE_NAMES[language]} · {t('Descrizione foto')}
-                  <input className="shop-input" maxLength={500} value={heroTranslations?.[language] ?? ''} onChange={event => setHeroTranslations({ ...heroTranslations, [language]: event.target.value })} />
+                  <input className="shop-input" maxLength={500} value={heroTranslations?.[language] ?? ''} onChange={event => setHeroTranslations(current => ({ ...current, [language]: event.target.value }))} onKeyDown={event => onHeroTranslateKey(event, language, heroAltField)} />
                 </label>)}
+                <AutoTranslateHint status={heroTranslationStatus} />
                 <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW}>
                   {t("Salva foto principale")}
                 </button>
