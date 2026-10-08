@@ -65,6 +65,15 @@
   img { display: block; max-width: 100%; height: auto; }
   ::selection { background: var(--color-ink); color: var(--color-bg); }
   :focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
+  /* Thin grey thumb on a white/off-white track. WebKit/Blink get the rounded pill; Firefox uses the standard properties. */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--color-well); }
+  ::-webkit-scrollbar-thumb { background: #c8c8c5; border: 2px solid var(--color-well); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #a3a3a0; }
+  ::-webkit-scrollbar-corner { background: var(--color-well); }
+  @supports not selector(::-webkit-scrollbar) {
+    * { scrollbar-width: thin; scrollbar-color: #c8c8c5 var(--color-well); }
+  }
 }
 
 @layer components {

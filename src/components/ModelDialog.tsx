@@ -61,7 +61,7 @@ export default function ModelDialog({ model, trigger, initialVariant, initialIma
     >
       {model && (
         <div className="relative">
-          <div className="sticky top-0 z-10 flex justify-end bg-bg/95 p-2 md:absolute md:top-4 md:right-4 md:bg-transparent md:p-0">
+          <div className="sticky top-0 z-10 flex justify-end bg-bg/95 p-2 md:top-4 md:h-0 md:bg-transparent md:p-0 md:pr-4">
             <button
               type="button"
               onClick={onClose}
