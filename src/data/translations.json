@@ -527,7 +527,10 @@
     "Orologi e tradizione di famiglia": "Часы и семейные традиции",
     "in preparazione": "скоро",
     "Eliminare {name} dal catalogo?": "Удалить {name} из каталога?",
-    "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Оплата завершена. Номер заказа: {id}. Сохраните этот номер."
+    "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Оплата завершена. Номер заказа: {id}. Сохраните этот номер.",
+    "Ingredienti": "Ингредиенты",
+    "Indirizzo": "Адрес",
+    "Codici": "Коды"
   },
   "en": {
     "1957": "1957",
@@ -1057,7 +1060,10 @@
     "Orologi e tradizione di famiglia": "Watches and family tradition",
     "in preparazione": "coming soon",
     "Eliminare {name} dal catalogo?": "Delete {name} from the catalogue?",
-    "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Payment completed. Order reference: {id}. Keep this reference."
+    "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Payment completed. Order reference: {id}. Keep this reference.",
+    "Ingredienti": "Ingredients",
+    "Indirizzo": "Address",
+    "Codici": "Codes"
   },
   "uk": {
     "1957": "1957",
@@ -1587,7 +1593,10 @@
     "Orologi e tradizione di famiglia": "Годинники та сімейні традиції",
     "in preparazione": "готується",
     "Eliminare {name} dal catalogo?": "Видалити {name} з каталогу?",
-    "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Оплату завершено. Номер замовлення: {id}. Збережіть цей номер."
+    "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Оплату завершено. Номер замовлення: {id}. Збережіть цей номер.",
+    "Ingredienti": "Інгредієнти",
+    "Indirizzo": "Адреса",
+    "Codici": "Коди"
   },
   "de": {
     "1957": "1957",
@@ -2117,7 +2126,10 @@
     "Orologi e tradizione di famiglia": "Uhren und Familientradition",
     "in preparazione": "in Vorbereitung",
     "Eliminare {name} dal catalogo?": "{name} aus dem Katalog löschen?",
-    "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Zahlung abgeschlossen. Bestellreferenz: {id}. Bewahren Sie diese Referenz auf."
+    "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Zahlung abgeschlossen. Bestellreferenz: {id}. Bewahren Sie diese Referenz auf.",
+    "Ingredienti": "Inhaltsstoffe",
+    "Indirizzo": "Adresse",
+    "Codici": "Codes"
   },
   "pl": {
     "1957": "1957",
@@ -2647,6 +2659,9 @@
     "Orologi e tradizione di famiglia": "Zegarki i tradycja rodzinna",
     "in preparazione": "w przygotowaniu",
     "Eliminare {name} dal catalogo?": "Usunąć {name} z katalogu?",
-    "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Płatność zakończona. Numer zamówienia: {id}. Zachowaj ten numer."
+    "Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.": "Płatność zakończona. Numer zamówienia: {id}. Zachowaj ten numer.",
+    "Ingredienti": "Składniki",
+    "Indirizzo": "Adres",
+    "Codici": "Kody"
   }
 }

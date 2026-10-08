@@ -61,14 +61,14 @@ export default function ModelDialog({ model, trigger, initialVariant, initialIma
     >
       {model && (
         <div className="relative">
-          <div className="sticky top-0 z-10 flex justify-end bg-bg/95 md:absolute md:top-3 md:right-3 md:bg-transparent">
+          <div className="sticky top-0 z-10 flex justify-end bg-bg/95 p-2 md:absolute md:top-4 md:right-4 md:bg-transparent md:p-0">
             <button
               type="button"
               onClick={onClose}
               aria-label={site.labels.close}
-              className="flex h-12 w-12 cursor-pointer items-center justify-center text-ink transition-colors duration-200 hover:bg-well"
+              className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-line bg-bg/90 text-ink backdrop-blur transition-colors duration-200 hover:border-ink hover:bg-well"
             >
-              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
                 <path d="M4 4l12 12M16 4L4 16" />
               </svg>
             </button>

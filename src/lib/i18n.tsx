@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { contatti, orologi, site, storia } from '../data/content'
 import { LANGUAGE_NAMES, LANGUAGE_TAGS, LOCALES, localizeContent, translateSource, type Locale } from '../data/localization'
 
@@ -51,10 +51,66 @@ export function useLocale() {
 export function useContent() { return useLocale().content }
 export function LanguageSelector({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale } = useLocale()
-  return <label className="inline-flex min-h-11 items-center gap-2 text-small">
-    <span className="sr-only">{t('Lingua del sito')}</span>
-    <select data-language-selector aria-label={t('Lingua del sito')} className={`min-h-11 border border-line bg-bg px-2 text-small ${compact ? 'w-18 sm:w-auto sm:max-w-[8rem]' : 'max-w-[9rem]'}`} value={locale} onChange={event => setLocale(event.target.value as Locale)}>
-      {LOCALES.map(language => <option key={language} value={language} lang={language}>{compact ? language.toUpperCase() : LANGUAGE_NAMES[language]}</option>)}
-    </select>
-  </label>
+  const [open, setOpen] = useState(false)
+  const [focus, setFocus] = useState(0)
+  const root = useRef<HTMLDivElement>(null)
+  const button = useRef<HTMLButtonElement>(null)
+  const list = useRef<HTMLUListElement>(null)
+  const id = useId()
+  useEffect(() => {
+    if (!open) return
+    const outside = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false) }
+    document.addEventListener('pointerdown', outside)
+    list.current?.focus()
+    return () => document.removeEventListener('pointerdown', outside)
+  }, [open])
+  const show = () => { setFocus(LOCALES.indexOf(locale)); setOpen(true) }
+  const choose = (language: Locale) => { setLocale(language); setOpen(false); button.current?.focus() }
+  const onListKey = (event: KeyboardEvent) => {
+    const last = LOCALES.length - 1
+    const moves: Record<string, number> = { ArrowDown: Math.min(focus + 1, last), ArrowUp: Math.max(focus - 1, 0), Home: 0, End: last }
+    if (event.key in moves) { event.preventDefault(); setFocus(moves[event.key]) }
+    else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(LOCALES[focus]) }
+    else if (event.key === 'Escape' || event.key === 'Tab') { if (event.key === 'Escape') event.preventDefault(); setOpen(false); button.current?.focus() }
+  }
+  return <div ref={root} className="relative" data-language-selector>
+    <button
+      ref={button}
+      type="button"
+      aria-haspopup="listbox"
+      aria-expanded={open}
+      aria-controls={`${id}-list`}
+      aria-label={`${t('Lingua del sito')}: ${LANGUAGE_NAMES[locale]}`}
+      onClick={() => (open ? setOpen(false) : show())}
+      onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); show() } }}
+      className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border border-line bg-bg px-4 text-small tracking-wide transition-colors duration-200 hover:border-ink focus-visible:border-ink"
+    >
+      <span>{compact ? locale.toUpperCase() : LANGUAGE_NAMES[locale]}</span>
+      <svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}><path d="M2 3.5l3 3 3-3" /></svg>
+    </button>
+    {open && <ul
+      ref={list}
+      id={`${id}-list`}
+      role="listbox"
+      tabIndex={-1}
+      aria-label={t('Lingua del sito')}
+      aria-activedescendant={`${id}-${LOCALES[focus]}`}
+      onKeyDown={onListKey}
+      className="absolute right-0 z-50 mt-2 min-w-[11rem] overflow-hidden rounded-2xl border border-line bg-bg p-1.5 shadow-[0_12px_32px_-12px_rgb(0_0_0/0.25)] outline-none"
+    >
+      {LOCALES.map((language, index) => <li
+        key={language}
+        id={`${id}-${language}`}
+        role="option"
+        lang={language}
+        aria-selected={language === locale}
+        onPointerEnter={() => setFocus(index)}
+        onClick={() => choose(language)}
+        className={`flex min-h-10 cursor-pointer items-center justify-between gap-4 rounded-xl px-3 text-small ${index === focus ? 'bg-well' : ''}`}
+      >
+        <span>{LANGUAGE_NAMES[language]}</span>
+        <span className={`text-muted ${language === locale ? 'text-ink' : ''}`}>{language === locale ? '✓' : language.toUpperCase()}</span>
+      </li>)}
+    </ul>}
+  </div>
 }

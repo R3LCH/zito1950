@@ -55,7 +55,7 @@ export default function Header() {
         return
       }
       if (e.key !== 'Tab' || !panelRef.current || !buttonRef.current) return
-      const languageSelect = document.querySelector<HTMLElement>('header select[data-language-selector]')
+      const languageSelect = document.querySelector<HTMLElement>('header [data-language-selector] > button')
       const focusables = [...(languageSelect ? [languageSelect] : []), buttonRef.current, ...panelRef.current.querySelectorAll<HTMLElement>('a')]
       const first = focusables[0]
       const last = focusables[focusables.length - 1]

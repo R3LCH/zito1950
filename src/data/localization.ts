@@ -15,12 +15,16 @@ const messages: Record<string, Record<string, string>> = dictionaries
 export function translateSource(source: string, locale: Locale): string {
   return locale === 'it' ? source : messages[locale]?.[source] ?? source
 }
-export function localizeContent<T>(value: T, locale: Locale): T {
+type KeySet = Record<string, true>
+const SHARED_KEYS: KeySet = { name: true, id: true, src: true, code: true, codes: true, price: true, ingredients: true, address: true, city: true, company: true }
+const NO_SHARED_KEYS: KeySet = {}
+export function localizeContent<T>(value: T, locale: Locale, shared: KeySet = SHARED_KEYS): T {
   if (locale === 'it') return value
   if (typeof value === 'string') return translateSource(value, locale) as T
-  if (Array.isArray(value)) return value.map(item => localizeContent(item, locale)) as T
+  if (Array.isArray(value)) return value.map(item => localizeContent(item, locale, shared)) as T
   if (!value || typeof value !== 'object') return value
-  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, ['name', 'id', 'src', 'code', 'codes', 'price', 'ingredients', 'address', 'city', 'company'].includes(key) ? item : localizeContent(item, locale)])) as T
+  // `labels` holds UI words such as "Codice", so its keys never mark shared data.
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, shared[key] ? item : localizeContent(item, locale, key === 'labels' ? NO_SHARED_KEYS : shared)])) as T
 }
 export function seedImageTranslations(image: Img): Img {
   if (image.altTranslations) return image
@@ -74,7 +78,7 @@ export function localizeModel(model: Model, locale: Locale): Model {
 }
 export function localizePerfume(perfume: Profumo, locale: Locale): Profumo {
   const text = locale === 'it' ? undefined : perfume.translations?.[locale]
-  return { ...perfume, eyebrow: translateSource(perfume.eyebrow, locale), specs: text?.specs?.some(value => value.trim()) ? text.specs.filter(value => value.trim()) : perfume.specs, paragraphs: text?.paragraphs?.some(value => value.trim()) ? text.paragraphs.filter(value => value.trim()) : perfume.paragraphs, quote: { ...perfume.quote, text: text?.quoteText?.trim() || perfume.quote.text }, images: perfume.images.map(image => localizeImage(image, locale)), labels: localizeContent(perfume.labels, locale) }
+  return { ...perfume, eyebrow: translateSource(perfume.eyebrow, locale), specs: text?.specs?.some(value => value.trim()) ? text.specs.filter(value => value.trim()) : perfume.specs, paragraphs: text?.paragraphs?.some(value => value.trim()) ? text.paragraphs.filter(value => value.trim()) : perfume.paragraphs, quote: { ...perfume.quote, text: text?.quoteText?.trim() || perfume.quote.text }, images: perfume.images.map(image => localizeImage(image, locale)), labels: localizeContent(perfume.labels, locale, NO_SHARED_KEYS) }
 }
 export function missingTranslationFields(product: Model | Variant | Profumo, language: TranslationLocale): string[] {
   const text = product.translations?.[language]
