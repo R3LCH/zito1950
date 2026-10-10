@@ -1208,37 +1208,43 @@ export default function Admin() {
                   {t("Cerca per nome")}
                   <input type="search" className="shop-input" value={photoQuery} onChange={(e) => setPhotoQuery(e.target.value)} />
                 </label>
-                {!shownInUse.length && <p className="text-small">{t("Nessuna foto trovata.")}</p>}
-                <ul className="divide-y divide-line border-y border-line">
-                  {shownInUse.map(({ image, places }) => (
-                    <li key={image.src}>
-                      <label className="grid cursor-pointer grid-cols-[auto_64px_minmax(0,1fr)] items-center gap-4 py-3">
-                        <input
-                          type="checkbox"
-                          className="accent-ink"
-                          checked={pending.includes(image.src)}
-                          onChange={() => toggleSource(image.src)}
-                        />
-                        <img src={asset(image.src)} alt="" loading="lazy" className="h-16 w-16 bg-well object-contain" />
-                        <span className="min-w-0">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span className="break-words text-small font-medium">{photoLabel(image)}</span>
-                            {image.src === catalog.hero.src && (
-                              <span className="border border-ink bg-ink px-2 py-0.5 text-xs font-medium uppercase tracking-[0.08em] text-bg">{t("Principale")}</span>
-                            )}
-                          </span>
-                          {places.length > 0 && <span className="mt-1 block break-words text-xs text-muted">{places.join(' · ')}</span>}
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-                {pending.length > 0 && (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="min-w-0">
+                    <h3 id="site-photos-from" className="text-h3">{t("Da sostituire")}</h3>
+                    {/* Scroll container keeps the long in-use list from pushing the page; focusable for keyboard scrolling. */}
+                    <div role="region" aria-labelledby="site-photos-from" tabIndex={0} className="mt-3 max-h-[60vh] overflow-y-auto border border-line px-3">
+                      {!shownInUse.length && <p className="py-3 text-small">{t("Nessuna foto trovata.")}</p>}
+                      <ul className="divide-y divide-line">
+                        {shownInUse.map(({ image, places }) => (
+                          <li key={image.src}>
+                            <label className="grid cursor-pointer grid-cols-[auto_56px_minmax(0,1fr)] items-center gap-3 py-2">
+                              <input
+                                type="checkbox"
+                                className="accent-ink"
+                                checked={pending.includes(image.src)}
+                                onChange={() => toggleSource(image.src)}
+                              />
+                              <img src={asset(image.src)} alt="" loading="lazy" className="h-14 w-14 bg-well object-contain" />
+                              <span className="min-w-0">
+                                <span className="flex flex-wrap items-center gap-2">
+                                  <span className="break-words text-small font-medium">{photoLabel(image)}</span>
+                                  {image.src === catalog.hero.src && (
+                                    <span className="border border-ink bg-ink px-2 py-0.5 text-xs font-medium uppercase tracking-[0.08em] text-bg">{t("Principale")}</span>
+                                  )}
+                                </span>
+                                {places.length > 0 && <span className="mt-1 block break-words text-xs text-muted">{places.join(' · ')}</span>}
+                              </span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
                   <form
-                    className="space-y-4"
+                    className="min-w-0"
                     onSubmit={(e) => {
                       e.preventDefault()
-                      if (!pending.every((src) => replacements[src])) return
+                      if (!pending.length || !pending.every((src) => replacements[src])) return
                       void perform(async () => {
                         setCatalog(
                           await api<Catalog>('/admin/images/replace', 'PUT', {
@@ -1250,45 +1256,53 @@ export default function Admin() {
                       }, 'Fotografie sostituite.')
                     }}
                   >
-                    <h3 className="text-h3">{t("Sostituisci selezionate ({count})", { count: pending.length })}</h3>
-                    <ul className="space-y-3">
-                      {pending.map((source) => {
-                        const current = inUse.get(source)!.image
-                        const next = replacements[source]
-                        return (
-                          <li key={source} className="grid grid-cols-[64px_auto_64px_minmax(0,1fr)] items-center gap-3">
-                            <img src={asset(source)} alt="" className="h-16 w-16 bg-well object-contain" />
-                            <span aria-hidden="true">→</span>
-                            {next ? (
-                              <img src={asset(next.src)} alt="" className="h-16 w-16 bg-well object-contain" />
-                            ) : (
-                              <span className="h-16 w-16 border border-dashed border-line" />
-                            )}
-                            <div className="min-w-0 text-small">
-                              <p className="break-words">{photoLabel(current)} → {next ? photoLabel(next) : '—'}</p>
-                              <button
-                                type="button"
-                                className="mt-1 underline"
-                                aria-label={`${t("Scegli la nuova foto")}: ${photoLabel(current)}`}
-                                onClick={() => setPickerFor(source)}
-                              >
-                                {t("Scegli")}
-                              </button>
-                            </div>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                    <div className="flex flex-wrap items-center gap-5">
-                      <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW || !pending.every((src) => replacements[src])}>
+                    <h3 id="site-photos-to" className="text-h3">
+                      {t("Sostituisci con")}
+                      {pending.length > 0 && <span className="ml-2 text-small text-muted">({pending.length})</span>}
+                    </h3>
+                    <div role="region" aria-labelledby="site-photos-to" tabIndex={0} className="mt-3 max-h-[60vh] overflow-y-auto border border-line px-3">
+                      {!pending.length && <p className="py-3 text-small text-muted">{t("Seleziona a sinistra le foto da sostituire.")}</p>}
+                      <ul className="divide-y divide-line">
+                        {pending.map((source) => {
+                          const current = inUse.get(source)!.image
+                          const next = replacements[source]
+                          return (
+                            <li key={source} className="grid grid-cols-[56px_auto_56px_minmax(0,1fr)] items-center gap-3 py-2">
+                              <img src={asset(source)} alt="" className="h-14 w-14 bg-well object-contain" />
+                              <span aria-hidden="true">→</span>
+                              {next ? (
+                                <img src={asset(next.src)} alt="" className="h-14 w-14 bg-well object-contain" />
+                              ) : (
+                                <span className="h-14 w-14 border border-dashed border-line" />
+                              )}
+                              <div className="min-w-0 text-small">
+                                <p className="break-words">{photoLabel(current)} → {next ? photoLabel(next) : '—'}</p>
+                                <button
+                                  type="button"
+                                  className="mt-1 underline"
+                                  aria-label={`${t("Scegli la nuova foto")}: ${photoLabel(current)}`}
+                                  onClick={() => setPickerFor(source)}
+                                >
+                                  {t("Scegli")}
+                                </button>
+                              </div>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                    <div className="mt-4 flex flex-wrap items-center gap-5">
+                      <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW || !pending.length || !pending.every((src) => replacements[src])}>
                         {t("Sostituisci foto")}
                       </button>
-                      <button type="button" className="underline text-small" onClick={clearSelection}>
-                        {t("Annulla selezione")}
-                      </button>
+                      {pending.length > 0 && (
+                        <button type="button" className="underline text-small" onClick={clearSelection}>
+                          {t("Annulla selezione")}
+                        </button>
+                      )}
                     </div>
                   </form>
-                )}
+                </div>
                 <PhotoPicker
                   open={pickerFor !== null}
                   library={library.filter((im) => im.src !== pickerFor)}

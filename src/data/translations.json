@@ -617,14 +617,16 @@
     "Seleziona una o più foto, scegli per ciascuna la nuova foto e salva.": "Отметьте одно или несколько фото, выберите для каждого новое и сохраните.",
     "Principale": "Главное",
     "Fotografie sostituite.": "Фотографии заменены.",
-    "Sostituisci selezionate ({count})": "Заменить выбранные ({count})",
     "Scegli": "Выбрать",
     "Annulla selezione": "Снять выбор",
     "Foto caricate.": "Фото загружены.",
     "Con 0 pezzi il modello appare Esaurito e non è acquistabile.": "При 0 штук модель отмечена «Распродано» и недоступна для покупки.",
     "Foto duplicate nella sostituzione.": "В замене повторяются фото.",
     "Foto non trovata nel sito.": "Фото не найдено на сайте.",
-    "Pezzi disponibili insufficienti. Aggiorna il carrello.": "Недостаточно доступных экземпляров. Обновите корзину."
+    "Pezzi disponibili insufficienti. Aggiorna il carrello.": "Недостаточно доступных экземпляров. Обновите корзину.",
+    "Da sostituire": "Заменить",
+    "Sostituisci con": "Заменить на",
+    "Seleziona a sinistra le foto da sostituire.": "Выберите слева фото для замены."
   },
   "en": {
     "1957": "1957",
@@ -1244,14 +1246,16 @@
     "Seleziona una o più foto, scegli per ciascuna la nuova foto e salva.": "Select one or more photos, choose a new photo for each and save.",
     "Principale": "Main",
     "Fotografie sostituite.": "Photos replaced.",
-    "Sostituisci selezionate ({count})": "Replace selected ({count})",
     "Scegli": "Choose",
     "Annulla selezione": "Clear selection",
     "Foto caricate.": "Photos uploaded.",
     "Con 0 pezzi il modello appare Esaurito e non è acquistabile.": "At 0 pieces the model shows as Sold out and cannot be bought.",
     "Foto duplicate nella sostituzione.": "Duplicate photos in the replacement.",
     "Foto non trovata nel sito.": "Photo not found on the site.",
-    "Pezzi disponibili insufficienti. Aggiorna il carrello.": "Not enough pieces available. Update your cart."
+    "Pezzi disponibili insufficienti. Aggiorna il carrello.": "Not enough pieces available. Update your cart.",
+    "Da sostituire": "To replace",
+    "Sostituisci con": "Replace with",
+    "Seleziona a sinistra le foto da sostituire.": "Select the photos to replace on the left."
   },
   "uk": {
     "1957": "1957",
@@ -1871,14 +1875,16 @@
     "Seleziona una o più foto, scegli per ciascuna la nuova foto e salva.": "Позначте одне або кілька фото, оберіть для кожного нове й збережіть.",
     "Principale": "Головне",
     "Fotografie sostituite.": "Фотографії замінено.",
-    "Sostituisci selezionate ({count})": "Замінити вибрані ({count})",
     "Scegli": "Обрати",
     "Annulla selezione": "Скасувати вибір",
     "Foto caricate.": "Фото завантажено.",
     "Con 0 pezzi il modello appare Esaurito e non è acquistabile.": "При 0 штук модель позначена «Розпродано» і недоступна для купівлі.",
     "Foto duplicate nella sostituzione.": "У заміні повторюються фото.",
     "Foto non trovata nel sito.": "Фото не знайдено на сайті.",
-    "Pezzi disponibili insufficienti. Aggiorna il carrello.": "Недостатньо доступних екземплярів. Оновіть кошик."
+    "Pezzi disponibili insufficienti. Aggiorna il carrello.": "Недостатньо доступних екземплярів. Оновіть кошик.",
+    "Da sostituire": "Замінити",
+    "Sostituisci con": "Замінити на",
+    "Seleziona a sinistra le foto da sostituire.": "Виберіть ліворуч фото для заміни."
   },
   "de": {
     "1957": "1957",
@@ -2498,14 +2504,16 @@
     "Seleziona una o più foto, scegli per ciascuna la nuova foto e salva.": "Wählen Sie ein oder mehrere Fotos, bestimmen Sie für jedes ein neues Foto und speichern Sie.",
     "Principale": "Haupt",
     "Fotografie sostituite.": "Fotos ersetzt.",
-    "Sostituisci selezionate ({count})": "Ausgewählte ersetzen ({count})",
     "Scegli": "Wählen",
     "Annulla selezione": "Auswahl aufheben",
     "Foto caricate.": "Fotos hochgeladen.",
     "Con 0 pezzi il modello appare Esaurito e non è acquistabile.": "Bei 0 Stück erscheint das Modell als Ausverkauft und ist nicht kaufbar.",
     "Foto duplicate nella sostituzione.": "Doppelte Fotos in der Ersetzung.",
     "Foto non trovata nel sito.": "Foto auf der Website nicht gefunden.",
-    "Pezzi disponibili insufficienti. Aggiorna il carrello.": "Nicht genügend Stücke verfügbar. Aktualisieren Sie Ihren Warenkorb."
+    "Pezzi disponibili insufficienti. Aggiorna il carrello.": "Nicht genügend Stücke verfügbar. Aktualisieren Sie Ihren Warenkorb.",
+    "Da sostituire": "Zu ersetzen",
+    "Sostituisci con": "Ersetzen durch",
+    "Seleziona a sinistra le foto da sostituire.": "Wählen Sie links die zu ersetzenden Fotos aus."
   },
   "pl": {
     "1957": "1957",
@@ -3125,13 +3133,15 @@
     "Seleziona una o più foto, scegli per ciascuna la nuova foto e salva.": "Zaznacz jedno lub więcej zdjęć, wybierz dla każdego nowe i zapisz.",
     "Principale": "Główne",
     "Fotografie sostituite.": "Zdjęcia zastąpione.",
-    "Sostituisci selezionate ({count})": "Zamień zaznaczone ({count})",
     "Scegli": "Wybierz",
     "Annulla selezione": "Wyczyść zaznaczenie",
     "Foto caricate.": "Zdjęcia przesłane.",
     "Con 0 pezzi il modello appare Esaurito e non è acquistabile.": "Przy 0 sztukach model jest oznaczony jako Wyprzedany i nie można go kupić.",
     "Foto duplicate nella sostituzione.": "Powtórzone zdjęcia w zamianie.",
     "Foto non trovata nel sito.": "Nie znaleziono zdjęcia na stronie.",
-    "Pezzi disponibili insufficienti. Aggiorna il carrello.": "Za mało dostępnych egzemplarzy. Zaktualizuj koszyk."
+    "Pezzi disponibili insufficienti. Aggiorna il carrello.": "Za mało dostępnych egzemplarzy. Zaktualizuj koszyk.",
+    "Da sostituire": "Do zamiany",
+    "Sostituisci con": "Zamień na",
+    "Seleziona a sinistra le foto da sostituire.": "Wybierz po lewej zdjęcia do zamiany."
   }
 }
