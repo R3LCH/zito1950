@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import type { Img, Model, Profumo, Variant, TextTranslation } from '../data/types'
+import { AVAILABILITIES, type Availability, type CertificateHolder, type Img, type Model, type Profumo, type Variant, type TextTranslation } from '../data/types'
 import { api, euro, getSession, STATIC_PREVIEW, useShop, type Catalog } from '../lib/shop'
 import { profumo as originalPerfume } from '../data/content'
 import { asset } from '../lib/asset'
@@ -24,6 +24,14 @@ const perfumeText = (d: Profumo, locale: Locale): TextTranslation => (locale ===
 function withPerfumeText(d: Profumo, locale: Locale, patch: TextTranslation): Profumo {
   if (locale !== 'it') return { ...d, translations: { ...d.translations, [locale]: { ...d.translations?.[locale], ...patch } } }
   return { ...d, ...(patch.paragraphs !== undefined ? { paragraphs: patch.paragraphs } : {}), ...(patch.specs !== undefined ? { specs: patch.specs } : {}), ...(patch.quoteText !== undefined ? { quote: { ...d.quote, text: patch.quoteText } } : {}) }
+}
+// Admin copy for each public availability state: tile title and one-line effect on the site.
+const AVAILABILITY_COPY: Record<Availability, { label: string; hint: string }> = {
+  buy: { label: 'Acquistabile', hint: 'Mostra il pulsante Acquista e il prezzo.' },
+  'no-buy': { label: 'Solo vetrina', hint: 'Visibile, senza pulsante di acquisto.' },
+  sold: { label: 'Venduto', hint: 'Visibile con l’etichetta Venduto, per chi l’ha perso.' },
+  'out-of-stock': { label: 'Esaurito', hint: 'Visibile con l’etichetta Esaurito.' },
+  hidden: { label: 'Nascosto', hint: 'Non compare sul sito.' },
 }
 
 function AutoTranslateHint({ status }: { status: string }) {
@@ -231,14 +239,67 @@ function ProductEditor({
               }
             />
           </label>
-          <label className="flex items-center gap-3 text-small">
-            <input
-              type="checkbox"
-              checked={!!draft.buyEnabled}
-              onChange={(e) => setDraft({ ...draft, buyEnabled: e.target.checked })}
-            />{' '}
-            {t("Abilita acquisto e pulsante Acquista")}
-          </label>
+        </div>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <fieldset className="min-w-0">
+            <legend className="mb-3 text-small font-medium">{t("Disponibilità")}</legend>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {AVAILABILITIES.map((value) => (
+                <label
+                  key={value}
+                  className="flex cursor-pointer items-start gap-3 border border-line p-4 has-[:checked]:border-ink has-[:checked]:bg-well has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
+                >
+                  <input
+                    type="radio"
+                    name="availability"
+                    value={value}
+                    className="mt-1 accent-ink focus-visible:outline-none"
+                    checked={(draft.availability ?? 'no-buy') === value}
+                    onChange={() => setDraft(d => ({ ...d, availability: value }))}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-small font-medium">{t(AVAILABILITY_COPY[value].label)}</span>
+                    <span className="mt-1 block text-xs text-muted">{t(AVAILABILITY_COPY[value].hint)}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className="min-w-0 space-y-4">
+            <legend className="mb-3 text-small font-medium">{t("Edizione limitata")}</legend>
+            <label className="flex items-center gap-3 text-small">
+              <input
+                type="checkbox"
+                className="accent-ink"
+                checked={!!draft.limitedEdition}
+                onChange={(e) => setDraft(d => ({ ...d, limitedEdition: e.target.checked }))}
+              />
+              {t("Edizione limitata")}
+            </label>
+            <label className="shop-label">
+              {t("Pezzi rimanenti")}
+              <input
+                className="shop-input disabled:text-muted"
+                type="number"
+                min="0"
+                max="9999"
+                step="1"
+                inputMode="numeric"
+                placeholder={t("non mostrare")}
+                disabled={!draft.limitedEdition}
+                aria-describedby={`pieces-hint-${draft.id}`}
+                value={draft.piecesRemaining ?? ''}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  const piecesRemaining = raw === '' ? null : Math.min(9999, Math.max(0, Math.trunc(Number(raw))))
+                  setDraft(d => ({ ...d, piecesRemaining }))
+                }}
+              />
+            </label>
+            <p id={`pieces-hint-${draft.id}`} className="text-xs text-muted">
+              {t("Mostrato sulla scheda del modello. Lascia vuoto per non mostrarlo.")}
+            </p>
+          </fieldset>
         </div>
         <TextLanguages language={language} onChange={setLanguage} product={draft} translationStatus={translationStatus} />
         <label className="shop-label">
@@ -499,7 +560,10 @@ interface Order {
     captureId: string
     email?: string
     shipping?: { name?: { full_name: string }; address?: Record<string, string> }
+    payer: { firstName: string; lastName: string; email: string } | null
   } | null
+  certificate: CertificateHolder | null
+  certificateCode: string | null
 }
 export default function Admin() {
   const { locale } = useLocale()
@@ -551,6 +615,32 @@ export default function Admin() {
     ).values(),
   ]
   const model = newProduct ?? catalog.models.find((m) => m.id === selected)
+  // Hero picker groups: every model and variant photo first, then site photos, then uploads; each src listed once.
+  const heroSeen = new Set<string>()
+  const heroGroup = (entries: { image: Img; label: string }[]) =>
+    entries.filter(({ image }) => !heroSeen.has(image.src) && heroSeen.add(image.src))
+  const heroGroups = [
+    {
+      label: 'Modelli',
+      entries: heroGroup(catalog.models.flatMap((m) => [
+        ...m.images.map((image) => ({ image, label: `${m.name} · ${image.alt || image.src}` })),
+        ...(m.variants ?? []).flatMap((v) => v.images.map((image) => ({ image, label: `${m.name} · ${v.label} · ${image.alt || image.src}` }))),
+      ])),
+    },
+    {
+      label: 'Foto del sito',
+      entries: heroGroup([catalog.hero, ...catalog.siteImages, ...(catalog.perfume?.images ?? [])].map((image) => ({ image, label: image.alt || image.src }))),
+    },
+    { label: 'Libreria', entries: heroGroup(catalog.photos.map((image) => ({ image, label: image.alt || image.src }))) },
+  ]
+  const pickHero = (image: Img | undefined, src: string) => {
+    setHeroSrc(src)
+    setHeroAlt(image?.alt ?? '')
+    setHeroTranslations(image?.altTranslations ?? {})
+  }
+  const mostExpensive = catalog.models
+    .filter((m) => m.availability !== 'hidden' && m.images.length)
+    .reduce<Model | undefined>((top, m) => (!top || (m.priceCents ?? 0) > (top.priceCents ?? 0) ? m : top), undefined)
   async function perform(action: () => Promise<void>, message: string) {
     if (STATIC_PREVIEW) { setStatus('Anteprima UI: operazioni server e pubblicazione disattivate.'); return }
     if (busy) return
@@ -709,7 +799,9 @@ export default function Admin() {
                       codes: [],
                       price: '',
                       priceCents: 100,
-                      buyEnabled: false,
+                      availability: 'no-buy',
+                      limitedEdition: false,
+                      piecesRemaining: null,
                       specs: [],
                       images: [],
                     })
@@ -735,7 +827,10 @@ export default function Admin() {
                         }}
                       >
                         <span className="block font-serif text-xl">{m.name}</span>
-                        <span className="text-xs text-muted">{m.buyEnabled ? t('Acquisto attivo') : t('Solo vetrina')}</span>
+                        <span className="text-xs text-muted">
+                          {t(AVAILABILITY_COPY[m.availability ?? 'no-buy'].label)}
+                          {m.limitedEdition && ` · ${t('Edizione limitata')}`}
+                        </span>
                       </button>
                     </li>
                   ))}
@@ -778,7 +873,7 @@ export default function Admin() {
                   <div className="border-t border-line pt-8">
                     <h2 className="text-h2">{t("La collezione")}</h2>
                     <p className="mt-4 text-ink-2">
-                      {t("Seleziona un orologio per modificare descrizioni, prezzi, varianti e fotografie. L’acquisto può essere attivato per ogni prodotto.")}
+                      {t("Seleziona un orologio per modificare descrizioni, prezzi, varianti e fotografie. Per ogni prodotto puoi scegliere la disponibilità e segnalare un’edizione limitata.")}
                     </p>
                   </div>
                 )}
@@ -850,18 +945,28 @@ export default function Admin() {
                 <label className="shop-label">
                   {t("Fotografia")}
                   <select className="shop-input" value={heroSrc} onChange={(e) => {
-                    const image = [catalog.hero, ...library].find(image => image.src === e.target.value)
-                    setHeroSrc(e.target.value)
-                    setHeroAlt(image?.alt ?? '')
-                    setHeroTranslations(image?.altTranslations ?? {})
+                    const src = e.target.value
+                    pickHero(heroGroups.flatMap((group) => group.entries).find(({ image }) => image.src === src)?.image, src)
                   }}>
-                    {[...new Map([catalog.hero, ...library].map((im) => [im.src, im])).values()].map((im) => (
-                      <option key={im.src} value={im.src}>
-                        {im.alt || im.src}
-                      </option>
+                    {heroGroups.filter((group) => group.entries.length).map((group) => (
+                      <optgroup key={group.label} label={t(group.label)}>
+                        {group.entries.map(({ image, label }) => (
+                          <option key={image.src} value={image.src}>
+                            {label}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </label>
+                <button
+                  type="button"
+                  className="underline text-small"
+                  disabled={busy || !mostExpensive}
+                  onClick={() => mostExpensive && pickHero(mostExpensive.images[0], mostExpensive.images[0].src)}
+                >
+                  {t("Usa il modello più costoso")}
+                </button>
                 <label className="shop-label">
                   {t("Descrizione")}
                   <input className="shop-input" required value={heroAlt} onChange={(e) => setHeroAlt(e.target.value)} onKeyDown={(e) => onHeroTranslateKey(e, 'it', heroAltField)} />
@@ -993,6 +1098,45 @@ export default function Admin() {
                         <p>{Object.values(order.receipt.shipping?.address ?? {}).join(', ')}</p>
                       </div>
                     )}
+                    {(() => {
+                      const holder = order.certificate ?? order.receipt?.payer ?? null
+                      return (
+                        <section className="mt-5 border border-line p-5" aria-labelledby={`certificate-${order.id}`}>
+                          <div className="flex flex-wrap items-baseline justify-between gap-3">
+                            <h4 id={`certificate-${order.id}`} className="text-small font-medium">{t("Certificato")}</h4>
+                            <span className="text-xs text-muted">
+                              {order.certificate ? t('Personalizzato dal cliente') : holder ? t('Dati PayPal') : t('In attesa del pagamento')}
+                            </span>
+                          </div>
+                          {holder && (
+                            <div className="mt-3 text-small">
+                              <p>{holder.firstName} {holder.lastName}</p>
+                              <p className="break-all">{holder.email}</p>
+                            </div>
+                          )}
+                          <form
+                            key={`${order.id}-${order.certificateCode ?? ''}`}
+                            className="mt-4 flex flex-wrap items-end gap-4"
+                            onSubmit={(e) => {
+                              e.preventDefault()
+                              const code = String(new FormData(e.currentTarget).get('code') ?? '')
+                              void perform(async () => {
+                                const updated = await api<Order>(`/admin/orders/${order.id}/certificate`, 'PUT', { code })
+                                setOrders((list) => list.map((item) => (item.id === updated.id ? updated : item)))
+                              }, 'Codice certificato salvato.')
+                            }}
+                          >
+                            <label className="shop-label min-w-0 flex-1">
+                              {t("Codice certificato")}
+                              <input className="shop-input" name="code" maxLength={80} defaultValue={order.certificateCode ?? ''} />
+                            </label>
+                            <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW}>
+                              {t("Salva codice")}
+                            </button>
+                          </form>
+                        </section>
+                      )
+                    })()}
                   </li>
                 ))}
               </ul>

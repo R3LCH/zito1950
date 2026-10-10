@@ -4,11 +4,12 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { DatabaseSync } from 'node:sqlite'
 import sharp from 'sharp'
 import { createApp } from './app.mjs'
 import { hashPassword } from './password.mjs'
 
-async function fixture(t, paypal = false) {
+async function fixture(t, paypal = false, legacyBody = null) {
   const dir = mkdtempSync(join(tmpdir(), 'zito-test-'))
   const remoteOrders = new Map()
   const seen = { captures: 0, amounts: [], mismatch: false, lostCapture: false }
@@ -21,6 +22,7 @@ async function fixture(t, paypal = false) {
         id: `PP-${remoteOrders.size + 1}`,
         status: 'CREATED',
         purchase_units: body.purchase_units,
+        payer: { name: { given_name: 'Mario', surname: 'Rossi' }, email_address: 'mario@example.com' },
         links: [{ rel: 'payer-action', href: 'https://www.sandbox.paypal.com/checkoutnow?token=TEST' }],
       }
       remoteOrders.set(remote.id, remote)
@@ -52,6 +54,15 @@ async function fixture(t, paypal = false) {
     APP_ORIGIN: 'http://localhost:5173',
     ADMIN_PASSWORD_HASH: hashPassword('a-long-test-password'),
     ...(paypal ? { PAYPAL_CLIENT_ID: 'test', PAYPAL_CLIENT_SECRET: 'test' } : {}),
+  }
+  if (legacyBody) {
+    // Pre-certificate schema and catalog body, as written by the previous release.
+    const legacy = new DatabaseSync(join(dir, 'shop.sqlite'))
+    legacy.exec(
+      'CREATE TABLE catalog (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL); CREATE TABLE orders (id TEXT PRIMARY KEY, session TEXT NOT NULL, fingerprint TEXT NOT NULL, paypal_id TEXT UNIQUE, status TEXT NOT NULL, total INTEGER NOT NULL, items TEXT NOT NULL, receipt TEXT, created INTEGER NOT NULL);',
+    )
+    legacy.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(legacyBody))
+    legacy.close()
   }
   const translateFetch = async (url, init) =>
     Response.json([[[`[${new URL(url).searchParams.get('tl')}] ${new URLSearchParams(init.body).get('q')}`, 'x']]])
@@ -92,15 +103,15 @@ async function fixture(t, paypal = false) {
   assert.equal((await admin.request('/admin/login', 'POST', { password: 'a-long-test-password' })).status, 200)
   const buyer = client()
   await buyer.request('/session')
-  const enable = async (modelId = 'n7') => {
+  const enable = async (modelId = 'n7', availability = 'buy') => {
     const current = (await admin.request('/catalog')).body
     const product = current.models.find((m) => m.id === modelId)
-    product.buyEnabled = true
+    product.availability = availability
     const response = await admin.request(`/admin/products/${modelId}`, 'PUT', { product, revision: current.revision })
     assert.equal(response.status, 200, JSON.stringify(response.body))
     return response.body
   }
-  return { admin, buyer, client, enable, seen, application, dir }
+  return { admin, buyer, client, enable, seen, application, dir, env }
 }
 
 test('admin authorization, CSRF, session rotation and revocation', async (t) => {
@@ -236,7 +247,7 @@ test('checkout uses server variant price, rejects disabled products and foreign 
   assert.equal((await stranger.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).status, 404)
   const current = (await admin.request('/catalog')).body
   const product = current.models.find((m) => m.id === 'n7')
-  product.buyEnabled = false
+  product.availability = 'no-buy'
   await admin.request('/admin/products/n7', 'PUT', { product, revision: current.revision })
   assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).status, 409)
   assert.equal(seen.captures, 0)
@@ -272,4 +283,114 @@ test('mismatched PayPal capture amount is never recorded as paid', async (t) => 
   })
   assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).status, 409)
   assert.notEqual((await admin.request('/admin/orders')).body[0].status, 'COMPLETED')
+})
+
+test('legacy catalog migrates buyEnabled, limited editions and default hero once', async (t) => {
+  const { models, storia } = await import('../src/data/content.ts')
+  const legacyBody = {
+    hero: { src: 'img/hero/new_hero.jpg', alt: 'Boutique' },
+    models: models.map((m) => ({ ...m, priceCents: 100000, buyEnabled: m.id === 'n7', variants: m.variants?.map((v) => ({ ...v, priceCents: 100000 })) })),
+    photos: [],
+    imageOverrides: {},
+    siteImages: [{ src: 'img/hero/new_hero.jpg', alt: 'Boutique' }],
+  }
+  const { admin, buyer, application, dir, env } = await fixture(t, true, legacyBody)
+  const catalog = (await admin.request('/catalog')).body
+  const n7 = catalog.models.find((m) => m.id === 'n7')
+  assert.equal(n7.availability, 'buy')
+  assert.equal(n7.buyEnabled, undefined)
+  assert.equal(n7.limitedEdition, false)
+  assert.equal(n7.piecesRemaining, null)
+  assert.equal(catalog.models.find((m) => m.id === 'takimo').availability, 'no-buy')
+  for (const limited of ['tutus-ab-uno', 'takimo', 'bauletto'])
+    assert.equal(catalog.models.find((m) => m.id === limited).limitedEdition, true)
+  assert.equal(catalog.hero.src, 'img/models/tutus-ab-uno.jpg')
+  assert.ok(catalog.hero.altTranslations)
+  for (const im of storia.place?.images ?? []) assert.ok(catalog.siteImages.some((s) => s.src === im.src))
+  const columns = application.db.prepare('PRAGMA table_info(orders)').all().map((c) => c.name)
+  assert.ok(columns.includes('certificate') && columns.includes('certificate_code'))
+  const order = await buyer.request('/payments/orders', 'POST', {
+    items: [{ modelId: 'n7', variantId: n7.variants[0].id, quantity: 1 }],
+    requestId: randomUUID(),
+  })
+  assert.equal(order.status, 200, JSON.stringify(order.body))
+  // Reopening the same database must not migrate again or bump the revision.
+  const reopened = createApp({ env, dataDir: dir })
+  const reopenedRevision = reopened.db.prepare('SELECT revision FROM catalog').get().revision
+  reopened.close()
+  assert.equal(reopenedRevision, catalog.revision)
+})
+
+test('owner-customized hero survives migration', async (t) => {
+  const { models } = await import('../src/data/content.ts')
+  const legacyBody = {
+    hero: { src: 'img/models/takimo.jpg', alt: 'Takimo' },
+    models: models.map((m) => ({ ...m, priceCents: 100000, buyEnabled: false, variants: m.variants?.map((v) => ({ ...v, priceCents: 100000 })) })),
+    photos: [],
+    imageOverrides: {},
+    siteImages: [],
+  }
+  const { admin } = await fixture(t, false, legacyBody)
+  assert.equal((await admin.request('/catalog')).body.hero.src, 'img/models/takimo.jpg')
+})
+
+test('hidden models are omitted from the public catalog but kept for admin', async (t) => {
+  const { admin, buyer, enable } = await fixture(t)
+  await enable('n7', 'hidden')
+  assert.equal((await buyer.request('/catalog')).body.models.some((m) => m.id === 'n7'), false)
+  assert.equal((await admin.request('/catalog')).body.models.find((m) => m.id === 'n7').availability, 'hidden')
+})
+
+test('sold, out-of-stock, showcase and hidden models are not purchasable', async (t) => {
+  const { buyer, enable } = await fixture(t, true)
+  const items = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
+  for (const availability of ['sold', 'out-of-stock', 'no-buy', 'hidden']) {
+    await enable('takimo', availability)
+    const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
+    assert.equal(order.status, 409, availability)
+  }
+  await enable('takimo', 'buy')
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })).status, 200)
+})
+
+test('custom certificate holder is stored, replaceable on retry and returned to admin', async (t) => {
+  const { admin, buyer, enable } = await fixture(t, true)
+  await enable('takimo')
+  const items = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
+  const requestId = randomUUID()
+  const invalid = { firstName: 'Anna', lastName: 'Bianchi', email: 'not-an-email' }
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId, certificate: invalid })).status, 400)
+  const first = { firstName: 'Anna', lastName: 'Bianchi', email: 'anna@example.com' }
+  const order = await buyer.request('/payments/orders', 'POST', { items, requestId, certificate: first })
+  assert.equal(order.status, 200, JSON.stringify(order.body))
+  const second = { firstName: ' Luca ', lastName: 'Verdi', email: 'luca@example.com' }
+  const retried = await buyer.request('/payments/orders', 'POST', { items, requestId, certificate: second })
+  assert.equal(retried.body.id, order.body.id)
+  assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).body.status, 'COMPLETED')
+  const [row] = (await admin.request('/admin/orders')).body
+  assert.deepEqual(row.certificate, { firstName: 'Luca', lastName: 'Verdi', email: 'luca@example.com' })
+  assert.equal(row.certificateCode, null)
+  assert.deepEqual(row.receipt.payer, { firstName: 'Mario', lastName: 'Rossi', email: 'mario@example.com' })
+  const plain = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID(), certificate: null })
+  assert.equal(plain.status, 200)
+  assert.equal((await admin.request('/admin/orders')).body.find((o) => o.paypal_id === plain.body.id).certificate, null)
+})
+
+test('certificate code route requires admin and CSRF, sets and clears the code', async (t) => {
+  const { admin, buyer, enable } = await fixture(t, true)
+  await enable('takimo')
+  const requestId = randomUUID()
+  await buyer.request('/payments/orders', 'POST', { items: [{ modelId: 'takimo', variantId: null, quantity: 1 }], requestId })
+  const path = `/admin/orders/${requestId}/certificate`
+  assert.equal((await buyer.request(path, 'PUT', { code: 'ZT-001' })).status, 401)
+  assert.equal((await admin.request(path, 'PUT', { code: 'ZT-001' }, { 'X-CSRF-Token': 'bad' })).status, 403)
+  assert.equal((await admin.request(`/admin/orders/${randomUUID()}/certificate`, 'PUT', { code: 'ZT-001' })).status, 404)
+  assert.equal((await admin.request(path, 'PUT', { code: 'x'.repeat(81) })).status, 400)
+  const set = await admin.request(path, 'PUT', { code: '  ZT-001  ' })
+  assert.equal(set.status, 200)
+  assert.equal(set.body.id, requestId)
+  assert.equal(set.body.certificateCode, 'ZT-001')
+  assert.equal((await admin.request('/admin/orders')).body[0].certificateCode, 'ZT-001')
+  const cleared = await admin.request(path, 'PUT', { code: '' })
+  assert.equal(cleared.body.certificateCode, null)
 })

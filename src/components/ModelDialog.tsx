@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Picture from './Picture'
-import { infoHref, priceClass } from './ModelCard'
+import Recommended from './Recommended'
+import { PiecesNote, Tags, infoHref, priceClass, priceTone } from './ModelCard'
 import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
 import { useContent } from '../lib/i18n'
 import type { Model } from '../data/types'
@@ -14,20 +15,27 @@ interface Props {
   /** Variant and photo shown on the card when it was opened. */
   initialVariant: number
   initialImage: number
+  /** Public models offered under "Scopri anche". */
+  models: Model[]
   onClose: () => void
+  /** Switches the open dialog to another model. */
+  onSelect: (model: Model) => void
 }
 
-export default function ModelDialog({ model, trigger, initialVariant, initialImage, onClose }: Props) {
+export default function ModelDialog({ model, models, trigger, initialVariant, initialImage, onClose, onSelect }: Props) {
   const { orologi, site } = useContent()
   const ref = useRef<HTMLDialogElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const switched = useRef(false)
   const [active, setActive] = useState(0)
   const [variant, setVariant] = useState(0)
+  const isOpen = !!model
+  const modelId = model?.id
 
+  // Open/close follows presence only, so switching models keeps the dialog (and its focus trap) in place.
   useEffect(() => {
-    setActive(initialImage)
-    setVariant(initialVariant)
     const dialog = ref.current
-    if (!dialog || !model) return
+    if (!dialog || !isOpen) return
     if (!dialog.open) dialog.showModal()
     const { overflow } = document.documentElement.style
     document.documentElement.style.overflow = 'hidden'
@@ -36,7 +44,22 @@ export default function ModelDialog({ model, trigger, initialVariant, initialIma
       if (dialog.open) dialog.close()
       trigger?.focus()
     }
-  }, [model, trigger, initialVariant, initialImage])
+  }, [isOpen, trigger])
+
+  useEffect(() => {
+    setActive(initialImage)
+    setVariant(initialVariant)
+    if (!switched.current) return
+    switched.current = false
+    // Instant jump: the new model replaces the old one in place; a long smooth scroll would only add latency.
+    if (ref.current) ref.current.scrollTop = 0
+    titleRef.current?.focus({ preventScroll: true })
+  }, [modelId, initialVariant, initialImage])
+
+  const select = (next: Model) => {
+    switched.current = true
+    onSelect(next)
+  }
 
   const view = model ? resolveView(model, variant) : null
   const count = view?.images.length ?? 0
@@ -122,16 +145,18 @@ export default function ModelDialog({ model, trigger, initialVariant, initialIma
             </div>
             <div className={wide ? 'grid gap-8 md:grid-cols-2 md:gap-12' : 'max-w-[60ch]'}>
               <div className={wide ? 'max-w-[60ch]' : undefined}>
-                <h2 id={titleId} className="font-serif text-h2">
+                <h2 id={titleId} ref={titleRef} tabIndex={-1} className="font-serif text-h2 focus:outline-none focus-visible:outline-none">
                   {model.name}
                 </h2>
                 <p className="mt-2 text-small text-muted">
                   {view!.codes.length > 1 ? site.labels.codes : site.labels.code}: {view!.codes.join(' · ')}
                 </p>
-                <p className={`mt-4 ${priceClass}`}>
+                <p className={`mt-4 ${priceClass} ${priceTone(model)}`}>
                   <span className="sr-only">{site.labels.price}: </span>
                   {view!.price}
                 </p>
+                <Tags model={model} className="mt-3 flex-wrap" />
+                <PiecesNote model={model} className="mt-3" />
                 {model.variants && model.variants.length > 1 && (
                   <div className="-ml-3 mt-3">
                     <Swatches
@@ -174,6 +199,7 @@ export default function ModelDialog({ model, trigger, initialVariant, initialIma
               </div>
             </div>
           </div>
+          <Recommended current={model} models={models} onSelect={select} />
         </div>
       )}
     </dialog>

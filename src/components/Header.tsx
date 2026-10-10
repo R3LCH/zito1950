@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import { LanguageSelector, useContent } from '../lib/i18n'
+import { LanguageSelector, t, useContent } from '../lib/i18n'
 import { asset } from '../lib/asset'
+import { useShop } from '../lib/shop'
 
 const MENU_ID = 'menu-mobile'
 
 export default function Header() {
   const { site } = useContent()
+  const { cart, setCartOpen } = useShop()
+  const count = cart.reduce((sum, line) => sum + line.quantity, 0)
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  const cartRef = useRef<HTMLButtonElement>(null)
   const [active, setActive] = useState<string | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -56,7 +60,7 @@ export default function Header() {
       }
       if (e.key !== 'Tab' || !panelRef.current || !buttonRef.current) return
       const languageSelect = document.querySelector<HTMLElement>('header [data-language-selector] > button')
-      const focusables = [...(languageSelect ? [languageSelect] : []), buttonRef.current, ...panelRef.current.querySelectorAll<HTMLElement>('a')]
+      const focusables = [...(languageSelect ? [languageSelect] : []), ...(cartRef.current ? [cartRef.current] : []), buttonRef.current, ...panelRef.current.querySelectorAll<HTMLElement>('a')]
       const first = focusables[0]
       const last = focusables[focusables.length - 1]
       if (e.shiftKey && document.activeElement === first) {
@@ -122,7 +126,32 @@ export default function Header() {
               })}
             </ul>
           </nav>
-          <LanguageSelector compact />
+          <div className="flex items-center gap-1 md:gap-2">
+            <LanguageSelector compact />
+            <button
+              ref={cartRef}
+              type="button"
+              className="relative inline-flex min-h-11 min-w-11 items-center justify-center text-ink-2 transition-colors duration-200 hover:text-ink"
+              aria-haspopup="dialog"
+              aria-label={t('Carrello, {count} articoli', { count })}
+              onClick={() => {
+                setOpen(false)
+                setCartOpen(true)
+              }}
+            >
+              <svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="miter">
+                <path d="M4.5 7.5h15l-1 13h-13z" />
+                <path d="M8.5 9.5V6a3.5 3.5 0 0 1 7 0v3.5" />
+              </svg>
+              {count > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute right-1 top-1.5 inline-flex h-4 min-w-4 items-center justify-center bg-ink px-1 text-[10px] font-medium leading-none tabular-nums text-bg"
+                >
+                  {count}
+                </span>
+              )}
+            </button>
 
           <button
             ref={buttonRef}
@@ -146,6 +175,7 @@ export default function Header() {
               />
             </span>
           </button>
+          </div>
         </div>
 
         <div

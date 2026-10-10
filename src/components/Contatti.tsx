@@ -5,8 +5,8 @@ import { useContent } from '../lib/i18n'
 const fullAddress = `${baseContacts.address}, ${baseContacts.city}`
 const mapEmbed = `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`
 
-/** Large, calm link row: label on top, value below; whole row is the tap target. */
-function ContactLink({
+/** Large, calm link row: label on top, value below; whole row is the tap target. Shared with Social. */
+export function ContactLink({
   label,
   value,
   href,
@@ -93,24 +93,7 @@ export default function Contatti() {
           <div>
             <h3 className="text-h3">{site.cta.visit}</h3>
             <ul className="mt-6 border-t border-line">
-              <ContactLink label={contatti.labels.phone} value={contatti.numeroVerde} href={contatti.numeroVerdeHref} />
               <ContactLink label={contatti.labels.pec} value={contatti.pec} href={`mailto:${contatti.pec}`} />
-            </ul>
-
-            <h4 className="mt-10 text-small font-medium text-ink-2">{contatti.labels.social}</h4>
-            <ul className="mt-3 border-t border-line">
-              <ContactLink
-                label={contatti.labels.instagram}
-                value={`@${new URL(contatti.instagram).pathname.replaceAll('/', '')}`}
-                href={contatti.instagram}
-                external
-              />
-              <ContactLink
-                label={contatti.labels.facebook}
-                value={new URL(contatti.facebook).pathname.replaceAll('/', '')}
-                href={contatti.facebook}
-                external
-              />
             </ul>
           </div>
         </div>

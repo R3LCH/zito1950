@@ -3,7 +3,7 @@ import Picture from './Picture'
 import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
 import { contatti, orologi } from '../data/content'
 import { t, useContent } from '../lib/i18n'
-import type { Model } from '../data/types'
+import type { Availability, Model } from '../data/types'
 import { BuyButton } from './Cart'
 
 /** mailto link for an information request about a model (codes of the chosen variant). */
@@ -12,8 +12,48 @@ export function infoHref(model: Model, codes: string[] = model.codes): string {
   return `mailto:${contatti.pec}?subject=${encodeURIComponent(subject)}`
 }
 
-/** Price style shared by the card and the dialog. */
-export const priceClass = 'font-sans text-base font-medium tabular-nums text-ink'
+/** Price style shared by the card, the dialog and the recommendations; colour comes from `priceTone`. */
+export const priceClass = 'font-sans text-base font-medium tabular-nums'
+
+/** Missing availability means showcase only. */
+export const availabilityOf = (model: Model): Availability => model.availability ?? 'no-buy'
+
+/** Sold and out-of-stock watches stay listed, with a quieter price. */
+export const priceTone = (model: Model) => (statusLabel(model) ? 'text-muted' : 'text-ink')
+
+export function statusLabel(model: Model): string | null {
+  const availability = availabilityOf(model)
+  if (availability === 'sold') return t('Venduto')
+  if (availability === 'out-of-stock') return t('Esaurito')
+  return null
+}
+
+const tag = 'inline-block border border-ink px-2 py-[5px] font-sans text-[0.6875rem] font-medium uppercase leading-[1.2] tracking-[0.08em] lg:tracking-[0.14em]'
+export const limitedTag = `${tag} bg-ink text-bg`
+export const statusTag = `${tag} bg-bg text-ink`
+
+/** Limited-edition and status labels; the caller picks the direction (column on cards, row in the dialog). */
+export function Tags({ model, className = '' }: { model: Model; className?: string }) {
+  const status = statusLabel(model)
+  if (!model.limitedEdition && !status) return null
+  return (
+    <span className={`flex items-start gap-1 ${className}`}>
+      {model.limitedEdition && <span className={limitedTag}>{t('Edizione limitata')}</span>}
+      {status && <span className={statusTag}>{status}</span>}
+    </span>
+  )
+}
+
+/** Remaining pieces of a limited edition, shown only while at least one is left. */
+export function PiecesNote({ model, className = '' }: { model: Model; className?: string }) {
+  const pieces = model.piecesRemaining
+  if (!model.limitedEdition || pieces == null || pieces < 1) return null
+  return (
+    <p className={`border-l-2 border-ink pl-2 font-sans text-xs font-medium uppercase leading-snug tracking-[0.12em] text-ink ${className}`}>
+      {pieces === 1 ? t('Ultimo pezzo disponibile') : t('Ancora {count} pezzi', { count: pieces })}
+    </p>
+  )
+}
 
 interface Props {
   model: Model
@@ -59,6 +99,7 @@ export default function ModelCard({ model, onOpen }: Props) {
           label={model.name}
           className="[@media(hover:hover)_and_(pointer:fine)]:opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100"
         />
+        <Tags model={model} className="pointer-events-none absolute left-2 top-2 max-w-[calc(100%-1rem)] flex-col" />
       </div>
       <div className="flex flex-1 flex-col border-b border-line pt-4 pb-4">
         <h3 id={titleId} className="font-serif text-lg leading-snug lg:text-xl">
@@ -69,10 +110,11 @@ export default function ModelCard({ model, onOpen }: Props) {
           {view.codes.join(' · ')}
           {view.current && <span className="text-ink-2"> · {view.current.label}</span>}
         </p>
-        <p className={`mt-1 ${priceClass}`}>
+        <p className={`mt-1 ${priceClass} ${priceTone(model)}`}>
           <span className="sr-only">{site.labels.price}: </span>
           {view.price}
         </p>
+        <PiecesNote model={model} className="mt-2" />
         <div className="-ml-3 mt-1">
           <Swatches
             model={model}

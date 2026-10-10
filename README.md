@@ -2,6 +2,8 @@
 
 React 19 + Vite 8 + TypeScript + Tailwind 4 storefront, with a Node 24 / Express backend and persistent SQLite catalog, sessions, orders and uploaded photos. Design system: `design/DESIGN.md`.
 
+Page order: Hero → Orologi (`#orologi`) → Profumi (`#profumi`) → Storia (`#storia`, opening with “Scalea e la Calabria” and real place photographs) → Social (`#social`, Instagram and Facebook) → Dove siamo (`#contatti`, address, map, PEC and P.IVA). The header shopping-bag control opens the cart and shows a square item-count badge.
+
 ## Develop
 
 Requires Node **24** (the backend uses `node:sqlite` and native TypeScript stripping).
@@ -34,12 +36,18 @@ For a local built-site smoke run, set `APP_ORIGIN=http://localhost:3001` in `.en
 
 Open **`/admin`** on the same origin as the website. All write APIs require a server-validated admin session, exact-origin and CSRF checks. Passwords use salted scrypt hashes; login is rate-limited. Sessions rotate on login, expire after one hour and are revoked on logout. In production the cookie is `__Host-` prefixed, Secure, HttpOnly and SameSite=Strict. Security headers include CSP, frame restrictions and HSTS. Do not expose this app over production HTTP.
 
-- **Prodotti:** add/delete watches; edit names, codes, descriptions, quotations, specifications and EUR prices. Manage variants, their prices and photo galleries. **Abilita acquisto** controls purchase buttons on both cards and detail dialogs. Watches begin in showcase-only mode; enable them individually after verifying prices and payment configuration.
+- **Prodotti:** add/delete watches; edit names, codes, descriptions, quotations, specifications and EUR prices. Manage variants, their prices and photo galleries. **Disponibilità** is a five-option tile radio group: `buy` (Acquistabile), `no-buy` (Solo vetrina), `sold` (Venduto), `out-of-stock` (Esaurito), `hidden` (Nascosto). Only `buy` permits purchases; `hidden` is omitted from public `/api/catalog` responses. New watches start at `no-buy`; change them to `buy` only after verifying prices and payment configuration. **Edizione limitata** sets `limitedEdition`; **Pezzi rimanenti** sets `piecesRemaining` to an integer from 0–9999, or empty (`null`) to omit the count.
 - **Profumo:** edit the existing perfume's description, price, ingredients and photos; remove or add it back to the site.
 - **Fotografie:** upload JPG/PNG/WebP (12 MB maximum; 40 megapixel decode limit), associate with products, change the hero or replace story/perfume photographs. Images are re-encoded as WebP without original metadata and capped at 2400 px. In-use uploads cannot be removed from the library. Removed library files remain immutable for in-flight visitors; prune unused files offline only after backup.
-- **Ordini:** view recent checkout attempts, captured orders and PayPal delivery addresses. Only `COMPLETED` records confirm payment; approval or order creation does not.
+- **Ordini:** view recent checkout attempts, captured orders, PayPal delivery addresses and the certificate holder. Assign or clear each order's certificate code with the code form; it calls admin- and CSRF-protected `PUT /api/admin/orders/:id/certificate` with `{ "code": "ZT-001" }` (an empty code clears it). Only `COMPLETED` records confirm payment; approval or order creation does not.
 
 Changes publish immediately and persist in SQLite. Revision checks prevent one admin tab from silently overwriting another; on a conflict, reload the catalog and reapply the edit. All user-supplied text is rendered as text, not HTML. Purchase availability and prices are checked on the server, never trusted from local cart storage.
+
+The catalog shows purchasable watches first, followed by showcase-only, out-of-stock and sold models, with descending price within each group. **Tutti i modelli / Edizioni limitate** filters the list; `#edizioni-limitate` activates the limited-edition filter. Limited models have an **Edizione limitata** corner label; sold and out-of-stock models retain **Venduto / Esaurito** tags. Positive remaining counts show **Ancora N pezzi**, or **Ultimo pezzo disponibile** for one; empty or zero shows no count. The count is display metadata, not the purchase-availability control. **Scopri anche** in the detail dialog recommends up to four other models with the same limited-edition status first, then the closest price; selecting one switches the open dialog in place.
+
+The hero uses `catalog.hero`, defaulting to the most expensive seed model, **Tutus ab uno** (`img/models/tutus-ab-uno.jpg`), with **Orologiai a Scalea dal 1950** and links to the story, limited editions and social section. In **Fotografie → Foto principale**, the picker includes model photographs; **Usa il modello più costoso** selects the first photograph of the highest-priced non-hidden model with photographs. Save the form to publish that choice; it does not automatically follow future price changes.
+
+On backend startup, existing databases migrate `buyEnabled: true` to `availability: buy`, and false/missing to `no-buy`, preserving any existing availability state and removing the old flag. The former default hero `img/hero/new_hero.jpg` becomes the Tutus ab uno photograph; custom hero choices are kept. Missing `certificate` and `certificate_code` columns are automatically added to the orders table.
 
 ## Languages and translated product content
 
@@ -73,6 +81,10 @@ PAYPAL_CLIENT_SECRET=<sandbox REST app secret>
 Never prefix these values with `VITE_`. Restart the server after configuration changes. Missing credentials disable payment initiation and leave information-request links available.
 
 Checkout uses the [PayPal Orders v2 API](https://developer.paypal.com/api/orders/v2): server-calculated EUR order → hosted PayPal approval → return to the cart → explicit confirmation and server capture. No third-party payment script is loaded into the website. The server requests full representations, verifies capture status, amount, EUR currency and the local order reference before recording completion. Orders belong to the shopper's HttpOnly session (24-hour expiry); create/capture idempotency keys and persisted snapshots support repeated requests and capture-response recovery without a second charge. A price or availability change before capture requires a new checkout. Cancellation preserves the cart. If payment confirmation fails, use **Conferma / verifica pagamento** for the existing order before starting another purchase.
+
+Before checkout, **Certificato personalizzato** optionally collects **Nome**, **Cognome** and **Email**, matching the old site's `richiesta-certificato.html` fields. When enabled, checkout sends `certificate: { firstName, lastName, email }` in `POST /api/payments/orders`; when disabled, it sends `certificate: null`, and the certificate holder uses the PayPal payer name and email recorded on capture. The owner assigns the certificate code later in **Admin → Ordini**; shoppers do not enter the code.
+
+Privacy: certificate-holder names and email addresses are stored with orders. Custom holder details are stored when the order is created; PayPal payer details are recorded after capture. These details are visible to the authenticated administrator and are included in database backups.
 
 The current total is item prices × quantities, **without an added shipping surcharge**; PayPal collects the delivery address. Confirm the merchant's shipping, tax and delivery policies before enabling live purchases. Order information is available in admin; no email fulfilment automation is included.
 
@@ -118,9 +130,9 @@ Back up the database and uploads together, using SQLite's backup API or stopping
 
 Build-time public settings remain `VITE_BASE` (use `/` for the server deployment) and `VITE_SITE_URL` (absolute canonical URL with a trailing slash). Production build emits robots, sitemap and design reference assets.
 
-## Change record — 2026-10-07
+## Change record — 2026-10-07–2026-10-10
 
-- Replaced the watch hero with `public/img/hero/new_hero.jpg` and a generated WebP sibling. Preserved the square storefront composition rather than cropping it into the old panoramic watch frame.
+- Initially replaced the panoramic watch hero with a square storefront photograph. The current default is the Tutus ab uno product photograph; automatic migration replaces only the former default, preserving owner-selected heroes.
 - Added styled `/admin`, persistent catalog/media management and per-watch purchase toggles. Previously all product data was hard-coded; browser-only administration was rejected because it cannot enforce access control or publish durable changes.
 - Added a persistent cart and server-side PayPal order/capture integration with price validation and duplicate-charge protection. Previously the site only offered information requests.
 - Replaced the static-only Docker runtime with a non-root Node service and persistent volume; added build/test CI and a separate Pages-only public UI preview. Static hosting cannot safely implement real admin edits or payments, so the preview makes no API calls and disables publication rather than simulating a successful backend. Added isolated regressions for authorization, CSRF, concurrent edits, uploads, payment totals, disabled products, capture recovery and amount verification.
@@ -128,3 +140,5 @@ Build-time public settings remain `VITE_BASE` (use `/` for the server deployment
 - Added independent product-content language tabs, shared pricing/media, multilingual variant and photograph text, missing-translation feedback and Italian fallback. Bundled public-copy translations seed once. Kept all locales in one catalog revision to avoid language-specific saves overwriting each other, and added persistence/validation/fallback regressions.
 - Fixed admin product-editor intrinsic sizing for narrow screens; multilingual controls wrap without horizontal scrolling.
 - Added admin auto-translation into empty fields of other languages (Enter / Ctrl+Enter) via a server-side MyMemory → unofficial Google fallback, with session/CSRF protection. Previously each language was typed manually; the client never calls the translation services directly.
+- Reordered the storefront around the catalog, added the Scalea place block and a separate social section, and moved the cart opener into the header. Product availability states replace the old purchase toggle so sold, out-of-stock and hidden models are distinct; limited-edition labels, filtering and in-dialog recommendations expose the collection without changing those states.
+- Added optional certificate-holder details at checkout and an owner-assigned certificate code in admin orders, replacing the old standalone certificate request with order-linked data. Existing databases gain the certificate columns automatically.

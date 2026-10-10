@@ -1,6 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, euro, lineKey, useShop, type CartLine } from '../lib/shop'
 import { t } from '../lib/i18n'
+import type { CertificateHolder } from '../data/types'
+
+const CERTIFICATE_KEY = 'zito-certificate'
+interface CertificateDraft extends CertificateHolder { custom: boolean }
+function storedCertificate(): CertificateDraft {
+  const empty = { custom: false, firstName: '', lastName: '', email: '' }
+  try {
+    const value: unknown = JSON.parse(sessionStorage.getItem(CERTIFICATE_KEY) ?? 'null')
+    if (!value || typeof value !== 'object') return empty
+    const v = value as Record<string, unknown>
+    const text = (field: unknown, max: number) => (typeof field === 'string' ? field.slice(0, max) : '')
+    return { custom: v.custom === true, firstName: text(v.firstName, 80), lastName: text(v.lastName, 80), email: text(v.email, 254) }
+  } catch {
+    return empty
+  }
+}
 
 export function BuyButton({
   modelId,
@@ -13,7 +29,7 @@ export function BuyButton({
 }) {
   const { catalog, add, error } = useShop()
   const model = catalog.models.find((m) => m.id === modelId)
-  if (!model?.buyEnabled || error) return null
+  if (model?.availability !== 'buy' || error) return null
   return (
     <button type="button"
     className="btn mt-3 w-full"
@@ -35,16 +51,26 @@ export default function Cart() {
   )
   const [payments, setPayments] = useState<{ enabled: boolean; environment: string } | null>(null)
   const lock = useRef(false)
+  const certificateForm = useRef<HTMLFormElement>(null)
+  const [certificate, setCertificate] = useState(storedCertificate)
   const rows = cart.map((line) => {
     const model = catalog.models.find((m) => m.id === line.modelId)
     const variant = line.variantId ? model?.variants?.find((v) => v.id === line.variantId) : null
-    const available = !!model?.buyEnabled && (!model.variants?.length || !!variant)
+    const available = model?.availability === 'buy' && (!model.variants?.length || !!variant)
     return { line, model, variant, available, price: variant?.priceCents ?? model?.priceCents ?? 0 }
   })
   const total = rows.reduce((sum, row) => sum + row.price * row.line.quantity, 0)
   const unavailable = rows.some((row) => !row.available)
   useEffect(() => {
+    try {
+      sessionStorage.setItem(CERTIFICATE_KEY, JSON.stringify(certificate))
+    } catch {
+      /* Certificate choice still works without browser storage. */
+    }
+  }, [certificate])
+  useEffect(() => {
     if (!cartOpen) return
+    setPaid(false)
     trigger.current = document.activeElement as HTMLElement
     ref.current?.showModal()
     const previous = document.documentElement.style.overflow
@@ -72,11 +98,17 @@ export default function Cart() {
   }, [])
   async function checkout() {
     if (lock.current) return
+    // Native validation for the custom certificate holder fields.
+    if (certificate.custom && !certificateForm.current?.reportValidity()) return
     lock.current = true
     setBusy(true)
     setMessage('Preparazione del pagamento…')
     try {
-      const serialized = JSON.stringify(cart)
+      const holder: CertificateHolder | null = certificate.custom
+        ? { firstName: certificate.firstName.trim(), lastName: certificate.lastName.trim(), email: certificate.email.trim() }
+        : null
+      // A changed certificate holder is a different order request.
+      const serialized = JSON.stringify({ cart, certificate: holder })
       let request: { id: string; cart: string } | null = null
       try {
         request = JSON.parse(sessionStorage.getItem('zito-checkout-request') ?? 'null')
@@ -89,6 +121,7 @@ export default function Cart() {
       }
       const order = await api<{ id: string; approvalUrl: string }>('/payments/orders', 'POST', {
         items: cart,
+        certificate: holder,
         requestId: request.id,
       })
       sessionStorage.setItem('zito-paypal-order', order.id)
@@ -128,19 +161,7 @@ export default function Cart() {
   const update = (line: CartLine, quantity: number) =>
     setCart(cart.map((item) => (lineKey(item) === lineKey(line) ? { ...item, quantity } : item)))
   return (
-    <>
-      <button
-        type="button"
-        className="cart-trigger btn"
-        onClick={() => {
-          setPaid(false)
-          setCartOpen(true)
-        }}
-        aria-haspopup="dialog"
-      >
-        {t('Carrello ({count})', { count: cart.reduce((sum, line) => sum + line.quantity, 0) })}
-      </button>
-      <dialog
+    <dialog
         ref={ref}
         aria-labelledby="cart-title"
         className="shop-dialog"
@@ -240,20 +261,90 @@ export default function Cart() {
         ) : (
           !!cart.length &&
           !paid && (
-            <button
-              type="button"
-              className="btn mt-6 w-full"
-              disabled={busy || unavailable || !!shopError || !payments?.enabled}
-              onClick={() => void checkout()}
+            <form
+              ref={certificateForm}
+              className="mt-8 border-t border-line pt-6"
+              aria-labelledby="certificate-title"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void checkout()
+              }}
             >
-              {busy ? t('Connessione a PayPal…') : t('Paga con PayPal')}
-            </button>
+              <h3 id="certificate-title" className="sr-only">{t('Certificato di proprietà')}</h3>
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-small font-medium">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  className="h-5 w-5 shrink-0 cursor-pointer rounded-none accent-ink"
+                  checked={certificate.custom}
+                  disabled={busy}
+                  aria-describedby="certificate-help"
+                  onChange={(e) => setCertificate({ ...certificate, custom: e.target.checked })}
+                />
+                {t('Certificato personalizzato')}
+              </label>
+              <p id="certificate-help" className="mt-1 text-small text-muted">
+                {certificate.custom
+                  ? t('Il codice del certificato viene assegnato da ZITO 1950.')
+                  : t('Il certificato di proprietà sarà intestato ai dati del tuo account PayPal.')}
+              </p>
+              {certificate.custom && (
+                <fieldset disabled={busy} className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <legend className="sr-only">{t('Intestatario del certificato')}</legend>
+                  <label className="shop-label">
+                    {t('Nome di battesimo')}
+                    <input
+                      className="shop-input"
+                      name="given-name"
+                      autoComplete="given-name"
+                      required
+                      pattern=".*\S.*"
+                      maxLength={80}
+                      value={certificate.firstName}
+                      onChange={(e) => setCertificate({ ...certificate, firstName: e.target.value })}
+                    />
+                  </label>
+                  <label className="shop-label">
+                    {t('Cognome')}
+                    <input
+                      className="shop-input"
+                      name="family-name"
+                      autoComplete="family-name"
+                      required
+                      pattern=".*\S.*"
+                      maxLength={80}
+                      value={certificate.lastName}
+                      onChange={(e) => setCertificate({ ...certificate, lastName: e.target.value })}
+                    />
+                  </label>
+                  <label className="shop-label sm:col-span-2">
+                    {t('Email')}
+                    <input
+                      className="shop-input"
+                      type="email"
+                      name="email"
+                      autoComplete="email"
+                      required
+                      maxLength={254}
+                      value={certificate.email}
+                      onChange={(e) => setCertificate({ ...certificate, email: e.target.value })}
+                    />
+                  </label>
+                </fieldset>
+              )}
+              <button
+                type="submit"
+                className="btn mt-6 w-full"
+                disabled={busy || unavailable || !!shopError || !payments?.enabled}
+              >
+                {busy ? t('Connessione a PayPal…') : t('Paga con PayPal')}
+              </button>
+            </form>
           )
         )}
         {payments && !payments.enabled && !!cart.length && (
           <p className="mt-4 text-small">{t("Pagamenti online non ancora attivi. Contattaci per acquistare.")}</p>
         )}
       </dialog>
-    </>
   )
 }

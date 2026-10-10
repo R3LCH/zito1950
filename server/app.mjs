@@ -60,7 +60,9 @@ const modelSchema = z.object({
   name: text.min(1).max(120),
   codes: z.array(text.max(80)).max(20),
   priceCents: cents,
-  buyEnabled: z.boolean(),
+  availability: z.enum(['buy', 'no-buy', 'sold', 'out-of-stock', 'hidden']),
+  limitedEdition: z.boolean().optional(),
+  piecesRemaining: z.number().int().min(0).max(9999).nullable().optional(),
   description: text.optional(),
   quote: z.object({ text, author: text.optional() }).optional(),
   specs: z.array(text).max(50),
@@ -83,6 +85,13 @@ const cartSchema = z
   .array(z.object({ modelId: id, variantId: id.nullable(), quantity: z.number().int().min(1).max(10) }))
   .min(1)
   .max(30)
+const certificateSchema = z
+  .object({ firstName: text.min(1).max(80), lastName: text.min(1).max(80), email: z.string().trim().email().max(254) })
+  .strict()
+  .nullable()
+  .optional()
+const limitedEditions = new Set(['tutus-ab-uno', 'takimo', 'bauletto'])
+const placeImages = (storia.place?.images ?? []).map(({ src, alt }) => ({ src, alt }))
 
 export function createApp(options = {}) {
   const env = options.env ?? process.env
@@ -91,20 +100,31 @@ export function createApp(options = {}) {
   mkdirSync(join(dataDir, 'uploads'), { recursive: true })
   const db = new DatabaseSync(join(dataDir, 'shop.sqlite'))
   db.exec(
-    'PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; CREATE TABLE IF NOT EXISTS catalog (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, csrf TEXT NOT NULL, admin INTEGER NOT NULL, expires INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, session TEXT NOT NULL, fingerprint TEXT NOT NULL, paypal_id TEXT UNIQUE, status TEXT NOT NULL, total INTEGER NOT NULL, items TEXT NOT NULL, receipt TEXT, created INTEGER NOT NULL);',
+    'PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; CREATE TABLE IF NOT EXISTS catalog (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, csrf TEXT NOT NULL, admin INTEGER NOT NULL, expires INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, session TEXT NOT NULL, fingerprint TEXT NOT NULL, paypal_id TEXT UNIQUE, status TEXT NOT NULL, total INTEGER NOT NULL, items TEXT NOT NULL, receipt TEXT, created INTEGER NOT NULL, certificate TEXT, certificate_code TEXT);',
   )
+  const orderColumns = new Set(db.prepare('PRAGMA table_info(orders)').all().map((c) => c.name))
+  for (const column of ['certificate', 'certificate_code'])
+    if (!orderColumns.has(column)) db.exec(`ALTER TABLE orders ADD COLUMN ${column} TEXT`)
   if (!db.prepare('SELECT id FROM catalog').get()) {
     const seed = {
       hero: site.hero.image,
       models: models.map((m) => ({
         ...m,
         priceCents: initialPrice(m.price),
-        buyEnabled: false,
+        availability: 'no-buy',
+        limitedEdition: limitedEditions.has(m.id),
+        piecesRemaining: null,
         variants: m.variants?.map((v) => ({ ...v, priceCents: initialPrice(v.price) })),
       })),
       photos: [],
       imageOverrides: {},
-      siteImages: [site.hero.image, ...storia.chapters.flatMap((c) => (c.image ? [c.image] : [])), ...profumo.images],
+      siteImages: [
+        site.hero.image,
+        ...storia.chapters.flatMap((c) => (c.image ? [c.image] : [])),
+        ...placeImages,
+        ...profumo.images,
+      ],
+      catalogVersion: 2,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
@@ -122,6 +142,24 @@ export function createApp(options = {}) {
     existing.siteImages = existing.siteImages.map(seedImageTranslations)
     existing.imageOverrides = Object.fromEntries(Object.entries(existing.imageOverrides).map(([source, image]) => [source, seedImageTranslations(image)]))
     existing.localizationVersion = 1
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.catalogVersion !== 2) {
+    // Legacy buyEnabled flag becomes the availability state; owner-chosen heroes are kept.
+    existing.models = existing.models.map(({ buyEnabled, ...m }) => ({
+      ...m,
+      availability: m.availability ?? (buyEnabled ? 'buy' : 'no-buy'),
+      limitedEdition: m.limitedEdition ?? limitedEditions.has(m.id),
+      piecesRemaining: m.piecesRemaining ?? null,
+    }))
+    if (existing.hero?.src === 'img/hero/new_hero.jpg') existing.hero = seedImageTranslations(site.hero.image)
+    const known = new Set(existing.siteImages.map((im) => im.src))
+    for (const im of [site.hero.image, ...placeImages])
+      if (!known.has(im.src)) {
+        known.add(im.src)
+        existing.siteImages.push(seedImageTranslations(im))
+      }
+    existing.catalogVersion = 2
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   const catalog = () => {
@@ -229,7 +267,11 @@ export function createApp(options = {}) {
     res.clearCookie(cookieName, { path: '/', httpOnly: true, secure: production, sameSite: 'strict' })
     res.json({ ok: true })
   })
-  app.get('/api/catalog', (req, res) => res.json(catalog()))
+  app.get('/api/catalog', (req, res) => {
+    const body = catalog()
+    if (!req.session?.admin) body.models = body.models.filter((m) => m.availability !== 'hidden')
+    res.json(body)
+  })
   const translateText = createTranslator({ fetch: options.translateFetch ?? fetch, email: env.MYMEMORY_EMAIL })
   const translateRequest = z.object({
     source: z.enum(LOCALES),
@@ -338,16 +380,25 @@ export function createApp(options = {}) {
     res.json(save(body, revision(req)))
     // Keep the immutable file for in-flight customers and order history; prune offline after backup.
   })
+  const orderFields = 'id, paypal_id, status, total, items, receipt, created, certificate, certificate_code'
+  const orderRow = ({ certificate, certificate_code, ...o }) => ({
+    ...o,
+    items: JSON.parse(o.items),
+    receipt: o.receipt ? JSON.parse(o.receipt) : null,
+    certificate: certificate ? JSON.parse(certificate) : null,
+    certificateCode: certificate_code,
+  })
   app.get('/api/admin/orders', admin, (req, res) =>
     res.json(
-      db
-        .prepare(
-          'SELECT id, paypal_id, status, total, items, receipt, created FROM orders ORDER BY created DESC LIMIT 200',
-        )
-        .all()
-        .map((o) => ({ ...o, items: JSON.parse(o.items), receipt: o.receipt ? JSON.parse(o.receipt) : null })),
+      db.prepare(`SELECT ${orderFields} FROM orders ORDER BY created DESC LIMIT 200`).all().map(orderRow),
     ),
   )
+  app.put('/api/admin/orders/:id/certificate', admin, csrf, (req, res) => {
+    const code = z.string().trim().max(80).parse(req.body.code)
+    const result = db.prepare('UPDATE orders SET certificate_code=? WHERE id=?').run(code || null, req.params.id)
+    if (!result.changes) fail(404, 'Ordine non trovato.')
+    res.json(orderRow(db.prepare(`SELECT ${orderFields} FROM orders WHERE id=?`).get(req.params.id)))
+  })
 
   const paypalReady = !!env.PAYPAL_CLIENT_ID && !!env.PAYPAL_CLIENT_SECRET
   const paypalBase = env.PAYPAL_ENV === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com'
@@ -393,7 +444,7 @@ export function createApp(options = {}) {
       if (keys.has(key)) fail(400, 'Articolo duplicato nel carrello.')
       keys.add(key)
       const m = current.models.find((m) => m.id === row.modelId)
-      if (!m?.buyEnabled) fail(409, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
+      if (m?.availability !== 'buy') fail(409, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
       const v = row.variantId === null ? null : m.variants?.find((v) => v.id === row.variantId)
       if ((m.variants?.length && !v) || (row.variantId && !v)) fail(409, 'Variante non disponibile.')
       return {
@@ -423,21 +474,18 @@ export function createApp(options = {}) {
       const total = items.reduce((sum, row) => sum + row.priceCents * row.quantity, 0)
       if (total > 100000000) fail(400, 'Importo ordine troppo alto.')
       const requestId = z.string().uuid().parse(req.body.requestId)
+      const certificate = certificateSchema.parse(req.body.certificate)
+      const certificateJson = certificate ? JSON.stringify(certificate) : null
       const fingerprint = digest(JSON.stringify(items))
       let order = db.prepare('SELECT * FROM orders WHERE id=?').get(requestId)
       if (order && (order.session !== req.session.id || order.fingerprint !== fingerprint))
         fail(409, 'Carrello cambiato. Avvia un nuovo ordine.')
       if (order?.status === 'COMPLETED') fail(409, 'Ordine già pagato.')
-      if (!order) {
-        db.prepare('INSERT INTO orders (id,session,fingerprint,status,total,items,created) VALUES (?,?,?,?,?,?,?)').run(
-          requestId,
-          req.session.id,
-          fingerprint,
-          'CREATING',
-          total,
-          JSON.stringify(items),
-          Date.now(),
-        )
+      if (order) db.prepare('UPDATE orders SET certificate=? WHERE id=?').run(certificateJson, requestId)
+      else {
+        db.prepare(
+          'INSERT INTO orders (id,session,fingerprint,status,total,items,created,certificate) VALUES (?,?,?,?,?,?,?,?)',
+        ).run(requestId, req.session.id, fingerprint, 'CREATING', total, JSON.stringify(items), Date.now(), certificateJson)
         order = db.prepare('SELECT * FROM orders WHERE id=?').get(requestId)
       }
       if (order.paypal_id) {
@@ -519,10 +567,14 @@ export function createApp(options = {}) {
         units[0]?.custom_id !== order.id
       )
         fail(409, 'Pagamento non confermato. Non ripetere l’acquisto: riprova la verifica o contattaci.')
+      const email = remote.payer?.email_address ?? remote.payment_source?.paypal?.email_address
       const receipt = {
         captureId: captures[0].id,
-        email: remote.payer?.email_address ?? remote.payment_source?.paypal?.email_address,
+        email,
         shipping: units[0]?.shipping,
+        payer: remote.payer
+          ? { firstName: remote.payer.name?.given_name ?? '', lastName: remote.payer.name?.surname ?? '', email }
+          : null,
       }
       db.prepare('UPDATE orders SET status=?, receipt=? WHERE id=?').run('COMPLETED', JSON.stringify(receipt), order.id)
       res.json({ status: 'COMPLETED', id: order.id })

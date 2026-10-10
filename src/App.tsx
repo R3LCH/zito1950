@@ -4,6 +4,7 @@ import Header from './components/Header'
 import Hero from './components/Hero'
 import Orologi from './components/Orologi'
 import Profumi from './components/Profumi'
+import Social from './components/Social'
 import Storia from './components/Storia'
 import Admin from './components/Admin'
 import Cart from './components/Cart'
@@ -24,9 +25,10 @@ export default function App() {
       <Header />
       <main id="contenuto" tabIndex={-1} className="outline-none">
         <Hero />
-        <Storia />
         <Orologi />
         <Profumi />
+        <Storia />
+        <Social />
         <Contatti />
       </main>
       <Footer />

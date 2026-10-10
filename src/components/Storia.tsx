@@ -1,13 +1,50 @@
 import { useContent } from '../lib/i18n'
-import type { StoriaChapter } from '../data/types'
+import type { StoriaChapter, StoriaPlace } from '../data/types'
 import { useReveal } from '../lib/useReveal'
 import Picture from './Picture'
+
+/** Opening setting: the town, with a tall village photo beside text and a period photo below it. */
+function Place({ place }: { place: StoriaPlace }) {
+  const ref = useReveal<HTMLElement>()
+  const [main, secondary] = place.images
+  return (
+    <article
+      ref={ref}
+      aria-labelledby="storia-luogo"
+      className="reveal grid gap-8 border-t border-line py-[clamp(3rem,7vw,6.5rem)] md:grid-cols-12 md:gap-x-10"
+    >
+      {main && (
+        <figure className="md:col-span-6 md:row-span-2">
+          <Picture src={main.src} alt={main.alt} sizes="(min-width: 768px) 48vw, 100vw" pictureClassName="block bg-well" className="w-full" />
+          <figcaption className="mt-3 text-small text-muted">{main.caption}</figcaption>
+        </figure>
+      )}
+      <div className="md:col-span-5 md:col-start-8 md:self-end">
+        <p className="eyebrow">{place.eyebrow}</p>
+        <h3 id="storia-luogo" className="mt-4 text-h2 text-ink">
+          {place.title}
+        </h3>
+        <div className="mt-6 max-w-[52ch] space-y-5 text-ink-2 md:mt-8">
+          {place.paragraphs.map((p) => (
+            <p key={p}>{p}</p>
+          ))}
+        </div>
+      </div>
+      {secondary && (
+        <figure className="md:col-span-5 md:col-start-8 md:self-start">
+          <Picture src={secondary.src} alt={secondary.alt} sizes="(min-width: 768px) 40vw, 100vw" pictureClassName="block bg-well" className="w-full" />
+          <figcaption className="mt-3 text-small text-muted">{secondary.caption}</figcaption>
+        </figure>
+      )}
+    </article>
+  )
+}
 
 function Chapter({ chapter, index }: { chapter: StoriaChapter; index: number }) {
   const ref = useReveal<HTMLElement>()
   const titleId = `storia-capitolo-${index + 1}`
   const { image } = chapter
-  // Image on the left for even chapters, on the right for odd ones (desktop only).
+  // Chapter 1 (1945) is text-only, so image chapters alternate right, left, right… on desktop.
   const flip = index % 2 === 1
 
   const text = (
@@ -72,6 +109,8 @@ export default function Storia() {
             {storia.intro}
           </p>
         </div>
+
+        <Place place={storia.place} />
 
         {storia.chapters.map((chapter, i) => (
           <Chapter key={chapter.title} chapter={chapter} index={i} />

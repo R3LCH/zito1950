@@ -36,6 +36,10 @@ export interface Variant {
   translations?: TextTranslations
 }
 
+/** Public availability of a watch; set per product in the admin panel. */
+export const AVAILABILITIES = ['buy', 'no-buy', 'sold', 'out-of-stock', 'hidden'] as const
+export type Availability = (typeof AVAILABILITIES)[number]
+
 export interface Model {
   id: string
   codes: string[]
@@ -43,7 +47,11 @@ export interface Model {
   /** Exactly as printed on the price card, e.g. "3.890 EUR". */
   price: string
   priceCents?: number
-  buyEnabled?: boolean
+  /** buy: Acquista button · no-buy: showcase only · sold: Venduto · out-of-stock: Esaurito · hidden: not listed. Default no-buy. */
+  availability?: Availability
+  limitedEdition?: boolean
+  /** Pieces still available for a limited edition; null/undefined = not shown. */
+  piecesRemaining?: number | null
   quote?: Quote
   description?: string
   specs: string[]
@@ -53,18 +61,28 @@ export interface Model {
   translations?: TextTranslations
 }
 
+/** Name on the ownership certificate (old site: nome, cognome, email). */
+export interface CertificateHolder {
+  firstName: string
+  lastName: string
+  email: string
+}
+
 export interface Site {
   name: string
   tagline: string
   description: string
   nav: { href: string; label: string }[]
   cta: {
-    collection: string
+    /** Hero button to #storia. */
+    story: string
+    /** Hero button to #edizioni-limitate. */
+    limited: string
+    /** Hero button to #social. */
+    social: string
     info: string
     whereToFind: string
     visit: string
-    /** Secondary hero link to #storia. */
-    story: string
   }
   hero: { image: Img }
   labels: {
@@ -90,10 +108,19 @@ export interface StoriaChapter {
   image?: Img & { caption: string }
 }
 
+/** Opening setting of the story: the town where the business started and still is. */
+export interface StoriaPlace {
+  eyebrow: string
+  title: string
+  paragraphs: string[]
+  images: (Img & { caption: string })[]
+}
+
 export interface Storia {
   eyebrow: string
   title: string
   intro: string
+  place: StoriaPlace
   chapters: StoriaChapter[]
   closing: Quote
 }
@@ -148,8 +175,6 @@ export interface Contatti {
   company: string
   address: string
   city: string
-  numeroVerde: string
-  numeroVerdeHref: string
   pec: string
   piva: string
   website: string
@@ -158,7 +183,6 @@ export interface Contatti {
   mapsUrl: string
   labels: {
     address: string
-    phone: string
     pec: string
     social: string
     piva: string

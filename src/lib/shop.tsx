@@ -53,19 +53,23 @@ export const euro = formatMoney
 export const lineKey = (line: CartLine) => `${line.modelId}:${line.variantId ?? ''}`
 // Original catalog prices use Italian thousands separators and decimal commas.
 const seedPrice = (price: string) => Math.round(Number(price.replaceAll('.', '').replace(',', '.').replace(' EUR', '')) * 100)
+// Seed models whose specs read "Edizione limitata".
+const LIMITED_EDITIONS: Record<string, true> = { 'tutus-ab-uno': true, takimo: true, bauletto: true }
 const initial: Catalog = {
   revision: 0,
   models: models.map(model => seedModelTranslations({
     ...model,
     priceCents: seedPrice(model.price),
-    buyEnabled: false,
+    availability: 'no-buy',
+    limitedEdition: LIMITED_EDITIONS[model.id] === true,
+    piecesRemaining: null,
     variants: model.variants?.map(variant => ({ ...variant, priceCents: seedPrice(variant.price) })),
   })),
   perfume: seedPerfumeTranslations({ ...profumo, priceCents: seedPrice(profumo.price) }),
   hero: seedImageTranslations(site.hero.image),
   photos: [],
   imageOverrides: {},
-  siteImages: [site.hero.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), ...profumo.images],
+  siteImages: [site.hero.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), ...storia.place.images, ...profumo.images],
 }
 interface ShopState {
   catalog: Catalog
@@ -136,7 +140,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     }
   }, [cart])
   const add = (model: Model, variant: number) => {
-    if (!model.buyEnabled || error) return
+    if (model.availability !== 'buy' || error) return
     const line = { modelId: model.id, variantId: model.variants?.[variant]?.id ?? null, quantity: 1 }
     setCart((current) => {
       const old = current.find((item) => lineKey(item) === lineKey(line))

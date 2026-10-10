@@ -149,7 +149,6 @@
   .shop-label { display: flex; flex-direction: column; gap: 0.5rem; font-size: var(--text-small); }
   .shop-dialog { margin: auto; width: min(720px, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto; border: 1px solid var(--color-line); padding: clamp(1.25rem, 4vw, 2.5rem); background: var(--color-bg); color: var(--color-ink); }
   .shop-dialog::backdrop { background: rgb(20 20 20 / 35%); }
-  .cart-trigger { position: fixed; bottom: 1.25rem; right: var(--gutter); z-index: 30; background: var(--color-bg); }
   button, select { cursor: pointer; }
   button:disabled, fieldset:disabled { opacity: 0.55; cursor: not-allowed; }
 }

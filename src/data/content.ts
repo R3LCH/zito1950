@@ -2,26 +2,28 @@ import type { Contatti, Img, Model, Orologi, Profumo, Site, Storia } from './typ
 
 export const site: Site = {
   name: 'ZITO 1950',
-  tagline: 'Casa fondata nel 1950 dal Cav. Luigi Antonio Zito',
+  tagline: 'Orologiai a Scalea dal 1950',
   description:
-    'Zito1950 è una lunga storia che inizia più di mezzo secolo fa, a Scalea, sulla Riviera dei Cedri.',
+    'Casa fondata nel 1950 dal Cav. Luigi Antonio Zito a Scalea, sulla Riviera dei Cedri.',
   nav: [
-    { href: '#storia', label: 'Storia' },
     { href: '#orologi', label: 'Orologi' },
     { href: '#profumi', label: 'Profumi' },
-    { href: '#contatti', label: 'Contatti' },
+    { href: '#storia', label: 'Storia' },
+    { href: '#social', label: 'Social' },
+    { href: '#contatti', label: 'Dove siamo' },
   ],
   cta: {
-    collection: 'Scopri la collezione',
+    story: 'Scopri la storia',
+    limited: 'Edizioni limitate',
+    social: 'Social',
     info: 'Richiedi informazioni',
-    whereToFind: 'Dove trovarci',
-    visit: 'Chiamaci o scrivici',
-    story: 'La nostra storia',
+    whereToFind: 'Dove siamo',
+    visit: 'Scrivici',
   },
   hero: {
     image: {
-      src: 'img/hero/new_hero.jpg',
-      alt: 'La boutique OROincenso&mirra ZITO 1950, facciata e ingresso in bianco e nero',
+      src: 'img/models/tutus-ab-uno.jpg',
+      alt: 'Tutus ab uno, cassa in oro rosa 18 Kt, quadrante avorio e cinturino in coccodrillo',
     },
   },
   labels: {
@@ -513,9 +515,38 @@ export const storia: Storia = {
   eyebrow: 'Storia',
   title: 'Una famiglia di orologiai a Scalea',
   intro: 'Zito1950 è una lunga storia che inizia più di mezzo secolo fa.',
+  place: {
+    eyebrow: 'Scalea · Calabria',
+    title: 'Scalea e la Calabria',
+    paragraphs: [
+      'Scalea è un comune della provincia di Cosenza, in Calabria, affacciato sul Mar Tirreno lungo la Riviera dei Cedri.',
+      '«Piccolo e incontaminato borgo della Riviera dei Cedri, oggi rinomata meta turistica internazionale.»',
+      'Qui nel 1945 apre il primo negozio di famiglia e nel 1950 nasce la ditta Zito. Qui la casa è ancora oggi, in via Michele Bianchi n. 23.',
+    ],
+    images: [
+      {
+        src: 'img/storia/scalea-borgo.jpg',
+        alt: 'Fotografia d’epoca in bianco e nero di Scalea, il borgo sulla collina sopra il mare',
+        caption: 'Scalea, Riviera dei Cedri',
+      },
+      {
+        src: 'img/storia/scalea-palazzo.jpg',
+        alt: 'Fotografia d’epoca in bianco e nero di un palazzo storico di Scalea',
+        caption: 'Scalea, foto d’epoca',
+      },
+    ],
+  },
   chapters: [
     {
-      eyebrow: 'Il fondatore',
+      eyebrow: '1945 · Scalea',
+      title: 'Il primo negozio',
+      paragraphs: [
+        'Siamo nel 1945 a Scalea.',
+        "Un piccolo negozio le cui vetrine mostrano pochi ma preziosi orologi organizzati in gruppetto; sullo sfondo un ambiente dal sapore familiare: comode poltroncine su cui accomodarsi per scambiare due chiacchiere e gustare un dolcetto preparato da mia nonna, tipico dei negozi d'allora... dove il tempo scorreva lento.",
+      ],
+    },
+    {
+      eyebrow: '1950 · Il fondatore',
       title: 'Cav. Luigi Antonio Zito',
       paragraphs: [
         'L. A. Zito entra come orologiaio nelle ferrovie italiane. La sua grande passione, la forte determinazione e la grande abilità di maestro orologiaio lo stimolano a fondare nel 1950 la ditta Zito.',
@@ -524,19 +555,6 @@ export const storia: Storia = {
         src: 'img/storia/luigi-antonio-zito-cavaliere.jpg',
         alt: 'Ritratto in bianco e nero del Cav. Luigi Antonio Zito in abito scuro',
         caption: 'Cav. Luigi Antonio Zito',
-      },
-    },
-    {
-      eyebrow: '1945 · Scalea',
-      title: 'Il primo negozio',
-      paragraphs: [
-        'Siamo nel 1945 a Scalea, piccolo e incontaminato borgo della Riviera dei Cedri, oggi rinomata meta turistica internazionale.',
-        "Un piccolo negozio le cui vetrine mostrano pochi ma preziosi orologi organizzati in gruppetto; sullo sfondo un ambiente dal sapore familiare: comode poltroncine su cui accomodarsi per scambiare due chiacchiere e gustare un dolcetto preparato da mia nonna, tipico dei negozi d'allora... dove il tempo scorreva lento.",
-      ],
-      image: {
-        src: 'img/storia/scalea-borgo.jpg',
-        alt: 'Fotografia d’epoca in bianco e nero di Scalea, il borgo sulla collina sopra il mare',
-        caption: 'Scalea, Riviera dei Cedri',
       },
     },
     {
@@ -670,13 +688,11 @@ export const profumo: Profumo = {
 
 export const contatti: Contatti = {
   eyebrow: 'Contatti',
-  title: 'Vieni a trovarci',
+  title: 'Dove siamo',
   intro: 'Scalea, piccolo borgo della Riviera dei Cedri.',
   company: 'GRANALIDA s.r.l. soc. unipers.',
   address: 'via Michele Bianchi n. 23',
   city: 'Scalea (CS)',
-  numeroVerde: '800 58 67 08',
-  numeroVerdeHref: 'tel:+39800586708',
   pec: 'granalida@pec.it',
   piva: '03012360784',
   website: 'www.zito1950.it',
@@ -685,7 +701,6 @@ export const contatti: Contatti = {
   mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Via+Michele+Bianchi+23+Scalea+CS',
   labels: {
     address: 'Indirizzo',
-    phone: 'Numero Verde',
     pec: 'PEC',
     social: 'Social',
     piva: 'P. IVA',
@@ -710,7 +725,9 @@ export const contatti: Contatti = {
  * italy: journal 45 · cafe-racer: journal 46 · gentleman: journal 49 · 40000um: journal 50
  * casuale, high-flight-16b, high-flight-16: journal 51 ("Myota" come stampato)
  * tasca, bauletto: journal 52 (citazione bauletto senza autore) · vintage: journal 53
- * storia: fondatore journal 15 + old storia.html (ferrovie, 1950); Scalea 1945 journal 25-26;
+ * storia: Scalea (luogo) journal 25-26 (citazione "piccolo e incontaminato borgo"), provincia di
+ *   Cosenza/Tirreno: dato geografico; via Michele Bianchi n. 23 da old contatti.html;
+ *   primo negozio 1945 journal 25-26; fondatore journal 15 + old storia.html (ferrovie, 1950);
  *   Francesco Zito journal 27, 32 (1955); epoca moderna journal 32-34 + old passione-zito.html
  *   (ritratto ad olio / fototessera, "due momenti" da old storia.html); Vittorio Zito 1957
  *   journal 47; laboratorio del nonno journal 28-29; nuova era journal 34-35; chiusura journal 36.
@@ -719,7 +736,8 @@ export const contatti: Contatti = {
  * profumo: journal 354 (citazione, nome, ZPR07, testo, 50 ml), 355 (120 EUR);
  *   paragrafi 2-3 e ingredienti da old zpr07.html.
  * contatti: old contatti.html (GRANALIDA, indirizzo, P. IVA, PEC), old index/header (social);
- *   Numero Verde e www.zito1950.it: journal 357. CAP non presente nelle fonti.
- * site.tagline: old storia.html; nav/cta: microcopy UI.
+ *   www.zito1950.it: journal 357. Numero di telefono rimosso su richiesta. CAP non presente nelle fonti.
+ * site.tagline/description: old storia.html (fondazione 1950, Scalea, Riviera dei Cedri);
+ * hero: Tutus ab uno, modello più costoso del listino (journal 355, 3.890 EUR); nav/cta: microcopy UI.
  */
 
