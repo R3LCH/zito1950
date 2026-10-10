@@ -71,7 +71,7 @@ function PhotoEditor({
   library: Img[]
   language?: Locale
 }) {
-  const [selected, setSelected] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
   return (
     <div className="space-y-4">
       <p className="eyebrow">{t("Fotografie")}</p>
@@ -119,33 +119,19 @@ function PhotoEditor({
           </li>
         ))}
       </ul>
-      <div className="flex flex-wrap gap-3">
-        <select
-          aria-label={t("Foto dalla libreria")}
-          className="shop-input min-w-0 flex-1"
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-        >
-          <option value="">{t("Seleziona dalla libreria")}</option>
-          {library.map((im) => (
-            <option key={im.src} value={im.src}>
-              {photoLabel(im)}
-            </option>
-          ))}
-        </select>
-        <button
-          className="btn"
-          type="button"
-          disabled={!selected}
-          onClick={() => {
-            const photo = library.find((im) => im.src === selected)
-            if (photo) onChange(current => [...current, { ...photo }])
-            setSelected('')
-          }}
-        >
+      <div>
+        <button className="btn" type="button" onClick={() => setPickerOpen(true)}>
           {t("Aggiungi foto")}
         </button>
       </div>
+      <PhotoPicker
+        open={pickerOpen}
+        library={library}
+        busy={false}
+        onUpload={onUpload}
+        onPick={(photo) => onChange(current => [...current, { ...photo }])}
+        onClose={() => setPickerOpen(false)}
+      />
       <label className="shop-label">
         {t("Carica nuove foto")}
         <input
