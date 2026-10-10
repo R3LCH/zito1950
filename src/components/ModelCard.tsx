@@ -3,7 +3,8 @@ import Picture from './Picture'
 import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
 import { contatti, orologi } from '../data/content'
 import { t, useContent } from '../lib/i18n'
-import type { Availability, Model } from '../data/types'
+import type { Model } from '../data/types'
+import { availabilityOf } from '../lib/catalogFilters'
 import { BuyButton } from './Cart'
 
 /** mailto link for an information request about a model (codes of the chosen variant). */
@@ -15,17 +16,11 @@ export function infoHref(model: Model, codes: string[] = model.codes): string {
 /** Price style shared by the card, the dialog and the recommendations; colour comes from `priceTone`. */
 export const priceClass = 'font-sans text-base font-medium tabular-nums'
 
-/** Missing availability means showcase only. */
-export const availabilityOf = (model: Model): Availability => model.availability ?? 'no-buy'
-
-/** Sold and out-of-stock watches stay listed, with a quieter price. */
+/** Out-of-stock watches stay listed, with a quieter price. */
 export const priceTone = (model: Model) => (statusLabel(model) ? 'text-muted' : 'text-ink')
 
 export function statusLabel(model: Model): string | null {
-  const availability = availabilityOf(model)
-  if (availability === 'sold') return t('Venduto')
-  if (availability === 'out-of-stock') return t('Esaurito')
-  return null
+  return availabilityOf(model) === 'out-of-stock' ? t('Esaurito') : null
 }
 
 const tag = 'inline-block border border-ink px-2 py-[5px] font-sans text-[0.6875rem] font-medium uppercase leading-[1.2] tracking-[0.08em] lg:tracking-[0.14em]'

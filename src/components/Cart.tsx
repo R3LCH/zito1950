@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, euro, lineKey, useShop, type CartLine } from '../lib/shop'
 import { t } from '../lib/i18n'
 import type { CertificateHolder } from '../data/types'
+import { availabilityOf } from '../lib/catalogFilters'
 
 const CERTIFICATE_KEY = 'zito-certificate'
 interface CertificateDraft extends CertificateHolder { custom: boolean }
@@ -29,7 +30,7 @@ export function BuyButton({
 }) {
   const { catalog, add, error } = useShop()
   const model = catalog.models.find((m) => m.id === modelId)
-  if (model?.availability !== 'buy' || error) return null
+  if (!model || availabilityOf(model) !== 'buy' || error) return null
   return (
     <button type="button"
     className="btn mt-3 w-full"
@@ -40,7 +41,7 @@ export function BuyButton({
   )
 }
 export default function Cart() {
-  const { localizedCatalog: catalog, cart, setCart, cartOpen, setCartOpen, error: shopError } = useShop()
+  const { localizedCatalog: catalog, cart, setCart, cartOpen, setCartOpen, error: shopError, reload } = useShop()
   const ref = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLElement | null>(null)
   const [busy, setBusy] = useState(false)
@@ -56,7 +57,7 @@ export default function Cart() {
   const rows = cart.map((line) => {
     const model = catalog.models.find((m) => m.id === line.modelId)
     const variant = line.variantId ? model?.variants?.find((v) => v.id === line.variantId) : null
-    const available = model?.availability === 'buy' && (!model.variants?.length || !!variant)
+    const available = !!model && availabilityOf(model) === 'buy' && (!model.variants?.length || !!variant)
     return { line, model, variant, available, price: variant?.priceCents ?? model?.priceCents ?? 0 }
   })
   const total = rows.reduce((sum, row) => sum + row.price * row.line.quantity, 0)
@@ -150,6 +151,8 @@ export default function Cart() {
       sessionStorage.removeItem('zito-paypal-order')
       sessionStorage.removeItem('zito-checkout-request')
       history.replaceState(null, '', location.pathname)
+      // Captures lower limited-edition counts; show the new numbers without a page reload.
+      void reload()
       setMessage(t('Pagamento completato. Riferimento ordine: {id}. Conserva questo riferimento.', { id: result.id }))
     } catch (error) {
       setMessage((error as Error).message)

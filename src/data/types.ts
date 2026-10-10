@@ -13,6 +13,8 @@ export interface Img {
   src: string
   alt: string
   altTranslations?: Partial<Record<TranslationLocale, string>>
+  /** Original upload file name (without extension), shown only in the admin panel. */
+  name?: string
 }
 
 export interface Quote {
@@ -37,7 +39,7 @@ export interface Variant {
 }
 
 /** Public availability of a watch; set per product in the admin panel. */
-export const AVAILABILITIES = ['buy', 'no-buy', 'sold', 'out-of-stock', 'hidden'] as const
+export const AVAILABILITIES = ['buy', 'no-buy', 'out-of-stock', 'hidden'] as const
 export type Availability = (typeof AVAILABILITIES)[number]
 
 export interface Model {
@@ -47,10 +49,10 @@ export interface Model {
   /** Exactly as printed on the price card, e.g. "3.890 EUR". */
   price: string
   priceCents?: number
-  /** buy: Acquista button · no-buy: showcase only · sold: Venduto · out-of-stock: Esaurito · hidden: not listed. Default no-buy. */
+  /** buy: Acquista button · no-buy: showcase only · out-of-stock: Esaurito · hidden: not listed. Default no-buy. A limited edition with 0 pieces left reads as out-of-stock. */
   availability?: Availability
   limitedEdition?: boolean
-  /** Pieces still available for a limited edition; null/undefined = not shown. */
+  /** Pieces still available for a limited edition; null/undefined = not shown, 0 = Esaurito and not purchasable. */
   piecesRemaining?: number | null
   /** Shown with a "Nuovo" tag and listed first; set in the admin panel. */
   isNew?: boolean

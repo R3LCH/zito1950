@@ -50,12 +50,14 @@ export default function Profumi() {
             </div>
           </dl>
 
-          <blockquote className="mt-8">
-            <p className="font-serif text-h3 italic text-ink-2">«{profumo.quote.text}»</p>
-            {profumo.quote.author && (
-              <footer className="mt-2 text-small text-muted">— {profumo.quote.author}</footer>
-            )}
-          </blockquote>
+          {(profumo.quote.text.trim() || profumo.quote.author?.trim()) && (
+            <blockquote className="mt-8">
+              {profumo.quote.text.trim() && <p className="font-serif text-h3 italic text-ink-2">«{profumo.quote.text}»</p>}
+              {profumo.quote.author?.trim() && (
+                <footer className={`${profumo.quote.text.trim() ? 'mt-2 ' : ''}text-small text-muted`}>— {profumo.quote.author}</footer>
+              )}
+            </blockquote>
+          )}
 
           <div className="mt-8 space-y-5 text-ink-2">
             {profumo.paragraphs.map((p) => (

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import ModelCard, { availabilityOf } from './ModelCard'
+import ModelCard from './ModelCard'
 import ModelDialog from './ModelDialog'
 import CatalogFilters from './CatalogFilters'
 import { t, useContent } from '../lib/i18n'
 import type { Model } from '../data/types'
 import { useReveal } from '../lib/useReveal'
 import { useShop } from '../lib/shop'
-import { EMPTY_FILTERS, compareModels, facetIndex, matches, type FilterState } from '../lib/catalogFilters'
+import { EMPTY_FILTERS, availabilityOf, compareModels, facetIndex, matches, type FilterState } from '../lib/catalogFilters'
 
 const LIMITED_HASH = '#edizioni-limitate'
 

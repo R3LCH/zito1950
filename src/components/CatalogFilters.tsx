@@ -30,7 +30,6 @@ const OPTION_LABELS: Record<string, string> = {
   buy: 'Acquistabile',
   'no-buy': 'Solo vetrina',
   'out-of-stock': 'Esaurito',
-  sold: 'Venduto',
   automatic: 'Automatico',
   manual: 'Carica manuale',
   quartz: 'Quarzo',

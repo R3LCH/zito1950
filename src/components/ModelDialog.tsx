@@ -170,11 +170,11 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
                     />
                   </div>
                 )}
-                {model.quote && (
+                {(model.quote?.text.trim() || model.quote?.author?.trim()) && (
                   <figure className="mt-8 border-l border-line pl-5">
-                    <blockquote className="font-serif text-xl italic leading-snug">“{model.quote.text}”</blockquote>
-                    {model.quote.author && (
-                      <figcaption className="mt-2 text-small text-muted">— {model.quote.author}</figcaption>
+                    {model.quote.text.trim() && <blockquote className="font-serif text-xl italic leading-snug">“{model.quote.text}”</blockquote>}
+                    {model.quote.author?.trim() && (
+                      <figcaption className={`${model.quote.text.trim() ? 'mt-2 ' : ''}text-small text-muted`}>— {model.quote.author}</figcaption>
                     )}
                   </figure>
                 )}

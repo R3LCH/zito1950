@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { AVAILABILITIES, type Availability, type CertificateHolder, type Img, type Model, type Profumo, type Variant, type TextTranslation } from '../data/types'
 import { api, euro, getSession, STATIC_PREVIEW, useShop, type Catalog } from '../lib/shop'
 import { profumo as originalPerfume } from '../data/content'
@@ -13,6 +13,11 @@ const textPatch = (key: keyof TextTranslation, value: TextValue): TextTranslatio
 // Italian lives in the base fields; every other language lives in `translations` / `altTranslations`.
 const altOf = (image: Img, locale: Locale) => (locale === 'it' ? image.alt : image.altTranslations?.[locale])
 const withAlt = (image: Img, locale: Locale, alt: string): Img => (locale === 'it' ? { ...image, alt } : { ...image, altTranslations: { ...image.altTranslations, [locale]: alt } })
+/** Admin label for a photo: uploaded file name, then description, then path. */
+const photoLabel = (image: Img) => image.name?.trim() || image.alt.trim() || image.src
+/** Uploads files to the library and resolves to the new photos (empty when the upload failed). */
+type UploadPhotos = (files: File[]) => Promise<Img[]>
+const PHOTO_TYPES = 'image/jpeg,image/png,image/webp'
 const modelText = (d: Model, locale: Locale): TextTranslation => (locale === 'it' ? { description: d.description, specs: d.specs, quoteText: d.quote?.text } : d.translations?.[locale] ?? {})
 function withModelText(d: Model, locale: Locale, patch: TextTranslation): Model {
   if (locale !== 'it') return { ...d, translations: { ...d.translations, [locale]: { ...d.translations?.[locale], ...patch } } }
@@ -29,7 +34,6 @@ function withPerfumeText(d: Profumo, locale: Locale, patch: TextTranslation): Pr
 const AVAILABILITY_COPY: Record<Availability, { label: string; hint: string }> = {
   buy: { label: 'Acquistabile', hint: 'Mostra il pulsante Acquista e il prezzo.' },
   'no-buy': { label: 'Solo vetrina', hint: 'Visibile, senza pulsante di acquisto.' },
-  sold: { label: 'Venduto', hint: 'Visibile con l’etichetta Venduto, per chi l’ha perso.' },
   'out-of-stock': { label: 'Esaurito', hint: 'Visibile con l’etichetta Esaurito.' },
   hidden: { label: 'Nascosto', hint: 'Non compare sul sito.' },
 }
@@ -55,6 +59,7 @@ function PhotoEditor({
   images,
   onChange,
   onTranslateKey,
+  onUpload,
   library,
   language = 'it',
 }: {
@@ -62,6 +67,7 @@ function PhotoEditor({
   /** Receives an updater so asynchronous translations apply to the latest photos. */
   onChange: (update: (images: Img[]) => Img[]) => void
   onTranslateKey: TranslateKeyHandler
+  onUpload: UploadPhotos
   library: Img[]
   language?: Locale
 }) {
@@ -73,7 +79,8 @@ function PhotoEditor({
         {images.map((im, index) => (
           <li key={`${im.src}-${index}`} className="grid grid-cols-[64px_1fr] gap-3 border-b border-line pb-3">
             <img src={asset(im.src)} alt="" className="h-16 w-16 object-contain" />
-            <div>
+            <div className="min-w-0">
+              {im.name && <p className="mb-1 break-words text-xs text-muted">{im.name}</p>}
               <label className="text-small">
                 {t("Descrizione foto")}
                 <input
@@ -122,7 +129,7 @@ function PhotoEditor({
           <option value="">{t("Seleziona dalla libreria")}</option>
           {library.map((im) => (
             <option key={im.src} value={im.src}>
-              {im.alt || im.src}
+              {photoLabel(im)}
             </option>
           ))}
         </select>
@@ -139,7 +146,116 @@ function PhotoEditor({
           {t("Aggiungi foto")}
         </button>
       </div>
+      <label className="shop-label">
+        {t("Carica nuove foto")}
+        <input
+          type="file"
+          multiple
+          className="shop-input"
+          accept={PHOTO_TYPES}
+          disabled={STATIC_PREVIEW}
+          onChange={(e) => {
+            const files = Array.from(e.target.files ?? [])
+            e.target.value = ''
+            if (files.length) void onUpload(files).then((uploaded) => uploaded.length > 0 && onChange(current => [...current, ...uploaded]))
+          }}
+        />
+      </label>
     </div>
+  )
+}
+/** Modal grid of every known photo with name search; an uploaded file is picked as soon as it lands. */
+function PhotoPicker({
+  open,
+  library,
+  busy,
+  onPick,
+  onUpload,
+  onClose,
+}: {
+  open: boolean
+  library: Img[]
+  busy: boolean
+  onPick: (image: Img) => void
+  onUpload: UploadPhotos
+  onClose: () => void
+}) {
+  const ref = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+  const [query, setQuery] = useState('')
+  useEffect(() => {
+    const dialog = ref.current
+    if (!open || !dialog) return
+    dialog.showModal()
+    return () => {
+      if (dialog.open) dialog.close()
+    }
+  }, [open])
+  const pick = (image: Img) => {
+    onPick(image)
+    onClose()
+  }
+  const needle = query.trim().toLowerCase()
+  const shown = needle ? library.filter((im) => `${photoLabel(im)} ${im.src}`.toLowerCase().includes(needle)) : library
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      onClose={onClose}
+      onClick={(e) => {
+        // Clicks on the ::backdrop target the dialog element itself.
+        if (e.target === e.currentTarget) onClose()
+      }}
+      className="m-auto max-h-[85dvh] w-[min(56rem,calc(100vw-2rem))] max-w-none border border-line bg-bg p-0 text-ink backdrop:bg-ink/30"
+    >
+      {open && (
+        <div className="flex max-h-[85dvh] flex-col">
+          <div className="flex items-center justify-between gap-4 border-b border-line px-6 py-3">
+            <h2 id={titleId} className="font-serif text-h3">{t("Scegli la nuova foto")}</h2>
+            <button type="button" onClick={onClose} className="min-h-11 px-1 text-small underline decoration-line underline-offset-4 hover:decoration-current">
+              {t("Chiudi")}
+            </button>
+          </div>
+          <div className="grid gap-4 border-b border-line px-6 py-4 sm:grid-cols-2">
+            <label className="shop-label">
+              {t("Cerca per nome")}
+              <input type="search" className="shop-input" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </label>
+            <label className="shop-label">
+              {t("Carica nuove foto")}
+              <input
+                type="file"
+                className="shop-input"
+                accept={PHOTO_TYPES}
+                disabled={busy || STATIC_PREVIEW}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? [])
+                  e.target.value = ''
+                  if (files.length) void onUpload(files).then((uploaded) => uploaded[0] && pick(uploaded[0]))
+                }}
+              />
+            </label>
+          </div>
+          <div className="overflow-y-auto overscroll-contain px-6 py-6">
+            {!shown.length && <p className="text-small">{t("Nessuna foto trovata.")}</p>}
+            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {shown.map((im) => (
+                <li key={im.src}>
+                  <button
+                    type="button"
+                    className="block w-full border border-transparent p-1 text-left hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                    onClick={() => pick(im)}
+                  >
+                    <img src={asset(im.src)} alt="" loading="lazy" className="aspect-square w-full bg-well object-contain" />
+                    <span className="mt-2 block break-words text-xs">{photoLabel(im)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </dialog>
   )
 }
 function PriceInput({
@@ -178,6 +294,7 @@ function ProductEditor({
   busy,
   onSave,
   onDelete,
+  onUpload,
 }: {
   model: Model
   /** Whole catalog, hidden included, for the similar-models picker. */
@@ -186,6 +303,7 @@ function ProductEditor({
   busy: boolean
   onSave: (model: Model) => void
   onDelete: () => void
+  onUpload: UploadPhotos
 }) {
   const [draft, setDraft] = useState<Model>(() => structuredClone(model))
   const [language, setLanguage] = useState<Locale>('it')
@@ -300,7 +418,7 @@ function ProductEditor({
               />
             </label>
             <p id={`pieces-hint-${draft.id}`} className="text-xs text-muted">
-              {t("Mostrato sulla scheda del modello. Lascia vuoto per non mostrarlo.")}
+              {t("Mostrato sulla scheda del modello. Lascia vuoto per non mostrarlo.")} {t("Con 0 pezzi il modello appare Esaurito e non è acquistabile.")}
             </p>
           </fieldset>
         </div>
@@ -401,7 +519,7 @@ function ProductEditor({
             />
           </label>
         </div>
-        <PhotoEditor language={language} images={draft.images} library={library} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, images: update(d.images) }))} />
+        <PhotoEditor language={language} images={draft.images} library={library} onUpload={onUpload} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, images: update(d.images) }))} />
         <div className="space-y-6 border-t border-line pt-6">
           <h3 className="text-h3">{t("Varianti / colori")}</h3>
           {draft.variants?.map((v, index) => (
@@ -452,7 +570,7 @@ function ProductEditor({
                   onKeyDown={(e) => onTranslateKey(e, language, variantField(v, 'specs'))}
                 />
               </label>
-              <PhotoEditor language={language} images={v.images} library={library} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, variants: d.variants?.map(item => (item.id === v.id ? { ...item, images: update(item.images) } : item)) }))} />
+              <PhotoEditor language={language} images={v.images} library={library} onUpload={onUpload} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, variants: d.variants?.map(item => (item.id === v.id ? { ...item, images: update(item.images) } : item)) }))} />
               <button
                 type="button"
                 className="underline text-small"
@@ -504,12 +622,14 @@ function PerfumeEditor({
   busy,
   onSave,
   onDelete,
+  onUpload,
 }: {
   product: Profumo | null
   library: Img[]
   busy: boolean
   onSave: (product: Profumo) => void
   onDelete: () => void
+  onUpload: UploadPhotos
 }) {
   const [draft, setDraft] = useState<Profumo>(() =>
     structuredClone(product ?? { ...originalPerfume, priceCents: 12000 }),
@@ -596,7 +716,7 @@ function PerfumeEditor({
             onChange={(event) => setDraft({ ...draft, quote: { ...draft.quote, author: event.target.value } })}
           />
         </label>
-        <PhotoEditor language={language} images={draft.images} library={library} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, images: update(d.images) }))} />
+        <PhotoEditor language={language} images={draft.images} library={library} onUpload={onUpload} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, images: update(d.images) }))} />
         <div className="flex gap-5">
           <button className="btn" type="submit" disabled={STATIC_PREVIEW}>
             {t("Salva profumo")}
@@ -639,13 +759,18 @@ export default function Admin() {
   const [newProduct, setNewProduct] = useState<Model | null>(null)
   const [tab, setTab] = useState<'products' | 'perfume' | 'photos' | 'orders'>('products')
   const [orders, setOrders] = useState<Order[]>([])
-  const [photo, setPhoto] = useState<File | null>(null)
+  const [photos, setPhotos] = useState<File[]>([])
   const [photoAlt, setPhotoAlt] = useState('')
   const [heroSrc, setHeroSrc] = useState('')
   const [heroAlt, setHeroAlt] = useState('')
   const [heroTranslations, setHeroTranslations] = useState<Img['altTranslations']>({})
-  const [source, setSource] = useState('')
-  const [replacement, setReplacement] = useState('')
+  const [photoQuery, setPhotoQuery] = useState('')
+  const [selectedSources, setSelectedSources] = useState<string[]>([])
+  const [replacements, setReplacements] = useState<Record<string, Img>>({})
+  const [pickerFor, setPickerFor] = useState<string | null>(null)
+  // Uploads only add library photos, so open editors keep their drafts; any other catalog change remounts them.
+  const uploadRevision = useRef<number | null>(null)
+  const [editorRevision, setEditorRevision] = useState(catalog.revision)
   const { status: heroTranslationStatus, handle: onHeroTranslateKey } = useAutoTranslate()
   const heroAltField: TranslatableField = {
     read: language => (language === 'it' ? heroAlt : heroTranslations?.[language]),
@@ -666,6 +791,9 @@ export default function Admin() {
     setHeroAlt(catalog.hero.alt)
     setHeroTranslations(catalog.hero.altTranslations ?? {})
   }, [catalog.hero])
+  useEffect(() => {
+    if (catalog.revision !== uploadRevision.current) setEditorRevision(catalog.revision)
+  }, [catalog.revision])
   const library = [
     ...new Map(
       [
@@ -685,24 +813,21 @@ export default function Admin() {
     {
       label: 'Modelli',
       entries: heroGroup(catalog.models.flatMap((m) => [
-        ...m.images.map((image) => ({ image, label: `${m.name} · ${image.alt || image.src}` })),
-        ...(m.variants ?? []).flatMap((v) => v.images.map((image) => ({ image, label: `${m.name} · ${v.label} · ${image.alt || image.src}` }))),
+        ...m.images.map((image) => ({ image, label: `${m.name} · ${photoLabel(image)}` })),
+        ...(m.variants ?? []).flatMap((v) => v.images.map((image) => ({ image, label: `${m.name} · ${v.label} · ${photoLabel(image)}` }))),
       ])),
     },
     {
       label: 'Foto del sito',
-      entries: heroGroup([catalog.hero, ...catalog.siteImages, ...(catalog.perfume?.images ?? [])].map((image) => ({ image, label: image.alt || image.src }))),
+      entries: heroGroup([catalog.hero, ...catalog.siteImages, ...(catalog.perfume?.images ?? [])].map((image) => ({ image, label: photoLabel(image) }))),
     },
-    { label: 'Libreria', entries: heroGroup(catalog.photos.map((image) => ({ image, label: image.alt || image.src }))) },
+    { label: 'Libreria', entries: heroGroup(catalog.photos.map((image) => ({ image, label: photoLabel(image) }))) },
   ]
   const pickHero = (image: Img | undefined, src: string) => {
     setHeroSrc(src)
     setHeroAlt(image?.alt ?? '')
     setHeroTranslations(image?.altTranslations ?? {})
   }
-  const mostExpensive = catalog.models
-    .filter((m) => m.availability !== 'hidden' && m.images.length)
-    .reduce<Model | undefined>((top, m) => (!top || (m.priceCents ?? 0) > (top.priceCents ?? 0) ? m : top), undefined)
   async function perform(action: () => Promise<void>, message: string) {
     if (STATIC_PREVIEW) { setStatus('Anteprima UI: operazioni server e pubblicazione disattivate.'); return }
     if (busy) return
@@ -717,6 +842,44 @@ export default function Admin() {
     } finally {
       setBusy(false)
     }
+  }
+  async function uploadPhotos(files: File[], alt = ''): Promise<Img[]> {
+    let images: Img[] = []
+    await perform(async () => {
+      const form = new FormData()
+      for (const file of files) form.append('photo', file)
+      form.append('alt', alt)
+      form.append('revision', String(catalog.revision))
+      const result = await api<{ catalog: Catalog; images: Img[] }>('/admin/photos', 'POST', form)
+      uploadRevision.current = result.catalog.revision
+      setCatalog(result.catalog)
+      images = result.images
+    }, 'Foto caricate.')
+    return images
+  }
+  // Every photo the site shows, once per file, with where it appears; the hero is tagged rather than listed as a place.
+  const inUse = new Map<string, { image: Img; places: string[] }>()
+  const use = (image: Img, place?: string) => {
+    const entry = inUse.get(image.src) ?? inUse.set(image.src, { image, places: [] }).get(image.src)!
+    if (place && !entry.places.includes(place)) entry.places.push(place)
+  }
+  use(catalog.hero)
+  catalog.siteImages.forEach((slot) => use(catalog.imageOverrides[slot.src] ?? slot, t('Foto del sito')))
+  catalog.models.forEach((m) => {
+    m.images.forEach((image) => use(image, m.name))
+    m.variants?.forEach((v) => v.images.forEach((image) => use(image, `${m.name} · ${v.label}`)))
+  })
+  catalog.perfume?.images.forEach((image) => use(image, t('Profumo')))
+  const photoNeedle = photoQuery.trim().toLowerCase()
+  const shownInUse = [...inUse.values()].filter(({ image, places }) =>
+    !photoNeedle || [photoLabel(image), image.src, ...places].join(' ').toLowerCase().includes(photoNeedle))
+  // A selection can outlive its photo when another save removes it; only live sources are offered.
+  const pending = selectedSources.filter((src) => inUse.has(src))
+  const toggleSource = (src: string) =>
+    setSelectedSources((current) => (current.includes(src) ? current.filter((s) => s !== src) : [...current, src]))
+  const clearSelection = () => {
+    setSelectedSources([])
+    setReplacements({})
   }
   async function login(event: FormEvent) {
     event.preventDefault()
@@ -829,10 +992,11 @@ export default function Admin() {
           </nav>
           {tab === 'perfume' && (
             <PerfumeEditor
-              key={catalog.revision}
+              key={editorRevision}
               product={catalog.perfume}
               library={library}
               busy={busy}
+              onUpload={uploadPhotos}
               onSave={(product) =>
                 void perform(async () =>
                   setCatalog(await api<Catalog>('/admin/perfume', 'PUT', { product, revision: catalog.revision })), 'Profumo salvato e pubblicato.')
@@ -904,11 +1068,12 @@ export default function Admin() {
               <section>
                 {model ? (
                   <ProductEditor
-                    key={`${model.id}-${catalog.revision}`}
+                    key={`${model.id}-${editorRevision}`}
                     model={model}
                     models={catalog.models}
                     library={library}
                     busy={busy}
+                    onUpload={uploadPhotos}
                     onSave={(product) =>
                       void perform(async () => {
                         setCatalog(
@@ -952,16 +1117,14 @@ export default function Admin() {
                 className="max-w-2xl space-y-5"
                 onSubmit={(e) => {
                   e.preventDefault()
-                  if (!photo) return
-                  void perform(async () => {
-                    const form = new FormData()
-                    form.append('photo', photo)
-                    form.append('alt', photoAlt)
-                    form.append('revision', String(catalog.revision))
-                    setCatalog(await api<Catalog>('/admin/photos', 'POST', form))
-                    setPhoto(null)
+                  const form = e.currentTarget
+                  if (!photos.length) return
+                  void uploadPhotos(photos, photoAlt).then((images) => {
+                    if (!images.length) return
+                    form.reset()
+                    setPhotos([])
                     setPhotoAlt('')
-                  }, 'Foto caricata. Ora puoi associarla a un prodotto o al sito.')
+                  })
                 }}
               >
                 <h2 className="text-h2">{t("Carica fotografie")}</h2>
@@ -972,24 +1135,24 @@ export default function Admin() {
                   {t("File")}
                   <input
                     type="file"
+                    multiple
                     className="shop-input"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept={PHOTO_TYPES}
                     required
                     disabled={busy}
-                    onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+                    onChange={(e) => setPhotos(Array.from(e.target.files ?? []))}
                   />
                 </label>
                 <label className="shop-label">
                   {t("Descrizione accessibile")}
                   <input
                     className="shop-input"
-                    required
                     maxLength={500}
                     value={photoAlt}
                     onChange={(e) => setPhotoAlt(e.target.value)}
                   />
                 </label>
-                <button type="submit" className="btn" disabled={busy || !photo || STATIC_PREVIEW}>
+                <button type="submit" className="btn" disabled={busy || !photos.length || STATIC_PREVIEW}>
                   {t("Carica foto")}
                 </button>
               </form>
@@ -1025,14 +1188,6 @@ export default function Admin() {
                     ))}
                   </select>
                 </label>
-                <button
-                  type="button"
-                  className="underline text-small"
-                  disabled={busy || !mostExpensive}
-                  onClick={() => mostExpensive && pickHero(mostExpensive.images[0], mostExpensive.images[0].src)}
-                >
-                  {t("Usa il modello più costoso")}
-                </button>
                 <label className="shop-label">
                   {t("Descrizione")}
                   <input className="shop-input" required value={heroAlt} onChange={(e) => setHeroAlt(e.target.value)} onKeyDown={(e) => onHeroTranslateKey(e, 'it', heroAltField)} />
@@ -1046,66 +1201,115 @@ export default function Admin() {
                   {t("Salva foto principale")}
                 </button>
               </form>
-              <form
-                className="max-w-2xl space-y-5 border-t border-line pt-8"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  const im = library.find((im) => im.src === replacement)
-                  if (!im) return
-                  void perform(async () =>
-                    setCatalog(
-                      await api<Catalog>('/admin/image', 'PUT', { source, image: im, revision: catalog.revision }),
-                    ), 'Fotografia del sito sostituita.')
-                }}
-              >
+              <section className="space-y-5 border-t border-line pt-8">
                 <h2 className="text-h2">{t("Fotografie del sito")}</h2>
-                <label className="shop-label">
-                  {t("Foto da sostituire")}
-                  <select required className="shop-input" value={source} onChange={(e) => setSource(e.target.value)}>
-                    <option value="">{t("Seleziona")}</option>
-                    {catalog.siteImages
-                      .filter((im) => im.src !== catalog.hero.src)
-                      .map((im) => (
-                        <option key={im.src} value={im.src}>
-                          {im.alt}
-                        </option>
-                      ))}
-                  </select>
+                <p className="text-small text-muted">{t("Seleziona una o più foto, scegli per ciascuna la nuova foto e salva.")}</p>
+                <label className="shop-label max-w-md">
+                  {t("Cerca per nome")}
+                  <input type="search" className="shop-input" value={photoQuery} onChange={(e) => setPhotoQuery(e.target.value)} />
                 </label>
-                <label className="shop-label">
-                  {t("Nuova foto")}
-                  <select
-                    required
-                    className="shop-input"
-                    value={replacement}
-                    onChange={(e) => setReplacement(e.target.value)}
+                {!shownInUse.length && <p className="text-small">{t("Nessuna foto trovata.")}</p>}
+                <ul className="divide-y divide-line border-y border-line">
+                  {shownInUse.map(({ image, places }) => (
+                    <li key={image.src}>
+                      <label className="grid cursor-pointer grid-cols-[auto_64px_minmax(0,1fr)] items-center gap-4 py-3">
+                        <input
+                          type="checkbox"
+                          className="accent-ink"
+                          checked={pending.includes(image.src)}
+                          onChange={() => toggleSource(image.src)}
+                        />
+                        <img src={asset(image.src)} alt="" loading="lazy" className="h-16 w-16 bg-well object-contain" />
+                        <span className="min-w-0">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="break-words text-small font-medium">{photoLabel(image)}</span>
+                            {image.src === catalog.hero.src && (
+                              <span className="border border-ink bg-ink px-2 py-0.5 text-xs font-medium uppercase tracking-[0.08em] text-bg">{t("Principale")}</span>
+                            )}
+                          </span>
+                          {places.length > 0 && <span className="mt-1 block break-words text-xs text-muted">{places.join(' · ')}</span>}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                {pending.length > 0 && (
+                  <form
+                    className="space-y-4"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      if (!pending.every((src) => replacements[src])) return
+                      void perform(async () => {
+                        setCatalog(
+                          await api<Catalog>('/admin/images/replace', 'PUT', {
+                            replacements: pending.map((source) => ({ source, image: replacements[source] })),
+                            revision: catalog.revision,
+                          }),
+                        )
+                        clearSelection()
+                      }, 'Fotografie sostituite.')
+                    }}
                   >
-                    <option value="">{t("Seleziona")}</option>
-                    {library.map((im) => (
-                      <option key={im.src} value={im.src}>
-                        {im.alt || im.src}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {source && (
-                  <img
-                    src={asset(catalog.imageOverrides[source]?.src ?? source)}
-                    alt=""
-                    className="h-40 object-contain"
-                  />
+                    <h3 className="text-h3">{t("Sostituisci selezionate ({count})", { count: pending.length })}</h3>
+                    <ul className="space-y-3">
+                      {pending.map((source) => {
+                        const current = inUse.get(source)!.image
+                        const next = replacements[source]
+                        return (
+                          <li key={source} className="grid grid-cols-[64px_auto_64px_minmax(0,1fr)] items-center gap-3">
+                            <img src={asset(source)} alt="" className="h-16 w-16 bg-well object-contain" />
+                            <span aria-hidden="true">→</span>
+                            {next ? (
+                              <img src={asset(next.src)} alt="" className="h-16 w-16 bg-well object-contain" />
+                            ) : (
+                              <span className="h-16 w-16 border border-dashed border-line" />
+                            )}
+                            <div className="min-w-0 text-small">
+                              <p className="break-words">{photoLabel(current)} → {next ? photoLabel(next) : '—'}</p>
+                              <button
+                                type="button"
+                                className="mt-1 underline"
+                                aria-label={`${t("Scegli la nuova foto")}: ${photoLabel(current)}`}
+                                onClick={() => setPickerFor(source)}
+                              >
+                                {t("Scegli")}
+                              </button>
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    <div className="flex flex-wrap items-center gap-5">
+                      <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW || !pending.every((src) => replacements[src])}>
+                        {t("Sostituisci foto")}
+                      </button>
+                      <button type="button" className="underline text-small" onClick={clearSelection}>
+                        {t("Annulla selezione")}
+                      </button>
+                    </div>
+                  </form>
                 )}
-                <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW}>
-                  {t("Sostituisci foto")}
-                </button>
-              </form>
+                <PhotoPicker
+                  open={pickerFor !== null}
+                  library={library.filter((im) => im.src !== pickerFor)}
+                  busy={busy}
+                  onUpload={uploadPhotos}
+                  onPick={(image) => pickerFor && setReplacements((current) => ({ ...current, [pickerFor]: image }))}
+                  onClose={() => setPickerFor(null)}
+                />
+              </section>
               <section className="border-t border-line pt-8">
                 <h2 className="text-h2">{t("Libreria caricamenti")}</h2>
                 <ul className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                   {catalog.photos.map((im) => (
                     <li key={im.src}>
-                      <img src={asset(im.src)} alt={im.alt} className="h-48 w-full bg-well object-contain" />
-                      <p className="mt-3 text-small">{im.alt}</p>
+                      <img src={asset(im.src)} alt={im.alt} loading="lazy" className="h-48 w-full bg-well object-contain" />
+                      <p className="mt-3 flex flex-wrap items-center gap-2 break-words text-small">
+                        {photoLabel(im)}
+                        {im.src === catalog.hero.src && (
+                          <span className="border border-ink bg-ink px-2 py-0.5 text-xs font-medium uppercase tracking-[0.08em] text-bg">{t("Principale")}</span>
+                        )}
+                      </p>
                       <button
                         type="button"
                         className="mt-3 underline text-small"

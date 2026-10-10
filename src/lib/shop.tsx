@@ -3,6 +3,7 @@ import { models, profumo, site, storia } from '../data/content'
 import type { Img, Model, Profumo } from '../data/types'
 import { localizeImage, localizeModel, localizePerfume, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../data/localization'
 import { formatMoney, useLocale } from './i18n'
+import { availabilityOf } from './catalogFilters'
 
 export const STATIC_PREVIEW = import.meta.env.VITE_STATIC_PREVIEW === 'true'
 
@@ -140,7 +141,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     }
   }, [cart])
   const add = (model: Model, variant: number) => {
-    if (model.availability !== 'buy' || error) return
+    if (availabilityOf(model) !== 'buy' || error) return
     const line = { modelId: model.id, variantId: model.variants?.[variant]?.id ?? null, quantity: 1 }
     setCart((current) => {
       const old = current.find((item) => lineKey(item) === lineKey(line))

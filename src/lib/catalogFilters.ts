@@ -76,8 +76,14 @@ export type PriceBand = (typeof PRICE_BANDS)[number]['id']
 export const SORTS = ['featured', 'price-asc', 'price-desc', 'name'] as const
 export type SortKey = (typeof SORTS)[number]
 
+/** Public state of a model: a limited edition with no pieces left is out of stock whatever its setting, until the admin sets a positive count. */
+export function availabilityOf(model: Model): Availability {
+  const availability = model.availability ?? 'no-buy'
+  return availability !== 'hidden' && model.limitedEdition && model.piecesRemaining === 0 ? 'out-of-stock' : availability
+}
+
 /** Public availabilities, in the order the catalog groups them. */
-export const PUBLIC_AVAILABILITIES = ['buy', 'no-buy', 'out-of-stock', 'sold'] as const satisfies readonly Availability[]
+export const PUBLIC_AVAILABILITIES = ['buy', 'no-buy', 'out-of-stock'] as const satisfies readonly Availability[]
 
 export interface FilterState {
   sort: SortKey
@@ -113,7 +119,7 @@ export function matches(model: Model, facets: Facets, f: FilterState): boolean {
   return (
     (!f.isNew || !!model.isNew) &&
     (!f.limited || !!model.limitedEdition) &&
-    anyOf(f.availability, [model.availability ?? 'no-buy']) &&
+    anyOf(f.availability, [availabilityOf(model)]) &&
     anyOf(f.movement, facets.movement) &&
     anyOf(f.features, facets.features) &&
     anyOf(f.material, facets.material) &&
@@ -121,9 +127,9 @@ export function matches(model: Model, facets: Facets, f: FilterState): boolean {
   )
 }
 
-const RANK: Record<Availability, number> = { buy: 0, 'no-buy': 1, 'out-of-stock': 2, sold: 3, hidden: 4 }
+const RANK: Record<Availability, number> = { buy: 0, 'no-buy': 1, 'out-of-stock': 2, hidden: 3 }
 
-/** Featured: new first, then purchasable → showcase → out of stock → sold, most expensive first. */
+/** Featured: new first, then purchasable → showcase → out of stock, most expensive first. */
 export function compareModels(sort: SortKey): (a: Model, b: Model) => number {
   switch (sort) {
     case 'price-asc':
@@ -135,7 +141,7 @@ export function compareModels(sort: SortKey): (a: Model, b: Model) => number {
     default:
       return (a, b) =>
         Number(!!b.isNew) - Number(!!a.isNew) ||
-        RANK[a.availability ?? 'no-buy'] - RANK[b.availability ?? 'no-buy'] ||
+        RANK[availabilityOf(a)] - RANK[availabilityOf(b)] ||
         priceOf(b) - priceOf(a)
   }
 }

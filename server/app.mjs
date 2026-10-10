@@ -5,7 +5,7 @@ import multer from 'multer'
 import sharp from 'sharp'
 import { DatabaseSync } from 'node:sqlite'
 import { randomBytes, createHash, timingSafeEqual, randomUUID } from 'node:crypto'
-import { mkdirSync, existsSync } from 'node:fs'
+import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { z } from 'zod'
 import { models, site, storia, profumo } from '../src/data/content.ts'
@@ -41,6 +41,7 @@ const image = z.object({
   src: z.string().regex(/^(img\/[a-zA-Z0-9/_-]+\.(jpg|jpeg|png|webp)|uploads\/[a-f0-9-]+\.webp)$/),
   alt: text.max(500),
   altTranslations: z.partialRecord(z.enum(TRANSLATION_LOCALES), text.max(500)).optional(),
+  name: text.max(200).optional(),
 })
 const variantSchema = z.object({
   id,
@@ -60,7 +61,7 @@ const modelSchema = z.object({
   name: text.min(1).max(120),
   codes: z.array(text.max(80)).max(20),
   priceCents: cents,
-  availability: z.enum(['buy', 'no-buy', 'sold', 'out-of-stock', 'hidden']),
+  availability: z.enum(['buy', 'no-buy', 'out-of-stock', 'hidden']),
   limitedEdition: z.boolean().optional(),
   piecesRemaining: z.number().int().min(0).max(9999).nullable().optional(),
   isNew: z.boolean().optional(),
@@ -94,6 +95,8 @@ const certificateSchema = z
   .optional()
 const limitedEditions = new Set(['tutus-ab-uno', 'takimo', 'bauletto'])
 const placeImages = (storia.place?.images ?? []).map(({ src, alt }) => ({ src, alt }))
+// Blank quote parts are dropped: no author key without an author.
+const cleanQuote = ({ text, author }) => (author ? { text, author } : { text })
 
 export function createApp(options = {}) {
   const env = options.env ?? process.env
@@ -126,7 +129,7 @@ export function createApp(options = {}) {
         ...placeImages,
         ...profumo.images,
       ],
-      catalogVersion: 2,
+      catalogVersion: 3,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
@@ -146,7 +149,7 @@ export function createApp(options = {}) {
     existing.localizationVersion = 1
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
-  if (existing.catalogVersion !== 2) {
+  if ((existing.catalogVersion ?? 1) < 2) {
     // Legacy buyEnabled flag becomes the availability state; owner-chosen heroes are kept.
     existing.models = existing.models.map(({ buyEnabled, ...m }) => ({
       ...m,
@@ -162,6 +165,12 @@ export function createApp(options = {}) {
         existing.siteImages.push(seedImageTranslations(im))
       }
     existing.catalogVersion = 2
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.catalogVersion < 3) {
+    // The retired sold state reads as out of stock.
+    existing.models = existing.models.map((m) => (m.availability === 'sold' ? { ...m, availability: 'out-of-stock' } : m))
+    existing.catalogVersion = 3
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   const catalog = () => {
@@ -303,6 +312,8 @@ export function createApp(options = {}) {
     product.variants?.forEach((v) => v.images.forEach(validImage))
     if (new Set(product.variants?.map((v) => v.id)).size !== (product.variants?.length ?? 0))
       fail(400, 'Identificativi variante duplicati.')
+    if (product.quote && !product.quote.text && !product.quote.author) delete product.quote
+    else if (product.quote) product.quote = cleanQuote(product.quote)
     const body = catalog()
     // Similar picks: known, distinct, never the product itself; order is the owner's.
     const known = new Set(body.models.map((m) => m.id))
@@ -331,46 +342,93 @@ export function createApp(options = {}) {
     body.hero = validImage(image.parse(req.body.image))
     res.json(save(body, revision(req)))
   })
-  app.put('/api/admin/image', admin, csrf, (req, res) => {
+  const replaceRequest = z.object({
+    replacements: z.array(z.object({ source: image.shape.src, image })).min(1).max(50),
+  })
+  // A replaced slot keeps its own description; only a blank one takes the replacement's.
+  const swap = ({ name, alt, altTranslations, ...slot }, next) => ({
+    ...slot,
+    src: next.src,
+    ...(alt?.trim() ? { alt, altTranslations } : { alt: next.alt, altTranslations: next.altTranslations }),
+    ...(next.name ? { name: next.name } : {}),
+  })
+  app.put('/api/admin/images/replace', admin, csrf, (req, res) => {
+    const { replacements } = replaceRequest.parse(req.body)
+    const bySource = new Map(replacements.map((r) => [r.source, r.image]))
+    if (bySource.size !== replacements.length) fail(400, 'Foto duplicate nella sostituzione.')
+    replacements.forEach((r) => validImage(r.image))
     const body = catalog()
-    const source = image.shape.src.parse(req.body.source)
-    if (!body.siteImages.some((im) => im.src === source)) fail(400, 'Foto del sito non valida.')
-    body.imageOverrides[source] = validImage(image.parse(req.body.image))
+    // One pass over the original state, so a replacement never chains into another.
+    const used = new Set()
+    const replace = (im) => {
+      const next = bySource.get(im.src)
+      if (!next) return im
+      used.add(im.src)
+      return swap(im, next)
+    }
+    if (body.hero) body.hero = replace(body.hero)
+    body.models = body.models.map((m) => ({
+      ...m,
+      images: m.images.map(replace),
+      ...(m.variants ? { variants: m.variants.map((v) => ({ ...v, images: v.images.map(replace) })) } : {}),
+    }))
+    if (body.perfume) body.perfume.images = body.perfume.images.map(replace)
+    const shown = body.siteImages.map((s) => body.imageOverrides[s.src] ?? s)
+    body.siteImages.forEach((s, index) => {
+      const next = bySource.get(shown[index].src)
+      if (!next) return
+      used.add(shown[index].src)
+      if (next.src === s.src) delete body.imageOverrides[s.src]
+      else body.imageOverrides[s.src] = swap(shown[index], next)
+    })
+    if (used.size !== bySource.size) fail(400, 'Foto non trovata nel sito.')
     res.json(save(body, revision(req)))
   })
   app.put('/api/admin/perfume', admin, csrf, (req, res) => {
     const body = catalog()
     const product = req.body.product === null ? null : perfumeSchema.parse(req.body.product)
     product?.images.forEach(validImage)
+    if (product) product.quote = cleanQuote(product.quote)
     body.perfume = product ? { ...profumo, ...product, price: displayPrice(product.priceCents) } : null
     res.json(save(body, revision(req)))
   })
-  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 1 } })
-  app.post('/api/admin/photos', admin, csrf, upload.single('photo'), async (req, res) => {
-    if (!req.file) fail(400, 'Seleziona una foto JPG, PNG o WebP.')
+  // Browsers send filenames as raw UTF-8; busboy would otherwise read them as latin1.
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    defParamCharset: 'utf8',
+    limits: { fileSize: 12 * 1024 * 1024, files: 20 },
+  })
+  app.post('/api/admin/photos', admin, csrf, upload.array('photo', 20), async (req, res) => {
+    if (!req.files?.length) fail(400, 'Seleziona una foto JPG, PNG o WebP.')
     const rev = Number(req.body.revision)
     z.number().int().positive().parse(rev)
     const alt = text.max(500).parse(req.body.alt ?? '')
-    const file = `${randomUUID()}.webp`
+    const written = []
     try {
-      const decoded = sharp(req.file.buffer, { limitInputPixels: 40000000, animated: false })
-      const metadata = await decoded.metadata()
-      if (!['jpeg', 'png', 'webp'].includes(metadata.format)) fail(400, 'Formato non consentito.')
-      await decoded
-        .rotate()
-        .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 88 })
-        .toFile(join(dataDir, 'uploads', file))
-    } catch {
-      fail(400, 'Immagine non valida o troppo grande.')
-    }
-    const body = catalog()
-    body.photos.push({ src: `uploads/${file}`, alt })
-    try {
-      res.json(save(body, rev))
+      const images = []
+      for (const part of req.files) {
+        const file = `${randomUUID()}.webp`
+        written.push(file)
+        try {
+          const decoded = sharp(part.buffer, { limitInputPixels: 40000000, animated: false })
+          const metadata = await decoded.metadata()
+          if (!['jpeg', 'png', 'webp'].includes(metadata.format)) fail(400, 'Formato non consentito.')
+          await decoded
+            .rotate()
+            .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 88 })
+            .toFile(join(dataDir, 'uploads', file))
+        } catch {
+          fail(400, 'Immagine non valida o troppo grande.')
+        }
+        const name = part.originalname.replace(/\.[^.]*$/, '').trim().slice(0, 200)
+        images.push({ src: `uploads/${file}`, alt, name })
+      }
+      const body = catalog()
+      body.photos.push(...images)
+      res.json({ catalog: save(body, rev), images })
     } catch (error) {
-      const { unlinkSync } = await import('node:fs')
-      unlinkSync(join(dataDir, 'uploads', file))
+      for (const file of written) rmSync(join(dataDir, 'uploads', file), { force: true })
       throw error
     }
   })
@@ -444,16 +502,51 @@ export function createApp(options = {}) {
     if (!response.ok) fail(502, 'PayPal non ha completato la richiesta. Riprova con lo stesso ordine.')
     return result
   }
+  // Limited-edition units held by captures awaiting PayPal. One app instance owns the SQLite catalog, so memory suffices.
+  const reserved = new Map()
+  const unitsByModel = (rows) => {
+    const units = new Map()
+    for (const row of rows) units.set(row.modelId, (units.get(row.modelId) ?? 0) + row.quantity)
+    return units
+  }
+  const hold = (rows) => {
+    const units = unitsByModel(rows)
+    for (const [id, n] of units) reserved.set(id, (reserved.get(id) ?? 0) + n)
+    return units
+  }
+  const release = (units) => {
+    for (const [id, n] of units ?? []) {
+      const left = (reserved.get(id) ?? 0) - n
+      if (left > 0) reserved.set(id, left)
+      else reserved.delete(id)
+    }
+  }
+  /** Lowers counted limited editions by the units sold; caller holds the transaction. */
+  function consumePieces(rows) {
+    const body = catalog()
+    let changed = false
+    for (const [id, n] of unitsByModel(rows)) {
+      const m = body.models.find((m) => m.id === id)
+      if (!m?.limitedEdition || m.piecesRemaining == null) continue
+      m.piecesRemaining = Math.max(0, m.piecesRemaining - n)
+      changed = true
+    }
+    if (!changed) return
+    delete body.revision
+    // Unconditional bump: stale admin tabs then get a revision conflict instead of restoring the old count.
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(body))
+  }
   function resolveCart(input) {
     const rows = cartSchema.parse(input)
     const current = catalog()
     const keys = new Set()
-    return rows.map((row) => {
+    const items = rows.map((row) => {
       const key = `${row.modelId}:${row.variantId}`
       if (keys.has(key)) fail(400, 'Articolo duplicato nel carrello.')
       keys.add(key)
       const m = current.models.find((m) => m.id === row.modelId)
-      if (m?.availability !== 'buy') fail(409, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
+      if (m?.availability !== 'buy' || (m.limitedEdition === true && m.piecesRemaining === 0))
+        fail(409, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
       const v = row.variantId === null ? null : m.variants?.find((v) => v.id === row.variantId)
       if ((m.variants?.length && !v) || (row.variantId && !v)) fail(409, 'Variante non disponibile.')
       return {
@@ -463,6 +556,13 @@ export function createApp(options = {}) {
         codes: v?.codes ?? m.codes,
       }
     })
+    // Pieces are per model, so variants of one limited edition share the count.
+    for (const [id, n] of unitsByModel(rows)) {
+      const m = current.models.find((m) => m.id === id)
+      if (m.limitedEdition === true && m.piecesRemaining != null && n + (reserved.get(id) ?? 0) > m.piecesRemaining)
+        fail(409, 'Pezzi disponibili insufficienti. Aggiorna il carrello.')
+    }
+    return items
   }
   app.get('/api/payments/config', (req, res) =>
     res.json({ enabled: paypalReady, environment: env.PAYPAL_ENV === 'live' ? 'live' : 'sandbox', currency: 'EUR' }),
@@ -559,33 +659,51 @@ export function createApp(options = {}) {
       if (!order) fail(404, 'Ordine non trovato in questa sessione.')
       if (order.status === 'COMPLETED') return res.json({ status: 'COMPLETED', id: order.id })
       let remote = await paypal(`/v2/checkout/orders/${order.paypal_id}`)
-      if (remote.status !== 'COMPLETED') {
-        const currentItems = resolveCart(JSON.parse(order.items))
-        if (digest(JSON.stringify(currentItems)) !== order.fingerprint)
-          fail(409, 'Prezzi o disponibilità cambiati. Avvia un nuovo ordine.')
-        remote = await paypal(`/v2/checkout/orders/${order.paypal_id}/capture`, 'POST', {}, `capture-${order.id}`)
+      let held = null
+      try {
+        if (remote.status !== 'COMPLETED') {
+          const currentItems = resolveCart(JSON.parse(order.items))
+          if (digest(JSON.stringify(currentItems)) !== order.fingerprint)
+            fail(409, 'Prezzi o disponibilità cambiati. Avvia un nuovo ordine.')
+          // Synchronous with the stock check, so a concurrent capture sees these units as taken.
+          held = hold(currentItems)
+          remote = await paypal(`/v2/checkout/orders/${order.paypal_id}/capture`, 'POST', {}, `capture-${order.id}`)
+        }
+        const units = remote.purchase_units ?? []
+        const captures = units.flatMap((u) => u.payments?.captures ?? [])
+        if (
+          remote.status !== 'COMPLETED' ||
+          captures.length !== 1 ||
+          captures[0].status !== 'COMPLETED' ||
+          captures[0].amount?.currency_code !== 'EUR' ||
+          captures[0].amount?.value !== money(order.total) ||
+          units[0]?.custom_id !== order.id
+        )
+          fail(409, 'Pagamento non confermato. Non ripetere l’acquisto: riprova la verifica o contattaci.')
+        const email = remote.payer?.email_address ?? remote.payment_source?.paypal?.email_address
+        const receipt = {
+          captureId: captures[0].id,
+          email,
+          shipping: units[0]?.shipping,
+          payer: remote.payer
+            ? { firstName: remote.payer.name?.given_name ?? '', lastName: remote.payer.name?.surname ?? '', email }
+            : null,
+        }
+        // Completion and stock decrement commit together; the status guard keeps a recovered capture from counting twice.
+        db.exec('BEGIN IMMEDIATE')
+        try {
+          const done = db
+            .prepare("UPDATE orders SET status='COMPLETED', receipt=? WHERE id=? AND status!='COMPLETED'")
+            .run(JSON.stringify(receipt), order.id)
+          if (done.changes) consumePieces(JSON.parse(order.items))
+          db.exec('COMMIT')
+        } catch (error) {
+          db.exec('ROLLBACK')
+          throw error
+        }
+      } finally {
+        release(held)
       }
-      const units = remote.purchase_units ?? []
-      const captures = units.flatMap((u) => u.payments?.captures ?? [])
-      if (
-        remote.status !== 'COMPLETED' ||
-        captures.length !== 1 ||
-        captures[0].status !== 'COMPLETED' ||
-        captures[0].amount?.currency_code !== 'EUR' ||
-        captures[0].amount?.value !== money(order.total) ||
-        units[0]?.custom_id !== order.id
-      )
-        fail(409, 'Pagamento non confermato. Non ripetere l’acquisto: riprova la verifica o contattaci.')
-      const email = remote.payer?.email_address ?? remote.payment_source?.paypal?.email_address
-      const receipt = {
-        captureId: captures[0].id,
-        email,
-        shipping: units[0]?.shipping,
-        payer: remote.payer
-          ? { firstName: remote.payer.name?.given_name ?? '', lastName: remote.payer.name?.surname ?? '', email }
-          : null,
-      }
-      db.prepare('UPDATE orders SET status=?, receipt=? WHERE id=?').run('COMPLETED', JSON.stringify(receipt), order.id)
       res.json({ status: 'COMPLETED', id: order.id })
     }),
   )
