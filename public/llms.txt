@@ -6,7 +6,7 @@ Pagina unica, in questo ordine, con sezioni ad ancora:
 
 - #home: fotografia del prodotto configurabile in amministrazione, predefinita Tutus ab uno; “Orologiai a Scalea dal 1950”; link a storia, edizioni limitate e social.
 - #orologi: la collezione di modelli con codici, prezzi, specifiche, immagini e schede di dettaglio; disponibilità e indicazioni per le edizioni limitate.
-- #edizioni-limitate: filtro “Edizioni limitate” all'interno del catalogo Orologi.
+- #edizioni-limitate: catalogo Orologi con il filtro “Edizioni limitate” attivo; il pannello “Filtri e ordinamento” filtra anche per novità, disponibilità, movimento, funzioni, cassa e prezzo.
 - #profumi: il profumo N°7 Oud.
 - #storia: apertura “Scalea e la Calabria” con fotografie reali del luogo, poi capitoli cronologici sulla famiglia e sul marchio.
 - #social: link a Instagram (zito1950lifestyle) e Facebook (zito1950).

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ModelCard, { availabilityOf } from './ModelCard'
 import ModelDialog from './ModelDialog'
+import CatalogFilters from './CatalogFilters'
 import { t, useContent } from '../lib/i18n'
-import type { Availability, Model } from '../data/types'
+import type { Model } from '../data/types'
 import { useReveal } from '../lib/useReveal'
 import { useShop } from '../lib/shop'
+import { EMPTY_FILTERS, compareModels, facetIndex, matches, type FilterState } from '../lib/catalogFilters'
 
-/** Purchasable first, then showcase, then out of stock, then sold. Hidden never reaches the list. */
-const RANK: Record<Availability, number> = { buy: 0, 'no-buy': 1, 'out-of-stock': 2, sold: 3, hidden: 4 }
 const LIMITED_HASH = '#edizioni-limitate'
 
 export default function Orologi() {
@@ -15,33 +15,35 @@ export default function Orologi() {
   const introRef = useReveal<HTMLDivElement>()
   const pillarsRef = useReveal<HTMLUListElement>()
   const [open, setOpen] = useState<{ model: Model; trigger: HTMLElement; variant: number; image: number } | null>(null)
-  const [limitedOnly, setLimitedOnly] = useState(false)
-  const { localizedCatalog: catalog, error } = useShop()
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
+  const { catalog: source, localizedCatalog: catalog, error } = useShop()
+  // Facets read the Italian source text; localized specs would miss the keywords.
+  const facetsFor = useMemo(() => facetIndex(source.models), [source.models])
 
   const models = useMemo(
-    () =>
-      catalog.models
-        .filter((m) => availabilityOf(m) !== 'hidden')
-        .sort((a, b) => RANK[availabilityOf(a)] - RANK[availabilityOf(b)] || (b.priceCents ?? 0) - (a.priceCents ?? 0)),
+    () => catalog.models.filter((m) => availabilityOf(m) !== 'hidden').sort(compareModels('featured')),
     [catalog.models],
   )
-  const limitedCount = models.filter((m) => m.limitedEdition).length
-  const shown = limitedOnly ? models.filter((m) => m.limitedEdition) : models
+  const shown = useMemo(
+    () => models.filter((m) => matches(m, facetsFor(m), filters)).sort(compareModels(filters.sort)),
+    [models, facetsFor, filters],
+  )
 
-  // The hero's "Edizioni limitate" link lands here with the filter already applied.
+  // The hero's "Edizioni limitate" link lands here with only that filter applied.
   useEffect(() => {
     const sync = () => {
-      if (location.hash === LIMITED_HASH) setLimitedOnly(true)
+      if (location.hash === LIMITED_HASH) setFilters((f) => ({ ...EMPTY_FILTERS, sort: f.sort, limited: true }))
     }
     sync()
     window.addEventListener('hashchange', sync)
     return () => window.removeEventListener('hashchange', sync)
   }, [])
 
-  const choose = (limited: boolean) => {
-    setLimitedOnly(limited)
+  const update = (next: FilterState) => {
+    setFilters(next)
     // Keep the URL in step without scrolling; clearing it lets the hero link re-apply the filter later.
-    history.replaceState(history.state, '', limited ? LIMITED_HASH : location.pathname + location.search)
+    if (next.limited !== filters.limited)
+      history.replaceState(history.state, '', next.limited ? LIMITED_HASH : location.pathname + location.search)
   }
 
   const handleOpen = useCallback(
@@ -51,22 +53,6 @@ export default function Orologi() {
   const handleClose = useCallback(() => setOpen(null), [])
   // Same trigger: focus returns to the card that opened the dialog in the first place.
   const handleSelect = useCallback((model: Model) => setOpen((o) => o && { ...o, model, variant: 0, image: 0 }), [])
-
-  const filterButton = (limited: boolean, label: string, count: number) => (
-    <button
-      type="button"
-      aria-pressed={limitedOnly === limited}
-      onClick={() => choose(limited)}
-      className={`inline-flex min-h-11 items-center gap-2 border px-4 font-sans text-small font-medium transition-colors duration-200 ${
-        limitedOnly === limited
-          ? 'border-ink bg-ink text-bg'
-          : 'border-line bg-bg text-ink [@media(hover:hover)_and_(pointer:fine)]:hover:border-ink'
-      }`}
-    >
-      {label}
-      <span className="tabular-nums opacity-70">{count}</span>
-    </button>
-  )
 
   return (
     <section id="orologi" aria-labelledby="orologi-title" className="py-(--section-y)">
@@ -98,19 +84,18 @@ export default function Orologi() {
           </h2>
         </div>
 
-        <div
-          id="edizioni-limitate"
-          role="group"
-          aria-label={t('Filtra i modelli')}
-          className="mt-8 flex scroll-mt-(--header-h) flex-wrap gap-2"
-        >
-          {filterButton(false, t('Tutti i modelli'), models.length)}
-          {filterButton(true, t('Edizioni limitate'), limitedCount)}
+        <div id="edizioni-limitate" className="mt-8 scroll-mt-(--header-h)">
+          <CatalogFilters models={models} facetsFor={facetsFor} filters={filters} onChange={update} resultCount={shown.length} />
         </div>
 
         {error && <p role="status" className="mt-6 text-small">{t(error)}</p>}
-        {shown.length === 0 && limitedOnly ? (
-          <p className="mt-10 max-w-[60ch] text-ink-2">{t('Al momento non ci sono edizioni limitate disponibili.')}</p>
+        {shown.length === 0 && models.length > 0 ? (
+          <div className="mt-10 max-w-[60ch]">
+            <p className="text-ink-2">{t('Nessun modello corrisponde ai filtri scelti.')}</p>
+            <button type="button" className="btn mt-6" onClick={() => update({ ...EMPTY_FILTERS, sort: filters.sort })}>
+              {t('Azzera filtri')}
+            </button>
+          </div>
         ) : (
           <ul
             aria-labelledby="catalogo-title"

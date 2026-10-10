@@ -63,6 +63,8 @@ const modelSchema = z.object({
   availability: z.enum(['buy', 'no-buy', 'sold', 'out-of-stock', 'hidden']),
   limitedEdition: z.boolean().optional(),
   piecesRemaining: z.number().int().min(0).max(9999).nullable().optional(),
+  isNew: z.boolean().optional(),
+  similar: z.array(id).max(50).optional(),
   description: text.optional(),
   quote: z.object({ text, author: text.optional() }).optional(),
   specs: z.array(text).max(50),
@@ -301,12 +303,17 @@ export function createApp(options = {}) {
     product.variants?.forEach((v) => v.images.forEach(validImage))
     if (new Set(product.variants?.map((v) => v.id)).size !== (product.variants?.length ?? 0))
       fail(400, 'Identificativi variante duplicati.')
+    const body = catalog()
+    // Similar picks: known, distinct, never the product itself; order is the owner's.
+    const known = new Set(body.models.map((m) => m.id))
+    const similar = [...new Set(product.similar ?? [])].filter((s) => s !== product.id && known.has(s))
     const complete = {
       ...product,
+      isNew: product.isNew ?? false,
+      similar,
       price: displayPrice(product.priceCents),
       variants: product.variants?.map((v) => ({ ...v, price: displayPrice(v.priceCents) })),
     }
-    const body = catalog()
     const index = body.models.findIndex((m) => m.id === product.id)
     if (index < 0) body.models.push(complete)
     else body.models[index] = complete
@@ -314,7 +321,9 @@ export function createApp(options = {}) {
   })
   app.delete('/api/admin/products/:id', admin, csrf, (req, res) => {
     const body = catalog()
-    body.models = body.models.filter((m) => m.id !== req.params.id)
+    body.models = body.models
+      .filter((m) => m.id !== req.params.id)
+      .map((m) => (m.similar?.includes(req.params.id) ? { ...m, similar: m.similar.filter((s) => s !== req.params.id) } : m))
     res.json(save(body, revision(req)))
   })
   app.put('/api/admin/hero', admin, csrf, (req, res) => {

@@ -35,9 +35,10 @@ export const statusTag = `${tag} bg-bg text-ink`
 /** Limited-edition and status labels; the caller picks the direction (column on cards, row in the dialog). */
 export function Tags({ model, className = '' }: { model: Model; className?: string }) {
   const status = statusLabel(model)
-  if (!model.limitedEdition && !status) return null
+  if (!model.isNew && !model.limitedEdition && !status) return null
   return (
     <span className={`flex items-start gap-1 ${className}`}>
+      {model.isNew && <span className={limitedTag}>{t('Nuovo')}</span>}
       {model.limitedEdition && <span className={limitedTag}>{t('Edizione limitata')}</span>}
       {status && <span className={statusTag}>{status}</span>}
     </span>

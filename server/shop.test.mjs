@@ -341,6 +341,22 @@ test('hidden models are omitted from the public catalog but kept for admin', asy
   assert.equal((await admin.request('/catalog')).body.models.find((m) => m.id === 'n7').availability, 'hidden')
 })
 
+test('similar picks keep owner order, drop self/unknown/duplicates, and lose deleted models', async (t) => {
+  const { admin } = await fixture(t)
+  const catalog = (await admin.request('/catalog')).body
+  const product = catalog.models.find((m) => m.id === 'takimo')
+  product.isNew = true
+  product.similar = ['n7', 'takimo', 'missing-model', 'n2', 'n7']
+  const saved = await admin.request('/admin/products/takimo', 'PUT', { product, revision: catalog.revision })
+  assert.equal(saved.status, 200, JSON.stringify(saved.body))
+  const stored = saved.body.models.find((m) => m.id === 'takimo')
+  assert.deepEqual(stored.similar, ['n7', 'n2'])
+  assert.equal(stored.isNew, true)
+  const deleted = await admin.request('/admin/products/n7', 'DELETE', { revision: saved.body.revision })
+  assert.equal(deleted.status, 200)
+  assert.deepEqual(deleted.body.models.find((m) => m.id === 'takimo').similar, ['n2'])
+})
+
 test('sold, out-of-stock, showcase and hidden models are not purchasable', async (t) => {
   const { buyer, enable } = await fixture(t, true)
   const items = [{ modelId: 'takimo', variantId: null, quantity: 1 }]

@@ -52,6 +52,10 @@ export interface Model {
   limitedEdition?: boolean
   /** Pieces still available for a limited edition; null/undefined = not shown. */
   piecesRemaining?: number | null
+  /** Shown with a "Nuovo" tag and listed first; set in the admin panel. */
+  isNew?: boolean
+  /** Owner-chosen similar models (ids, in display order), shown first in "Scopri anche". */
+  similar?: string[]
   quote?: Quote
   description?: string
   specs: string[]

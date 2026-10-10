@@ -173,12 +173,15 @@ function PriceInput({
 }
 function ProductEditor({
   model,
+  models,
   library,
   busy,
   onSave,
   onDelete,
 }: {
   model: Model
+  /** Whole catalog, hidden included, for the similar-models picker. */
+  models: Model[]
   library: Img[]
   busy: boolean
   onSave: (model: Model) => void
@@ -299,6 +302,65 @@ function ProductEditor({
             <p id={`pieces-hint-${draft.id}`} className="text-xs text-muted">
               {t("Mostrato sulla scheda del modello. Lascia vuoto per non mostrarlo.")}
             </p>
+          </fieldset>
+        </div>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+          <fieldset className="min-w-0 space-y-3">
+            <legend className="mb-3 text-small font-medium">{t("Novità")}</legend>
+            <label className="flex items-center gap-3 text-small">
+              <input
+                type="checkbox"
+                className="accent-ink"
+                checked={!!draft.isNew}
+                onChange={(e) => setDraft(d => ({ ...d, isNew: e.target.checked }))}
+              />
+              {t("Nuovo")}
+            </label>
+            <p className="text-xs text-muted">{t("Mostra l’etichetta Nuovo e mette il modello in cima al catalogo.")}</p>
+          </fieldset>
+          <fieldset className="min-w-0 space-y-3">
+            <legend className="mb-3 text-small font-medium">{t("Modelli simili")}</legend>
+            <p className="text-xs text-muted">{t("Compaiono per primi in “Scopri anche”, in quest’ordine; gli altri seguono per somiglianza.")}</p>
+            {(draft.similar ?? []).length > 0 && (
+              <ol className="border-t border-line">
+                {(draft.similar ?? []).map((sid, i, list) => {
+                  const other = models.find((m) => m.id === sid)
+                  const move = (to: number) =>
+                    setDraft(d => {
+                      const next = [...(d.similar ?? [])]
+                      next.splice(to, 0, ...next.splice(i, 1))
+                      return { ...d, similar: next }
+                    })
+                  return (
+                    <li key={sid} className="flex items-center gap-2 border-b border-line py-2 text-small">
+                      <span className="w-6 tabular-nums text-muted">{i + 1}.</span>
+                      <span className="min-w-0 flex-1 truncate">{other?.name ?? sid}</span>
+                      <button type="button" className="min-h-11 min-w-11 underline disabled:no-underline" disabled={i === 0} aria-label={t("Sposta su: {name}", { name: other?.name ?? sid })} onClick={() => move(i - 1)}>↑</button>
+                      <button type="button" className="min-h-11 min-w-11 underline disabled:no-underline" disabled={i === list.length - 1} aria-label={t("Sposta giù: {name}", { name: other?.name ?? sid })} onClick={() => move(i + 1)}>↓</button>
+                      <button type="button" className="min-h-11 px-2 underline" aria-label={t("Rimuovi {name}", { name: other?.name ?? sid })} onClick={() => setDraft(d => ({ ...d, similar: d.similar?.filter((s) => s !== sid) }))}>{t("Rimuovi")}</button>
+                    </li>
+                  )
+                })}
+              </ol>
+            )}
+            <label className="shop-label">
+              {t("Aggiungi modello simile")}
+              <select
+                className="shop-input"
+                value=""
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value) setDraft(d => ({ ...d, similar: [...(d.similar ?? []), value] }))
+                }}
+              >
+                <option value="">{t("Scegli un modello…")}</option>
+                {models
+                  .filter((m) => m.id !== draft.id && !(draft.similar ?? []).includes(m.id))
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+              </select>
+            </label>
           </fieldset>
         </div>
         <TextLanguages language={language} onChange={setLanguage} product={draft} translationStatus={translationStatus} />
@@ -802,6 +864,8 @@ export default function Admin() {
                       availability: 'no-buy',
                       limitedEdition: false,
                       piecesRemaining: null,
+                      isNew: false,
+                      similar: [],
                       specs: [],
                       images: [],
                     })
@@ -829,6 +893,7 @@ export default function Admin() {
                         <span className="block font-serif text-xl">{m.name}</span>
                         <span className="text-xs text-muted">
                           {t(AVAILABILITY_COPY[m.availability ?? 'no-buy'].label)}
+                          {m.isNew && ` · ${t('Nuovo')}`}
                           {m.limitedEdition && ` · ${t('Edizione limitata')}`}
                         </span>
                       </button>
@@ -841,6 +906,7 @@ export default function Admin() {
                   <ProductEditor
                     key={`${model.id}-${catalog.revision}`}
                     model={model}
+                    models={catalog.models}
                     library={library}
                     busy={busy}
                     onSave={(product) =>
