@@ -529,7 +529,7 @@ export const storia: Storia = {
   more: 'Scopri la storia',
   image: {
     src: 'img/storia/storia-nuova.jpg',
-    alt: 'Documenti d’epoca del Ministero dei Trasporti e fotografie di famiglia',
+    alt: 'Documenti d’archivio delle Ferrovie dello Stato e dell’Ufficio Metrico intestati a Luigi Zito, con la fotografia di Luigi Zito al lavoro su un orologio a pendolo e un timbro delle Ferrovie dello Stato.',
     caption: 'Documenti e fotografie d’epoca',
   },
   chapters: [

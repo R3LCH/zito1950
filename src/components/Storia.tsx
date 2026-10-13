@@ -67,7 +67,6 @@ export default function Storia() {
             className="h-auto w-full"
           />
           <div className="md:col-span-7 md:pl-4">
-          <div className="md:col-span-5">
             {header}
             <div className="mt-6 max-w-[40ch] space-y-4 font-serif text-[clamp(1.25rem,1.8vw,1.5rem)] leading-[1.45] text-ink-2">
               <p>{storia.intro}</p>
