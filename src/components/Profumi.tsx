@@ -3,7 +3,7 @@ import Panel from './Panel'
 import { dims } from '../lib/imageMeta'
 import { useContent } from '../lib/i18n'
 import { useShop } from '../lib/shop'
-import type { Profumo } from '../data/types'
+import type { ComingSoon, Profumo } from '../data/types'
 
 /** One perfume: photo, name, code, price, quote, opening text, size and the request button. */
 function Summary({ profumo, first }: { profumo: Profumo; first: boolean }) {
@@ -76,6 +76,22 @@ function More({ profumo }: { profumo: Profumo }) {
   )
 }
 
+/** The perfume announced before release: box photo, name, line and a short note; no code, price or button. */
+function Upcoming({ item }: { item: ComingSoon }) {
+  const size = dims(item.image.src)
+  return (
+    <article aria-labelledby="profumo-prossimamente" className="mt-12 grid gap-8 border-t border-line pt-12 md:grid-cols-2 md:items-center md:gap-14">
+      <Picture src={item.image.src} alt={item.image.alt} width={size?.w} height={size?.h} sizes="(min-width: 768px) 44vw, 100vw" pictureClassName="block overflow-hidden rounded-[1.25rem]" className="h-auto w-full" />
+      <div className="max-w-[60ch]">
+        <p className="text-small uppercase tracking-[0.18em] text-muted">{item.eyebrow}</p>
+        <h3 id="profumo-prossimamente" className="mt-3 text-h2">{item.name}</h3>
+        <p className="mt-2 font-serif text-h3 italic text-ink-2">{item.line}</p>
+        <p className="mt-6 text-ink-2">{item.text}</p>
+      </div>
+    </article>
+  )
+}
+
 export default function Profumi() {
   const { profumiSection } = useContent()
   const { localizedCatalog: catalog } = useShop()
@@ -89,9 +105,14 @@ export default function Profumi() {
       eyebrow={profumiSection.eyebrow}
       title={profumiSection.title}
       intro={<p>{profumiSection.intro}</p>}
-      preview={perfumes.map((p, i) => (
-        <Summary key={p.id} profumo={p} first={i === 0} />
-      ))}
+      preview={
+        <>
+          {perfumes.map((p, i) => (
+            <Summary key={p.id} profumo={p} first={i === 0} />
+          ))}
+          <Upcoming item={profumiSection.comingSoon} />
+        </>
+      }
     >
       {hasMore
         ? perfumes.map((p) => <More key={p.id} profumo={p} />)

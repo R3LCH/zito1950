@@ -12,6 +12,7 @@ export default function Officina() {
       id="officina"
       eyebrow={officina.eyebrow}
       title={officina.title}
+      moreLabel={officina.more}
       preview={
         <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-10">
           <figure className="md:col-span-7">

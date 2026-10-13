@@ -8,7 +8,7 @@ import { randomBytes, createHash, timingSafeEqual, randomUUID } from 'node:crypt
 import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { z } from 'zod'
-import { models, site, storia, profumo, officina } from '../src/data/content.ts'
+import { models, site, storia, profumo, profumiSection, officina, territorio } from '../src/data/content.ts'
 import { LOCALES, TRANSLATION_LOCALES, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../src/data/localization.ts'
 import { createTranslator } from './translate.mjs'
 
@@ -89,14 +89,15 @@ const cartSchema = z
   .array(z.object({ modelId: id, variantId: id.nullable(), quantity: z.number().int().min(1).max(10) }))
   .min(1)
   .max(30)
+// Every order carries the warranty certificate holder; there is no PayPal-name fallback.
 const certificateSchema = z
   .object({ firstName: text.min(1).max(80), lastName: text.min(1).max(80), email: z.string().trim().email().max(254) })
   .strict()
-  .nullable()
-  .optional()
 const limitedEditions = new Set(['tutus-ab-uno', 'takimo', 'bauletto'])
-const placeImages = (storia.place?.images ?? []).map(({ src, alt }) => ({ src, alt }))
-const officinaImage = { src: officina.image.src, alt: officina.image.alt }
+// Site photos shown outside the catalog that v5 ensures: the Storia main photo, the coming-soon perfume, the workshop portrait and the territory view.
+const pageImages = [storia.image, profumiSection.comingSoon.image, officina.image, territorio.image].map(({ src, alt }) => ({ src, alt }))
+// Photos of the retired Scalea section; v5 drops their slots.
+const retiredImages = ['img/storia/scalea-borgo.jpg', 'img/storia/scalea-palazzo.jpg']
 // Blank quote parts are dropped: no author key without an author.
 const cleanQuote = ({ text, author }) => (author ? { text, author } : { text })
 
@@ -127,14 +128,16 @@ export function createApp(options = {}) {
       imageOverrides: {},
       siteImages: [
         site.hero.image,
+        storia.image,
         ...storia.chapters.flatMap((c) => (c.image ? [c.image] : [])),
-        ...placeImages,
-        officinaImage,
+        profumiSection.comingSoon.image,
+        officina.image,
+        territorio.image,
         ...profumo.images,
       ],
       perfumes: [{ ...profumo, priceCents: initialPrice(profumo.price) }],
       featured: [],
-      catalogVersion: 4,
+      catalogVersion: 5,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
@@ -165,12 +168,7 @@ export function createApp(options = {}) {
       piecesRemaining: m.piecesRemaining ?? null,
     }))
     if (existing.hero?.src === 'img/hero/new_hero.jpg') existing.hero = seedImageTranslations(site.hero.image)
-    const known = new Set(existing.siteImages.map((im) => im.src))
-    for (const im of [site.hero.image, ...placeImages])
-      if (!known.has(im.src)) {
-        known.add(im.src)
-        existing.siteImages.push(seedImageTranslations(im))
-      }
+    if (!existing.siteImages.some((im) => im.src === site.hero.image.src)) existing.siteImages.push(seedImageTranslations(site.hero.image))
     existing.catalogVersion = 2
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
@@ -185,9 +183,17 @@ export function createApp(options = {}) {
     existing.perfumes = existing.perfume ? [{ id: profumo.id, ...existing.perfume }] : []
     delete existing.perfume
     existing.featured ??= []
-    // The workshop portrait joins the replaceable site photos.
-    if (!existing.siteImages.some((im) => im.src === officinaImage.src)) existing.siteImages.push(seedImageTranslations(officinaImage))
     existing.catalogVersion = 4
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.catalogVersion < 5) {
+    // The redesigned page: Storia main photo, coming-soon perfume and territory view join, the workshop portrait stays; Scalea photos leave.
+    // Uploaded library files stay; only the slots and their replacements go.
+    existing.siteImages = existing.siteImages.filter((im) => !retiredImages.includes(im.src))
+    for (const src of retiredImages) delete existing.imageOverrides[src]
+    for (const im of pageImages)
+      if (!existing.siteImages.some((s) => s.src === im.src)) existing.siteImages.push(seedImageTranslations(im))
+    existing.catalogVersion = 5
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   const catalog = () => {
@@ -620,8 +626,7 @@ export function createApp(options = {}) {
       const total = items.reduce((sum, row) => sum + row.priceCents * row.quantity, 0)
       if (total > 100000000) fail(400, 'Importo ordine troppo alto.')
       const requestId = z.string().uuid().parse(req.body.requestId)
-      const certificate = certificateSchema.parse(req.body.certificate)
-      const certificateJson = certificate ? JSON.stringify(certificate) : null
+      const certificateJson = JSON.stringify(certificateSchema.parse(req.body.certificate))
       const fingerprint = digest(JSON.stringify(items))
       let order = db.prepare('SELECT * FROM orders WHERE id=?').get(requestId)
       if (order && (order.session !== req.session.id || order.fingerprint !== fingerprint))

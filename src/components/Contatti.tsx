@@ -5,7 +5,7 @@ import { useContent } from '../lib/i18n'
 const fullAddress = `${baseContacts.address}, ${baseContacts.city}`
 const mapEmbed = `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`
 
-/** Large, calm link row: label on top, value below; whole row is the tap target. Shared with Social. */
+/** Large, calm link row: label on top, value below; whole row is the tap target. */
 export function ContactLink({
   label,
   value,

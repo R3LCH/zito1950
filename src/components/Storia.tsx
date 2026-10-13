@@ -41,20 +41,31 @@ function Chapter({ chapter, index }: { chapter: StoriaChapter; index: number }) 
   )
 }
 
+/** Archive photo beside the 1951 railway assignment; "Scopri la storia" opens every chapter. */
 export default function Storia() {
   const { storia } = useContent()
-  const [first, ...rest] = storia.chapters
+  const { image } = storia
 
   return (
     <Panel
       id="storia"
       eyebrow={storia.eyebrow}
       title={storia.title}
-      intro={<p className="font-serif text-[1.25rem] italic leading-[1.5]">{storia.intro}</p>}
-      preview={first && <Chapter chapter={first} index={0} />}
+      moreLabel={storia.more}
+      preview={
+        <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-10">
+          <figure className="md:col-span-5">
+            <Picture src={image.src} alt={image.alt} sizes="(min-width: 768px) 36vw, 100vw" pictureClassName="block overflow-hidden rounded-[1.25rem] bg-well" className="w-full" />
+            <figcaption className="mt-3 text-small text-muted">{image.caption}</figcaption>
+          </figure>
+          <p className="max-w-[40ch] font-serif text-[clamp(1.375rem,2.2vw,1.875rem)] leading-[1.4] text-ink md:col-span-6 md:col-start-7">
+            {storia.intro}
+          </p>
+        </div>
+      }
     >
-      {rest.map((chapter, i) => (
-        <Chapter key={chapter.title} chapter={chapter} index={i + 1} />
+      {storia.chapters.map((chapter, i) => (
+        <Chapter key={chapter.title} chapter={chapter} index={i} />
       ))}
       <figure className="border-t border-line pt-[clamp(2rem,5vw,3.5rem)]">
         <blockquote>

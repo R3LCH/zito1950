@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { models, officina, profumo, site, storia } from '../data/content'
+import { models, officina, profumiSection, profumo, site, storia, territorio } from '../data/content'
 import type { Img, Model, Profumo } from '../data/types'
 import { localizeImage, localizeModel, localizePerfume, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../data/localization'
 import { formatMoney, useLocale } from './i18n'
@@ -73,7 +73,7 @@ const initial: Catalog = {
   hero: seedImageTranslations(site.hero.image),
   photos: [],
   imageOverrides: {},
-  siteImages: [site.hero.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), ...storia.place.images, officina.image, ...profumo.images],
+  siteImages: [site.hero.image, storia.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), profumiSection.comingSoon.image, officina.image, territorio.image, ...profumo.images],
 }
 interface ShopState {
   catalog: Catalog

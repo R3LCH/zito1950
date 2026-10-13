@@ -8,6 +8,8 @@ import { DatabaseSync } from 'node:sqlite'
 import sharp from 'sharp'
 import { createApp } from './app.mjs'
 import { hashPassword } from './password.mjs'
+// Every checkout must name the warranty certificate holder.
+const certificate = { firstName: 'Giulia', lastName: 'Neri', email: 'giulia@example.com' }
 
 async function fixture(t, paypal = false, legacyBody = null) {
   const dir = mkdtempSync(join(tmpdir(), 'zito-test-'))
@@ -240,7 +242,7 @@ test('checkout uses server variant price, rejects disabled products and foreign 
   // Read variant IDs from the catalog rather than assuming incidental names.
   const catalog = await enable()
   items[0].variantId = catalog.models.find((m) => m.id === 'n7').variants[0].id
-  const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
+  const order = await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })
   assert.equal(order.status, 200, JSON.stringify(order.body))
   assert.deepEqual(seen.amounts, ['1260.00'])
   const stranger = client()
@@ -252,13 +254,13 @@ test('checkout uses server variant price, rejects disabled products and foreign 
   await admin.request('/admin/products/n7', 'PUT', { product, revision: current.revision })
   assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).status, 409)
   assert.equal(seen.captures, 0)
-  assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })).status, 409)
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })).status, 409)
 })
 
 test('capture recovers a lost response and never charges again after completion', async (t) => {
   const { buyer, admin, enable, seen } = await fixture(t, true)
   await enable('takimo')
-  const request = { items: [{ modelId: 'takimo', variantId: null, quantity: 1 }], requestId: randomUUID() }
+  const request = { items: [{ modelId: 'takimo', variantId: null, quantity: 1 }], certificate, requestId: randomUUID() }
   const order = await buyer.request('/payments/orders', 'POST', request)
   assert.equal((await buyer.request('/payments/orders', 'POST', request)).body.id, order.body.id)
   assert.equal(seen.amounts.length, 1)
@@ -280,6 +282,7 @@ test('mismatched PayPal capture amount is never recorded as paid', async (t) => 
   seen.mismatch = true
   const order = await buyer.request('/payments/orders', 'POST', {
     items: [{ modelId: 'takimo', variantId: null, quantity: 1 }],
+    certificate,
     requestId: randomUUID(),
   })
   assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).status, 409)
@@ -287,7 +290,7 @@ test('mismatched PayPal capture amount is never recorded as paid', async (t) => 
 })
 
 test('legacy catalog migrates buyEnabled, limited editions and default hero once', async (t) => {
-  const { models, storia } = await import('../src/data/content.ts')
+  const { models, storia, profumiSection, officina, territorio } = await import('../src/data/content.ts')
   const legacyBody = {
     hero: { src: 'img/hero/new_hero.jpg', alt: 'Boutique' },
     models: models.map((m) => ({ ...m, priceCents: 100000, buyEnabled: m.id === 'n7', variants: m.variants?.map((v) => ({ ...v, priceCents: 100000 })) })),
@@ -298,7 +301,7 @@ test('legacy catalog migrates buyEnabled, limited editions and default hero once
   const { admin, buyer, application, dir, env } = await fixture(t, true, legacyBody)
   const catalog = (await admin.request('/catalog')).body
   const n7 = catalog.models.find((m) => m.id === 'n7')
-  assert.equal(catalog.catalogVersion, 4)
+  assert.equal(catalog.catalogVersion, 5)
   assert.equal(Object.hasOwn(catalog, 'perfume'), false)
   assert.deepEqual(catalog.perfumes.map((p) => p.id), ['n7-oud'])
   assert.deepEqual(catalog.featured, [])
@@ -311,11 +314,13 @@ test('legacy catalog migrates buyEnabled, limited editions and default hero once
     assert.equal(catalog.models.find((m) => m.id === limited).limitedEdition, true)
   assert.equal(catalog.hero.src, 'img/models/tutus-ab-uno.jpg')
   assert.ok(catalog.hero.altTranslations)
-  for (const im of storia.place?.images ?? []) assert.ok(catalog.siteImages.some((s) => s.src === im.src))
+  for (const src of [storia.image.src, profumiSection.comingSoon.image.src, officina.image.src, territorio.image.src]) assert.equal(catalog.siteImages.filter((s) => s.src === src).length, 1)
+  for (const src of ['img/storia/scalea-borgo.jpg', 'img/storia/scalea-palazzo.jpg']) assert.ok(!catalog.siteImages.some((s) => s.src === src))
   const columns = application.db.prepare('PRAGMA table_info(orders)').all().map((c) => c.name)
   assert.ok(columns.includes('certificate') && columns.includes('certificate_code'))
   const order = await buyer.request('/payments/orders', 'POST', {
     items: [{ modelId: 'n7', variantId: n7.variants[0].id, quantity: 1 }],
+    certificate,
     requestId: randomUUID(),
   })
   assert.equal(order.status, 200, JSON.stringify(order.body))
@@ -367,23 +372,31 @@ test('out-of-stock, showcase and hidden models are not purchasable; sold is no l
   const items = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
   for (const availability of ['out-of-stock', 'no-buy', 'hidden']) {
     await enable('takimo', availability)
-    const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
+    const order = await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })
     assert.equal(order.status, 409, availability)
   }
   const current = (await admin.request('/catalog')).body
   const product = { ...current.models.find((m) => m.id === 'takimo'), availability: 'sold' }
   assert.equal((await admin.request('/admin/products/takimo', 'PUT', { product, revision: current.revision })).status, 400)
   await enable('takimo', 'buy')
-  assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })).status, 200)
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })).status, 200)
 })
 
-test('custom certificate holder is stored, replaceable on retry and returned to admin', async (t) => {
+test('certificate holder is required, stored, replaceable on retry and returned to admin', async (t) => {
   const { admin, buyer, enable } = await fixture(t, true)
   await enable('takimo')
   const items = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
   const requestId = randomUUID()
-  const invalid = { firstName: 'Anna', lastName: 'Bianchi', email: 'not-an-email' }
-  assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId, certificate: invalid })).status, 400)
+  for (const rejected of [
+    undefined,
+    null,
+    { firstName: 'Anna', lastName: 'Bianchi', email: 'not-an-email' },
+    { firstName: '   ', lastName: 'Bianchi', email: 'anna@example.com' },
+    { firstName: 'Anna', lastName: '', email: 'anna@example.com' },
+    { firstName: 'x'.repeat(81), lastName: 'Bianchi', email: 'anna@example.com' },
+    { firstName: 'Anna', lastName: 'Bianchi', email: 'anna@example.com', extra: true },
+  ])
+    assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId, certificate: rejected })).status, 400)
   const first = { firstName: 'Anna', lastName: 'Bianchi', email: 'anna@example.com' }
   const order = await buyer.request('/payments/orders', 'POST', { items, requestId, certificate: first })
   assert.equal(order.status, 200, JSON.stringify(order.body))
@@ -395,16 +408,15 @@ test('custom certificate holder is stored, replaceable on retry and returned to 
   assert.deepEqual(row.certificate, { firstName: 'Luca', lastName: 'Verdi', email: 'luca@example.com' })
   assert.equal(row.certificateCode, null)
   assert.deepEqual(row.receipt.payer, { firstName: 'Mario', lastName: 'Rossi', email: 'mario@example.com' })
-  const plain = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID(), certificate: null })
-  assert.equal(plain.status, 200)
-  assert.equal((await admin.request('/admin/orders')).body.find((o) => o.paypal_id === plain.body.id).certificate, null)
+  // Rejected attempts never created a row: only the paid order exists.
+  assert.equal((await admin.request('/admin/orders')).body.length, 1)
 })
 
 test('certificate code route requires admin and CSRF, sets and clears the code', async (t) => {
   const { admin, buyer, enable } = await fixture(t, true)
   await enable('takimo')
   const requestId = randomUUID()
-  await buyer.request('/payments/orders', 'POST', { items: [{ modelId: 'takimo', variantId: null, quantity: 1 }], requestId })
+  await buyer.request('/payments/orders', 'POST', { items: [{ modelId: 'takimo', variantId: null, quantity: 1 }], certificate, requestId })
   const path = `/admin/orders/${requestId}/certificate`
   assert.equal((await buyer.request(path, 'PUT', { code: 'ZT-001' })).status, 401)
   assert.equal((await admin.request(path, 'PUT', { code: 'ZT-001' }, { 'X-CSRF-Token': 'bad' })).status, 403)
@@ -447,27 +459,27 @@ test('version-2 catalog migrates sold models to out-of-stock once', async (t) =>
   }
   const { admin, dir, env } = await fixture(t, false, legacyBody)
   const catalog = (await admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 4)
-  assert.equal(catalog.revision, 3)
+  assert.equal(catalog.catalogVersion, 5)
+  assert.equal(catalog.revision, 4)
   assert.equal(catalog.models.find((m) => m.id === 'takimo').availability, 'out-of-stock')
   assert.equal(catalog.models.find((m) => m.id === 'n7').availability, 'buy')
   const reopened = createApp({ env, dataDir: dir })
   const reopenedRevision = reopened.db.prepare('SELECT revision FROM catalog').get().revision
   reopened.close()
-  assert.equal(reopenedRevision, 3)
+  assert.equal(reopenedRevision, 4)
 })
 
 test('limited edition with zero pieces is sold out; unknown or positive pieces stay purchasable', async (t) => {
   const { admin, buyer } = await fixture(t, true)
   const items = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
   await savePieces(admin, 'takimo', 0)
-  const refused = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
+  const refused = await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })
   assert.equal(refused.status, 409)
   assert.equal(refused.body.error, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
   await savePieces(admin, 'takimo', 1)
-  assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })).status, 200)
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })).status, 200)
   await savePieces(admin, 'takimo', null)
-  const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
+  const order = await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })
   assert.equal(order.status, 200)
   // Capture re-resolves the cart, so pieces reaching zero after checkout also refuse payment.
   await savePieces(admin, 'takimo', 0)
@@ -479,13 +491,13 @@ test('paid captures consume limited pieces once, reserve the last piece, and lea
   const one = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
   const pieces = async () => (await admin.request('/catalog')).body.models.find((m) => m.id === 'takimo').piecesRemaining
   await savePieces(admin, 'takimo', 2)
-  const tooMany = await buyer.request('/payments/orders', 'POST', { items: [{ ...one[0], quantity: 3 }], requestId: randomUUID() })
+  const tooMany = await buyer.request('/payments/orders', 'POST', { items: [{ ...one[0], quantity: 3 }], certificate, requestId: randomUUID() })
   assert.equal(tooMany.status, 409)
   assert.equal(tooMany.body.error, 'Pezzi disponibili insufficienti. Aggiorna il carrello.')
 
   // A recovered capture response counts the sale exactly once.
   const stale = (await admin.request('/catalog')).body
-  const first = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
+  const first = await buyer.request('/payments/orders', 'POST', { items: one, certificate, requestId: randomUUID() })
   seen.lostCapture = true
   assert.equal((await buyer.request(`/payments/orders/${first.body.id}/capture`, 'POST', {})).status, 500)
   assert.equal(await pieces(), 2)
@@ -499,8 +511,8 @@ test('paid captures consume limited pieces once, reserve the last piece, and lea
   // Two shoppers race for the last piece: one is charged, the other is refused before capture.
   const other = client()
   await other.request('/session')
-  const a = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
-  const b = await other.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
+  const a = await buyer.request('/payments/orders', 'POST', { items: one, certificate, requestId: randomUUID() })
+  const b = await other.request('/payments/orders', 'POST', { items: one, certificate, requestId: randomUUID() })
   assert.equal(a.status, 200)
   assert.equal(b.status, 200)
   const capturesBefore = seen.captures
@@ -511,11 +523,11 @@ test('paid captures consume limited pieces once, reserve the last piece, and lea
   assert.deepEqual(results.map((r) => r.status).sort(), [200, 409])
   assert.equal(seen.captures - capturesBefore, 1)
   assert.equal(await pieces(), 0)
-  assert.equal((await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })).status, 409)
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items: one, certificate, requestId: randomUUID() })).status, 409)
 
   // Without a count, sales never invent one.
   await savePieces(admin, 'takimo', null)
-  const open = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
+  const open = await buyer.request('/payments/orders', 'POST', { items: one, certificate, requestId: randomUUID() })
   assert.equal((await buyer.request(`/payments/orders/${open.body.id}/capture`, 'POST', {})).body.status, 'COMPLETED')
   assert.equal(await pieces(), null)
 })
@@ -708,7 +720,7 @@ test('featured picks keep owner order, drop unknown/duplicates, reject more than
 })
 
 test('version-3 catalog turns the single perfume into a list once, and a removed perfume stays removed', async (t) => {
-  const { models, profumo } = await import('../src/data/content.ts')
+  const { models, profumo, profumiSection, officina, storia, territorio } = await import('../src/data/content.ts')
   const v3 = (perfume) => ({
     hero: { src: 'img/models/takimo.jpg', alt: 'Takimo' },
     models: models.map((m) => ({
@@ -720,24 +732,33 @@ test('version-3 catalog turns the single perfume into a list once, and a removed
       variants: m.variants?.map((v) => ({ ...v, priceCents: 100000 })),
     })),
     perfume,
-    photos: [],
-    imageOverrides: {},
-    siteImages: [],
+    imageOverrides: { 'img/storia/owner.jpg': { src: 'uploads/00000000-0000-0000-0000-000000000000.webp', alt: 'Ritratto caricato' } },
+    siteImages: [
+      { src: 'img/storia/scalea-borgo.jpg', alt: 'Borgo' },
+      { src: 'img/storia/scalea-palazzo.jpg', alt: 'Palazzo' },
+      { src: territorio.image.src, alt: 'Mare già presente' },
+    ],
+    photos: [{ src: 'uploads/00000000-0000-0000-0000-000000000000.webp', alt: 'Ritratto caricato' }],
     localizationVersion: 1,
     catalogVersion: 3,
   })
   const kept = await fixture(t, false, v3({ ...profumo, name: 'Oud del titolare', priceCents: 15000 }))
   const catalog = (await kept.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 4)
-  assert.equal(catalog.revision, 2)
+  assert.equal(catalog.catalogVersion, 5)
+  assert.equal(catalog.revision, 3)
   assert.equal(Object.hasOwn(catalog, 'perfume'), false)
   assert.deepEqual(catalog.perfumes.map((p) => [p.id, p.name, p.priceCents]), [[profumo.id, 'Oud del titolare', 15000]])
   assert.deepEqual(catalog.featured, [])
-  assert.equal(catalog.siteImages.filter((im) => im.src === 'img/storia/owner.jpg').length, 1)
+  // v5 drops the Scalea slots and adds the missing page photos; the workshop portrait keeps its replacement and the uploaded file stays in the library.
+  assert.deepEqual(catalog.siteImages.map((im) => im.src), [territorio.image.src, storia.image.src, profumiSection.comingSoon.image.src, officina.image.src])
+  assert.equal(catalog.siteImages[0].alt, 'Mare già presente')
+  assert.deepEqual(Object.keys(catalog.imageOverrides), [officina.image.src])
+  assert.equal(catalog.imageOverrides[officina.image.src].src, 'uploads/00000000-0000-0000-0000-000000000000.webp')
+  assert.deepEqual(catalog.photos.map((p) => p.src), ['uploads/00000000-0000-0000-0000-000000000000.webp'])
   const reopened = createApp({ env: kept.env, dataDir: kept.dir })
   const reopenedBody = reopened.db.prepare('SELECT revision, body FROM catalog').get()
   reopened.close()
-  assert.equal(reopenedBody.revision, 2)
+  assert.equal(reopenedBody.revision, 3)
   assert.equal(JSON.parse(reopenedBody.body).perfumes.length, 1)
   const removed = await fixture(t, false, v3(null))
   const empty = (await removed.admin.request('/catalog')).body

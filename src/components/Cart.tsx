@@ -3,17 +3,24 @@ import { api, euro, lineKey, useShop, type CartLine } from '../lib/shop'
 import { t } from '../lib/i18n'
 import type { CertificateHolder } from '../data/types'
 import { availabilityOf } from '../lib/catalogFilters'
+import Picture from './Picture'
 
 const CERTIFICATE_KEY = 'zito-certificate'
-interface CertificateDraft extends CertificateHolder { custom: boolean }
-function storedCertificate(): CertificateDraft {
-  const empty = { custom: false, firstName: '', lastName: '', email: '' }
+const CERTIFICATE_IMAGES = [
+  { src: 'img/certificato/fronte.jpg', alt: 'Certificato di proprietà ZITO 1950, fronte' },
+  { src: 'img/certificato/retro.jpg', alt: 'Certificato di proprietà ZITO 1950, retro' },
+]
+// Mirrors the server's email check closely enough to keep the button honest; the server stays authoritative.
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+type CertificateField = keyof CertificateHolder
+function storedCertificate(): CertificateHolder {
+  const empty = { firstName: '', lastName: '', email: '' }
   try {
     const value: unknown = JSON.parse(sessionStorage.getItem(CERTIFICATE_KEY) ?? 'null')
     if (!value || typeof value !== 'object') return empty
     const v = value as Record<string, unknown>
     const text = (field: unknown, max: number) => (typeof field === 'string' ? field.slice(0, max) : '')
-    return { custom: v.custom === true, firstName: text(v.firstName, 80), lastName: text(v.lastName, 80), email: text(v.email, 254) }
+    return { firstName: text(v.firstName, 80), lastName: text(v.lastName, 80), email: text(v.email, 254) }
   } catch {
     return empty
   }
@@ -54,6 +61,14 @@ export default function Cart() {
   const lock = useRef(false)
   const certificateForm = useRef<HTMLFormElement>(null)
   const [certificate, setCertificate] = useState(storedCertificate)
+  // Errors appear once a field is left or checkout is attempted, not while the buyer is still typing.
+  const [touched, setTouched] = useState<Record<CertificateField, boolean>>({ firstName: false, lastName: false, email: false })
+  const errors: Record<CertificateField, string | null> = {
+    firstName: certificate.firstName.trim() ? null : 'Inserisci il nome.',
+    lastName: certificate.lastName.trim() ? null : 'Inserisci il cognome.',
+    email: EMAIL.test(certificate.email.trim()) ? null : 'Inserisci un indirizzo email valido.',
+  }
+  const certificateValid = !errors.firstName && !errors.lastName && !errors.email
   const rows = cart.map((line) => {
     const model = catalog.models.find((m) => m.id === line.modelId)
     const variant = line.variantId ? model?.variants?.find((v) => v.id === line.variantId) : null
@@ -66,7 +81,7 @@ export default function Cart() {
     try {
       sessionStorage.setItem(CERTIFICATE_KEY, JSON.stringify(certificate))
     } catch {
-      /* Certificate choice still works without browser storage. */
+      /* Certificate details still work without browser storage. */
     }
   }, [certificate])
   useEffect(() => {
@@ -99,15 +114,19 @@ export default function Cart() {
   }, [])
   async function checkout() {
     if (lock.current) return
-    // Native validation for the custom certificate holder fields.
-    if (certificate.custom && !certificateForm.current?.reportValidity()) return
+    if (!certificateValid || !certificateForm.current?.reportValidity()) {
+      setTouched({ firstName: true, lastName: true, email: true })
+      return
+    }
     lock.current = true
     setBusy(true)
     setMessage('Preparazione del pagamento…')
     try {
-      const holder: CertificateHolder | null = certificate.custom
-        ? { firstName: certificate.firstName.trim(), lastName: certificate.lastName.trim(), email: certificate.email.trim() }
-        : null
+      const holder: CertificateHolder = {
+        firstName: certificate.firstName.trim(),
+        lastName: certificate.lastName.trim(),
+        email: certificate.email.trim(),
+      }
       // A changed certificate holder is a different order request.
       const serialized = JSON.stringify({ cart, certificate: holder })
       let request: { id: string; cart: string } | null = null
@@ -273,72 +292,65 @@ export default function Cart() {
                 void checkout()
               }}
             >
-              <h3 id="certificate-title" className="sr-only">{t('Certificato di proprietà')}</h3>
-              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-small font-medium">
-                <input
-                  type="checkbox"
-                  role="switch"
-                  className="h-5 w-5 shrink-0 cursor-pointer rounded-none accent-ink"
-                  checked={certificate.custom}
-                  disabled={busy}
-                  aria-describedby="certificate-help"
-                  onChange={(e) => setCertificate({ ...certificate, custom: e.target.checked })}
-                />
-                {t('Certificato personalizzato')}
-              </label>
-              <p id="certificate-help" className="mt-1 text-small text-muted">
-                {certificate.custom
-                  ? t('Il codice del certificato viene assegnato da ZITO 1950.')
-                  : t('Il certificato di proprietà sarà intestato ai dati del tuo account PayPal.')}
-              </p>
-              {certificate.custom && (
-                <fieldset disabled={busy} className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <legend className="sr-only">{t('Intestatario del certificato')}</legend>
-                  <label className="shop-label">
-                    {t('Nome di battesimo')}
-                    <input
-                      className="shop-input"
-                      name="given-name"
-                      autoComplete="given-name"
-                      required
-                      pattern=".*\S.*"
-                      maxLength={80}
-                      value={certificate.firstName}
-                      onChange={(e) => setCertificate({ ...certificate, firstName: e.target.value })}
-                    />
-                  </label>
-                  <label className="shop-label">
-                    {t('Cognome')}
-                    <input
-                      className="shop-input"
-                      name="family-name"
-                      autoComplete="family-name"
-                      required
-                      pattern=".*\S.*"
-                      maxLength={80}
-                      value={certificate.lastName}
-                      onChange={(e) => setCertificate({ ...certificate, lastName: e.target.value })}
-                    />
-                  </label>
-                  <label className="shop-label sm:col-span-2">
-                    {t('Email')}
-                    <input
-                      className="shop-input"
-                      type="email"
-                      name="email"
-                      autoComplete="email"
-                      required
-                      maxLength={254}
-                      value={certificate.email}
-                      onChange={(e) => setCertificate({ ...certificate, email: e.target.value })}
-                    />
-                  </label>
-                </fieldset>
-              )}
+              <h3 id="certificate-title" className="text-small font-medium">{t('Certificato di proprietà')}</h3>
+              <div className="mt-3 flex items-start gap-4">
+                <ul className="flex shrink-0 gap-2" aria-label={t('Certificato di proprietà')}>
+                  {CERTIFICATE_IMAGES.map((image) => (
+                    <li key={image.src} className="w-20 overflow-hidden rounded-md border border-line sm:w-24">
+                      <Picture
+                        src={image.src}
+                        alt={t(image.alt)}
+                        sizes="96px"
+                        className="h-auto w-full"
+                      />
+                    </li>
+                  ))}
+                </ul>
+                <p id="certificate-help" className="text-small text-muted">
+                  {t('Compila i dati per il certificato di garanzia: lo riceverai intestato a questo nome insieme all’orologio.')}
+                </p>
+              </div>
+              <fieldset disabled={busy} className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2" aria-describedby="certificate-help">
+                <legend className="sr-only">{t('Intestatario del certificato')}</legend>
+                {(
+                  [
+                    { field: 'firstName', label: 'Nome di battesimo', autoComplete: 'given-name', type: 'text', maxLength: 80, wide: false },
+                    { field: 'lastName', label: 'Cognome', autoComplete: 'family-name', type: 'text', maxLength: 80, wide: false },
+                    { field: 'email', label: 'Email', autoComplete: 'email', type: 'email', maxLength: 254, wide: true },
+                  ] as const
+                ).map(({ field, label, autoComplete, type, maxLength, wide }) => {
+                  const error = touched[field] ? errors[field] : null
+                  const errorId = `certificate-${field}-error`
+                  return (
+                    <label key={field} className={`shop-label${wide ? ' sm:col-span-2' : ''}`}>
+                      {t(label)}
+                      <input
+                        className="shop-input"
+                        type={type}
+                        name={autoComplete}
+                        autoComplete={autoComplete}
+                        required
+                        pattern={type === 'text' ? '.*\\S.*' : undefined}
+                        maxLength={maxLength}
+                        value={certificate[field]}
+                        aria-invalid={error ? true : undefined}
+                        aria-describedby={error ? errorId : undefined}
+                        onBlur={() => setTouched((state) => ({ ...state, [field]: true }))}
+                        onChange={(e) => setCertificate({ ...certificate, [field]: e.target.value })}
+                      />
+                      {error && (
+                        <span id={errorId} className="text-small text-ink">
+                          {t(error)}
+                        </span>
+                      )}
+                    </label>
+                  )
+                })}
+              </fieldset>
               <button
                 type="submit"
                 className="btn mt-6 w-full"
-                disabled={busy || unavailable || !!shopError || !payments?.enabled}
+                disabled={busy || unavailable || !!shopError || !payments?.enabled || !certificateValid}
               >
                 {busy ? t('Connessione a PayPal…') : t('Paga con PayPal')}
               </button>

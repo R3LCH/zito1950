@@ -86,13 +86,11 @@ export interface Site {
   cta: {
     /** Hero button to #orologi. */
     collection: string
-    /** Title of the Social section. */
-    social: string
     info: string
     whereToFind: string
     visit: string
   }
-  hero: { image: Img }
+  hero: { image: Img; motto: string; lead: string; text: string }
   labels: {
     code: string
     codes: string
@@ -116,24 +114,18 @@ export interface StoriaChapter {
   image?: Img & { caption: string }
 }
 
-/** Opening setting of the story: the town where the business started and still is. */
-export interface StoriaPlace {
-  eyebrow: string
-  title: string
-  paragraphs: string[]
-  images: (Img & { caption: string })[]
-}
-
 export interface Storia {
   eyebrow: string
   title: string
   intro: string
-  place: StoriaPlace
+  /** Label of the button that opens the full story. */
+  more: string
+  image: Img & { caption: string }
   chapters: StoriaChapter[]
   closing: Quote
 }
 
-export type SectionIcon = 'storia' | 'orologi' | 'limited' | 'officina' | 'luogo' | 'profumi' | 'social' | 'contatti'
+export type SectionIcon = 'storia' | 'limited' | 'perche'
 
 /** Heading copy of a section whose items come from the catalog (e.g. the perfumes). */
 export interface SectionCopy {
@@ -142,12 +134,45 @@ export interface SectionCopy {
   intro: string
 }
 
+/** A perfume announced before release: no code or price yet. */
+export interface ComingSoon {
+  eyebrow: string
+  name: string
+  line: string
+  text: string
+  image: Img
+}
+
+/** Perfume section heading plus the upcoming fragrance. */
+export interface ProfumiSection extends SectionCopy {
+  comingSoon: ComingSoon
+}
+
 /** The owner at the workbench: photo plus the craft notes (the former watch pillars). */
 export interface Officina {
   eyebrow: string
   title: string
   paragraphs: string[]
+  /** Label of the toggle that opens the craft notes. */
+  more: string
   image: Img & { caption: string }
+}
+
+/** «Perché scegliere ZITO1950»: serif lead, reasons, closing brand line. */
+export interface Perche {
+  title: string
+  lead: string
+  paragraphs: string[]
+  closing: string
+}
+
+/** «Scopri il territorio»: Scalea and the Calabrian coast. */
+export interface Territorio {
+  eyebrow: string
+  title: string
+  paragraphs: string[]
+  closing: string
+  image: Img
 }
 
 export interface Pillar {

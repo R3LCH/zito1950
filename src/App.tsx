@@ -4,11 +4,11 @@ import Header from './components/Header'
 import Hero from './components/Hero'
 import Officina from './components/Officina'
 import Orologi from './components/Orologi'
+import PercheZito from './components/PercheZito'
 import Profumi from './components/Profumi'
-import Scalea from './components/Scalea'
 import SectionButtons from './components/SectionButtons'
-import Social from './components/Social'
 import Storia from './components/Storia'
+import Territorio from './components/Territorio'
 import Admin from './components/Admin'
 import Cart from './components/Cart'
 import { ShopProvider, STATIC_PREVIEW } from './lib/shop'
@@ -28,14 +28,15 @@ export default function App() {
       <Header />
       <main id="contenuto" tabIndex={-1} className="outline-none">
         <Hero />
+        {/* Order follows the numbered sections of the client's layout; Perché Zito closes before the contacts. */}
         <div className="container-site mt-10 flex flex-col md:mt-14">
           <SectionButtons />
           <Storia />
           <Orologi />
-          <Officina />
-          <Scalea />
           <Profumi />
-          <Social />
+          <Officina />
+          <Territorio />
+          <PercheZito />
           <Contatti />
         </div>
       </main>

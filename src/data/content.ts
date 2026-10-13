@@ -1,4 +1,4 @@
-import type { Contatti, Img, Model, Officina, Orologi, Profumo, SectionCopy, Site, Storia } from './types'
+import type { Contatti, Img, Model, Officina, Orologi, Perche, Profumo, ProfumiSection, Site, Storia, Territorio } from './types'
 
 export const site: Site = {
   name: 'ZITO 1950',
@@ -9,23 +9,19 @@ export const site: Site = {
     { href: '#storia', label: 'Storia' },
     { href: '#orologi', label: 'Orologi' },
     { href: '#profumi', label: 'Profumi' },
-    { href: '#social', label: 'Social' },
-    { href: '#contatti', label: 'Dove siamo' },
+    { href: '#officina', label: 'Officina' },
+    { href: '#territorio', label: 'Territorio' },
+    { href: '#contatti', label: 'Contatti' },
   ],
+  // The three links under the hero, as in the client's layout.
   sections: [
-    { href: '#storia', label: 'Storia', hint: 'Dal 1945 a Scalea', icon: 'storia' },
-    { href: '#orologi', label: 'Orologi', hint: 'La collezione', icon: 'orologi' },
-    { href: '#edizioni-limitate', label: 'Edizioni limitate', hint: 'Pezzi numerati', icon: 'limited' },
-    { href: '#officina', label: 'Officina', hint: 'Il laboratorio', icon: 'officina' },
-    { href: '#scalea', label: 'Scalea', hint: 'Riviera dei Cedri', icon: 'luogo' },
-    { href: '#profumi', label: 'Profumi', hint: 'Eau de parfum', icon: 'profumi' },
-    { href: '#social', label: 'Social', hint: 'Instagram e Facebook', icon: 'social' },
-    { href: '#contatti', label: 'Dove siamo', hint: 'Via Michele Bianchi 23', icon: 'contatti' },
+    { href: '#storia', label: 'La nostra storia', hint: 'Una storia autentica di orologiai italiani.', icon: 'storia' },
+    { href: '#edizioni-limitate', label: 'Collezione limitata', hint: 'Produzioni selezionate per durare nel tempo.', icon: 'limited' },
+    { href: '#perche-zito', label: 'Perché Zito?', hint: 'Stile, qualità e carattere senza compromessi.', icon: 'perche' },
   ],
   panel: { more: 'Mostra tutto', less: 'Mostra meno', fullCatalog: 'Catalogo completo' },
   cta: {
     collection: 'Scopri la collezione',
-    social: 'Social',
     info: 'Richiedi informazioni',
     whereToFind: 'Dove siamo',
     visit: 'Scrivici',
@@ -35,6 +31,9 @@ export const site: Site = {
       src: 'img/models/tutus-ab-uno.jpg',
       alt: 'Tutus ab uno, cassa in oro rosa 18 Kt, quadrante avorio e cinturino in coccodrillo',
     },
+    motto: 'Officine del tempo',
+    lead: 'Dal 1950, una storia italiana.',
+    text: 'Orologi nati da una tradizione di famiglia. Design italiano, produzione limitata, per chi vive il tempo con passione.',
   },
   labels: {
     code: 'Codice',
@@ -522,30 +521,15 @@ export const models: Model[] = [
 ]
 
 export const storia: Storia = {
-  eyebrow: 'Storia',
-  title: 'Una famiglia di orologiai a Scalea',
-  intro: 'Zito1950 è una lunga storia che inizia più di mezzo secolo fa.',
-  place: {
-    eyebrow: 'Scalea · Calabria',
-    title: 'Scalea e la Calabria',
-    paragraphs: [
-      'Scalea è un comune della provincia di Cosenza, in Calabria, affacciato sul Mar Tirreno lungo la Riviera dei Cedri.',
-      '«Piccolo e incontaminato borgo della Riviera dei Cedri, oggi rinomata meta turistica internazionale.»',
-      'Il centro storico sale a gradoni sulla collina sopra il mare, tra vicoli, scalinate e palazzi antichi; sulla spiaggia si alza la Torre Talao. Alle spalle del paese cominciano le montagne del Parco nazionale del Pollino.',
-      'Qui nel 1945 apre il primo negozio di famiglia e nel 1950 nasce la ditta Zito. Qui la casa è ancora oggi, in via Michele Bianchi n. 23.',
-    ],
-    images: [
-      {
-        src: 'img/storia/scalea-borgo.jpg',
-        alt: 'Fotografia d’epoca in bianco e nero di Scalea, il borgo sulla collina sopra il mare',
-        caption: 'Scalea, Riviera dei Cedri',
-      },
-      {
-        src: 'img/storia/scalea-palazzo.jpg',
-        alt: 'Fotografia d’epoca in bianco e nero di un palazzo storico di Scalea',
-        caption: 'Scalea, foto d’epoca',
-      },
-    ],
+  eyebrow: 'La nostra storia',
+  title: 'Non ereditiamo un mestiere. Continuiamo un tempo.',
+  intro:
+    'Nel 1951 Luigi Zito viene incaricato dalle Ferrovie dello Stato per la riparazione e manutenzione degli orologi delle stazioni.',
+  more: 'Scopri la storia',
+  image: {
+    src: 'img/storia/storia-nuova.jpg',
+    alt: 'Documenti d’epoca del Ministero dei Trasporti e fotografie di famiglia',
+    caption: 'Documenti e fotografie d’epoca',
   },
   chapters: [
     {
@@ -665,11 +649,12 @@ export const orologi: Orologi = {
 }
 
 export const officina: Officina = {
-  eyebrow: 'Officina',
-  title: 'Il tempo, costruito con cura',
+  eyebrow: 'L’officina',
+  title: 'Il tempo, costruito con cura.',
   paragraphs: [
-    'Ogni orologio ZITO 1950 nasce al banco di lavoro di Scalea: la stessa passione di tre generazioni di orologiai, oggi nelle mani del titolare.',
+    'Ogni orologio ZITO 1950 unisce tradizione orologiaia, design italiano e selezione di materiali di alta qualità.',
   ],
+  more: 'Scopri il laboratorio',
   image: {
     src: 'img/storia/owner.jpg',
     alt: 'Il titolare di ZITO 1950 al banco di lavoro mentre regola un orologio con il monocolo da orologiaio',
@@ -677,10 +662,55 @@ export const officina: Officina = {
   },
 }
 
-export const profumiSection: SectionCopy = {
+/** Client copy: «Perché scegliere ZITO1950». */
+export const perche: Perche = {
+  title: 'Perché scegliere ZITO1950',
+  lead: 'Perché il valore di un orologio va oltre il nome sul quadrante.',
+  paragraphs: [
+    'Scegliere ZITO1950 significa scegliere un’identità indipendente, uno stile riconoscibile e una diversa idea di eleganza.',
+    'Significa indossare un orologio che unisce personalità, ricerca estetica e una storia italiana che affonda le proprie radici nel 1950.',
+    'Non cerchiamo di essere come tutti gli altri. Vogliamo offrire un’alternativa a chi ama gli orologi, apprezza il design e desidera distinguersi senza inseguire necessariamente i marchi più celebrati.',
+    'Crediamo in un lusso fatto di carattere, cura dei dettagli e valore concreto. In orologi capaci di esprimere chi li indossa, senza bisogno di ostentazione.',
+    'Perché non è il prezzo a definire il tuo stile. Non è la notorietà di un marchio a determinare il tuo gusto.',
+    'È la scelta che fai a raccontare chi sei.',
+  ],
+  closing: 'ZITO1950. Non seguire il tempo. Scegli come viverlo.',
+}
+
+/** Client copy: «Scopri il territorio»; photo supplied by the client. */
+export const territorio: Territorio = {
+  eyebrow: 'Scopri il territorio',
+  title: 'Scalea. Dove la bellezza incontra il tempo.',
+  paragraphs: [
+    'Ci sono luoghi che non hanno bisogno di essere inventati. Basta scoprirli.',
+    'Affacciata sul Mar Tirreno, lungo la Riviera dei Cedri, Scalea custodisce l’anima autentica della Calabria: il blu del mare, la pietra antica del centro storico, i vicoli che raccontano generazioni e una luce capace di trasformare ogni giornata in un ricordo.',
+    'Qui la storia incontra la bellezza della natura. Il ritmo del mare si alterna a quello lento delle strade antiche, mentre il paesaggio conserva il fascino di una terra orgogliosa delle proprie radici.',
+    'È in questo contesto che ZITO1950 sceglie di raccontare la propria identità: un marchio italiano che guarda al futuro senza dimenticare il valore della propria storia.',
+    'Perché il territorio non è soltanto un luogo sulla carta. È cultura, carattere, memoria e ispirazione.',
+    'Scoprire Scalea significa entrare in contatto con una Calabria da vivere, conoscere e portare con sé.',
+  ],
+  closing: 'ZITO1950. Il tempo ha una storia. La Calabria, mille da raccontare.',
+  image: {
+    src: 'img/storia/scalea-mare.jpg',
+    alt: 'Acqua turchese tra gli scogli e una canoa rossa sulla costa di Scalea',
+  },
+}
+
+export const profumiSection: ProfumiSection = {
   eyebrow: 'Profumi',
   title: 'Le essenze',
   intro: 'Eau de parfum firmate ZITO 1950.',
+  // Name and line as printed on the box (img/profumo/coming-soon.jpg); text from the client's announcement.
+  comingSoon: {
+    eyebrow: 'Prossimamente',
+    name: 'Tesoro di Alarico',
+    line: 'Pepe Nero',
+    text: 'Il profumo ispirato ad Alarico I, re dei Visigoti ed al suo Tesoro.',
+    image: {
+      src: 'img/profumo/coming-soon.jpg',
+      alt: 'Confezione nera del profumo Tesoro di Alarico, Pepe Nero, con medaglione dorato al centro',
+    },
+  },
 }
 
 export const profumo: Profumo = {

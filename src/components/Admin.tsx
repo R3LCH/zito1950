@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { AVAILABILITIES, type Availability, type CertificateHolder, type Img, type Model, type Profumo, type Variant, type TextTranslation } from '../data/types'
 import { api, euro, getSession, STATIC_PREVIEW, useShop, type Catalog } from '../lib/shop'
-import { officina, profumo as originalPerfume, storia } from '../data/content'
+import { officina, profumiSection, profumo as originalPerfume, storia, territorio } from '../data/content'
 import { asset } from '../lib/asset'
 import { t, LanguageSelector, useLocale } from '../lib/i18n'
 import { LOCALES, LANGUAGE_NAMES, LANGUAGE_TAGS, missingTranslationFields, type Locale } from '../data/localization'
@@ -17,9 +17,11 @@ const withAlt = (image: Img, locale: Locale, alt: string): Img => (locale === 'i
 const photoLabel = (image: Img) => image.name?.trim() || image.alt.trim() || image.src
 /** Public section showing each original site photo, keyed by its original src. Hero and perfume slots are labelled from the live catalog instead. */
 const SITE_SECTIONS: Record<string, string> = Object.fromEntries([
+  [storia.image.src, 'Storia'],
   ...storia.chapters.flatMap((c) => (c.image ? [[c.image.src, 'Storia']] : [])),
-  ...storia.place.images.map((im) => [im.src, 'Scalea e la Calabria']),
+  [profumiSection.comingSoon.image.src, 'Profumi – in arrivo'],
   [officina.image.src, 'Officina'],
+  [territorio.image.src, 'Scopri il territorio'],
 ])
 /** Lowercase ASCII id from a name, unique among `taken`. */
 function slugId(name: string, taken: string[]) {
@@ -833,7 +835,6 @@ interface Order {
     captureId: string
     email?: string
     shipping?: { name?: { full_name: string }; address?: Record<string, string> }
-    payer: { firstName: string; lastName: string; email: string } | null
   } | null
   certificate: CertificateHolder | null
   certificateCode: string | null
@@ -1554,21 +1555,21 @@ export default function Admin() {
                       </div>
                     )}
                     {(() => {
-                      const holder = order.certificate ?? order.receipt?.payer ?? null
+                      // Checkout requires the holder; orders placed before that may still lack one.
+                      const holder = order.certificate
                       return (
                         <section className="mt-5 border border-line p-5" aria-labelledby={`certificate-${order.id}`}>
-                          <div className="flex flex-wrap items-baseline justify-between gap-3">
-                            <h4 id={`certificate-${order.id}`} className="text-small font-medium">{t("Certificato")}</h4>
-                            <span className="text-xs text-muted">
-                              {order.certificate ? t('Personalizzato dal cliente') : holder ? t('Dati PayPal') : t('In attesa del pagamento')}
-                            </span>
+                          <h4 id={`certificate-${order.id}`} className="text-small font-medium">{t("Certificato")}</h4>
+                          <div className="mt-3 text-small">
+                            {holder ? (
+                              <>
+                                <p>{holder.firstName} {holder.lastName}</p>
+                                <p className="break-all">{holder.email}</p>
+                              </>
+                            ) : (
+                              <p>—</p>
+                            )}
                           </div>
-                          {holder && (
-                            <div className="mt-3 text-small">
-                              <p>{holder.firstName} {holder.lastName}</p>
-                              <p className="break-all">{holder.email}</p>
-                            </div>
-                          )}
                           <form
                             key={`${order.id}-${order.certificateCode ?? ''}`}
                             className="mt-4 flex flex-wrap items-end gap-4"
