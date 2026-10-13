@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { contatti, orologi, site, storia } from '../data/content'
+import { contatti, officina, orologi, profumiSection, site, storia } from '../data/content'
 import { LANGUAGE_NAMES, LANGUAGE_TAGS, LOCALES, localizeContent, translateSource, type Locale } from '../data/localization'
 
 function preferredLanguage(): Locale {
@@ -20,11 +20,11 @@ export function formatMoney(cents: number): string {
   const formatter = currencyFormats[activeLanguage] ??= new Intl.NumberFormat(LANGUAGE_TAGS[activeLanguage], { style: 'currency', currency: 'EUR' })
   return formatter.format(cents / 100)
 }
-interface LocaleState { locale: Locale; setLocale: (locale: Locale) => void; content: { site: typeof site; storia: typeof storia; orologi: typeof orologi; contatti: typeof contatti } }
+interface LocaleState { locale: Locale; setLocale: (locale: Locale) => void; content: { site: typeof site; storia: typeof storia; orologi: typeof orologi; officina: typeof officina; profumiSection: typeof profumiSection; contatti: typeof contatti } }
 const LocaleContext = createContext<LocaleState | null>(null)
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLanguage] = useState<Locale>(activeLanguage)
-  const content = useMemo(() => localizeContent({ site, storia, orologi, contatti }, locale), [locale])
+  const content = useMemo(() => localizeContent({ site, storia, orologi, officina, profumiSection, contatti }, locale), [locale])
   const setLocale = (value: Locale) => {
     activeLanguage = value
     setLanguage(value)

@@ -79,12 +79,14 @@ export interface Site {
   tagline: string
   description: string
   nav: { href: string; label: string }[]
+  /** Rounded jump buttons under the hero; `icon` picks the line icon drawn on the button. */
+  sections: { href: string; label: string; hint: string; icon: SectionIcon }[]
+  /** Shared labels of the expandable sections. */
+  panel: { more: string; less: string; fullCatalog: string }
   cta: {
-    /** Hero button to #storia. */
-    story: string
-    /** Hero button to #edizioni-limitate. */
-    limited: string
-    /** Hero button to #social. */
+    /** Hero button to #orologi. */
+    collection: string
+    /** Title of the Social section. */
     social: string
     info: string
     whereToFind: string
@@ -129,6 +131,23 @@ export interface Storia {
   place: StoriaPlace
   chapters: StoriaChapter[]
   closing: Quote
+}
+
+export type SectionIcon = 'storia' | 'orologi' | 'limited' | 'officina' | 'luogo' | 'profumi' | 'social' | 'contatti'
+
+/** Heading copy of a section whose items come from the catalog (e.g. the perfumes). */
+export interface SectionCopy {
+  eyebrow: string
+  title: string
+  intro: string
+}
+
+/** The owner at the workbench: photo plus the craft notes (the former watch pillars). */
+export interface Officina {
+  eyebrow: string
+  title: string
+  paragraphs: string[]
+  image: Img & { caption: string }
 }
 
 export interface Pillar {

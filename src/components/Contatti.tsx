@@ -1,4 +1,4 @@
-import { useReveal } from '../lib/useReveal'
+import Panel from './Panel'
 import { contatti as baseContacts } from '../data/content'
 import { useContent } from '../lib/i18n'
 
@@ -42,23 +42,18 @@ export function ContactLink({
 
 export default function Contatti() {
   const { contatti, site } = useContent()
-  const ref = useReveal<HTMLDivElement>()
 
   return (
-    <section id="contatti" aria-labelledby="contatti-title" className="border-t border-line py-(--section-y)">
-      <div ref={ref} className="reveal container-site">
-        <header className="max-w-[60ch]">
-          <p className="eyebrow">{contatti.eyebrow}</p>
-          <h2 id="contatti-title" className="mt-4 text-h2">
-            {contatti.title}
-          </h2>
-          <p className="mt-4 text-ink-2">{contatti.intro}</p>
-        </header>
-
-        <div className="mt-12 grid gap-12 md:mt-16 md:grid-cols-2 md:gap-16 lg:gap-24">
+    <Panel
+      id="contatti"
+      eyebrow={contatti.eyebrow}
+      title={contatti.title}
+      intro={<p>{contatti.intro}</p>}
+      preview={
+        <div className="grid gap-10 md:grid-cols-2 md:gap-16">
           <div>
             <h3 className="text-h3">{site.cta.whereToFind}</h3>
-            <address className="mt-6 not-italic">
+            <address className="mt-5 not-italic">
               <p className="font-medium">{contatti.company}</p>
               <p className="mt-1 text-ink-2">
                 <span className="sr-only">{contatti.labels.address}: </span>
@@ -70,34 +65,20 @@ export default function Contatti() {
                 {contatti.labels.piva} {contatti.piva}
               </p>
             </address>
-            <a
-              href={contatti.mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link-arrow mt-6 min-h-11"
-            >
+            <a href={contatti.mapsUrl} target="_blank" rel="noopener noreferrer" className="link-arrow mt-5 min-h-11">
               <span>{contatti.labels.maps}</span>
               <span className="sr-only"> {contatti.labels.newTab}</span>
             </a>
-            <div className="mt-8 aspect-[4/3] w-full border border-line bg-well">
-              <iframe
-                src={mapEmbed}
-                title={contatti.labels.mapTitle}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="h-full w-full grayscale"
-              />
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-h3">{site.cta.visit}</h3>
-            <ul className="mt-6 border-t border-line">
+            <h3 className="mt-10 text-h3">{site.cta.visit}</h3>
+            <ul className="mt-5 border-t border-line">
               <ContactLink label={contatti.labels.pec} value={contatti.pec} href={`mailto:${contatti.pec}`} />
             </ul>
           </div>
+          <div className="aspect-[4/3] w-full overflow-hidden rounded-[1.25rem] border border-line bg-well">
+            <iframe src={mapEmbed} title={contatti.labels.mapTitle} loading="lazy" referrerPolicy="no-referrer-when-downgrade" className="h-full w-full grayscale" />
+          </div>
         </div>
-      </div>
-    </section>
+      }
+    />
   )
 }

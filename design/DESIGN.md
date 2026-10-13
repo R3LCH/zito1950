@@ -26,14 +26,16 @@ No accent hue. Color comes from the photographs.
 - Container 1240px, gutter `clamp(1.25rem,4vw,4rem)`, section padding `clamp(3.5rem,8vw,8rem)`.
 - Spacing scale 4, 8, 12, 16, 24, 32, 40, 48, 64, 96, 128px.
 - 12-column editorial grid on desktop; below 768px one column, natural reading order, no horizontal overflow.
-- Radius 0 everywhere. No shadows, gradients, glass, pills, grain, icons-as-decoration. Functional control icons (cart) are allowed.
+- Sections are white cards: 1px `line` border, radius 2rem (photos inside 1.25rem), no shadows, gradients, glass or grain. Buttons and the section jump buttons are fully rounded. Line icons only on functional controls (cart, section buttons).
 - Sticky header 72px; anchors use `scroll-margin-top: 72px`.
-- Section order: Hero → Orologi (`#orologi`) → Profumi (`#profumi`) → Storia (`#storia`) → Social (`#social`) → Dove siamo (`#contatti`).
+- Section order: compact Hero → section buttons (Storia, Orologi, Edizioni limitate, Officina, Scalea, Profumi, Social, Dove siamo) → Storia (`#storia`) → Orologi (`#orologi`) → Officina (`#officina`) → Scalea (`#scalea`) → Profumi (`#profumi`) → Social (`#social`) → Dove siamo (`#contatti`).
+- Expandable sections (`Panel`): a short preview is always visible; "Mostra tutto" opens the rest with a height transition, body `inert` while closed; links into a closed body (e.g. `#edizioni-limitate`) open it first.
 
 ## Components
 - Header: white sticky bar, `logo.svg` left, anchor nav (Orologi, Profumi, Storia, Social, Dove siamo) right; functional outline-SVG shopping-bag button opens Cart, square ink count badge when non-empty; no floating cart button; hairline after scroll; mobile menu as modal with focus trap.
-- Hero: uncropped product photo from admin-configurable `catalog.hero`, default `img/models/tutus-ab-uno.jpg`, eager, high priority; display h1 “Orologiai a Scalea dal 1950” + short factual text. Three `.btn` links: primary ink-filled “Scopri la storia” (`#storia`), secondary outlined “Edizioni limitate” (`#edizioni-limitate`) and “Social” (`#social`).
-- Orologi: text-only pillars between hairlines, then equal-cell catalog grid (2/3 columns by width); exclude `hidden`; featured sort puts `isNew` first, then `buy`, `no-buy`, `out-of-stock`, `sold`, price descending within each group.
+- Hero: photo from admin-configurable `catalog.hero` beside h1 “Orologiai a Scalea dal 1950”, short text and one rounded ink button “Scopri la collezione” (`#orologi`).
+- Orologi: closed shows 3–4 watches from admin `catalog.featured` (fallback: first 4 of the featured sort); “Catalogo completo” opens filters and the full grid; exclude `hidden`; featured sort puts `isNew` first, then `buy`, `no-buy`, `out-of-stock`, price descending within each group.
+- Officina: owner photo `img/storia/owner.jpg` with craft text; opens to the movement/material notes. Scalea: town text and photos. Profumi: list of `catalog.perfumes`, opens to full details per perfume.
 - Filters: outlined “Filtri e ordinamento” button with ink count badge, result count, “Azzera filtri” and removable outlined chips. Native `<dialog>` side sheet, 420px from the right on desktop, full screen on mobile; sort radios, then checkbox groups (Selezione, Disponibilità, Movimento, Funzioni, Cassa, Prezzo) with tabular live counts; zero-count options muted and disabled. `#edizioni-limitate` applies only the limited-edition filter.
 - ModelCard: image and detail controls open ModelDialog at the selected variant/photo; product `object-fit: contain`, never cropping bezels/bracelets; name serif h3, codes small, price sans. Purchase control only for `availability: buy`.
 - Badge/labels: “Nuovo” and “Edizione limitata” at the image’s top-left corner, ink fill, white uppercase small type with tracking, radius 0; “Venduto” / “Esaurito” status tags outlined. Limited editions with positive `piecesRemaining` show “Ancora N pezzi” or “Ultimo pezzo disponibile”; empty or 0 shows no count.
@@ -58,7 +60,7 @@ No accent hue. Color comes from the photographs.
 - No parallax, loops, scroll-jacking, smooth-scroll libraries.
 
 ## Prohibitions
-Dark mode or dark sections; stock/generated imagery; invented facts, prices, dates, names, specs or testimonials; rounded corners; shadows; gradients; emoji; carousels with autoplay.
+Dark mode or dark sections; stock/generated imagery; invented facts, prices, dates, names, specs or testimonials; shadows; gradients; emoji; carousels with autoplay.
 
 ## Content rules
 - Italian source facts come from the catalogue, price card and old site; interface microcopy is separate. Unreadable = `[illeggibile]`. Localized copy must preserve the facts.

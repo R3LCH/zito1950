@@ -2,18 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import ModelCard from './ModelCard'
 import ModelDialog from './ModelDialog'
 import CatalogFilters from './CatalogFilters'
+import Panel from './Panel'
 import { t, useContent } from '../lib/i18n'
 import type { Model } from '../data/types'
-import { useReveal } from '../lib/useReveal'
 import { useShop } from '../lib/shop'
 import { EMPTY_FILTERS, availabilityOf, compareModels, facetIndex, matches, type FilterState } from '../lib/catalogFilters'
 
 const LIMITED_HASH = '#edizioni-limitate'
 
 export default function Orologi() {
-  const { orologi } = useContent()
-  const introRef = useReveal<HTMLDivElement>()
-  const pillarsRef = useReveal<HTMLUListElement>()
+  const { orologi, site } = useContent()
   const [open, setOpen] = useState<{ model: Model; trigger: HTMLElement; variant: number; image: number } | null>(null)
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
   const { catalog: source, localizedCatalog: catalog, error } = useShop()
@@ -24,6 +22,11 @@ export default function Orologi() {
     () => catalog.models.filter((m) => availabilityOf(m) !== 'hidden').sort(compareModels('featured')),
     [catalog.models],
   )
+  // Owner-picked watches for the closed section; without picks, the first four of the featured order.
+  const featured = useMemo(() => {
+    const picked = catalog.featured.flatMap((id) => models.find((m) => m.id === id) ?? [])
+    return (picked.length ? picked : models).slice(0, 4)
+  }, [catalog.featured, models])
   const shown = useMemo(
     () => models.filter((m) => matches(m, facetsFor(m), filters)).sort(compareModels(filters.sort)),
     [models, facetsFor, filters],
@@ -54,53 +57,43 @@ export default function Orologi() {
   // Same trigger: focus returns to the card that opened the dialog in the first place.
   const handleSelect = useCallback((model: Model) => setOpen((o) => o && { ...o, model, variant: 0, image: 0 }), [])
 
+  const grid = 'grid grid-cols-2 gap-x-4 gap-y-10 lg:gap-x-8 lg:gap-y-14'
+
   return (
-    <section id="orologi" aria-labelledby="orologi-title" className="py-(--section-y)">
-      <div className="container-site">
-        <div ref={introRef} className="reveal max-w-[60ch]">
-          <p className="eyebrow">{orologi.eyebrow}</p>
-          <h2 id="orologi-title" className="mt-4 font-serif text-h2">
-            {orologi.title}
-          </h2>
-          <p className="mt-6 text-ink-2">{orologi.intro}</p>
-        </div>
-
-        <ul
-          ref={pillarsRef}
-          className="reveal mt-12 grid gap-x-8 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4"
-        >
-          {orologi.pillars.map((p) => (
-            <li key={p.title} className="border-t border-line pt-6 pb-10">
-              <h3 className="font-serif text-h3">{p.title}</h3>
-              <p className="mt-3 text-small text-ink-2">{p.text}</p>
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-(--section-y)">
-          <p className="eyebrow">{orologi.catalog.eyebrow}</p>
-          <h2 id="catalogo-title" className="mt-4 font-serif text-h2">
-            {orologi.catalog.title}
-          </h2>
-        </div>
-
-        <div id="edizioni-limitate" className="mt-8 scroll-mt-(--header-h)">
+    <>
+      <Panel
+        id="orologi"
+        eyebrow={orologi.eyebrow}
+        title={orologi.title}
+        intro={<p>{orologi.intro}</p>}
+        previewOnlyCollapsed
+        moreLabel={site.panel.fullCatalog}
+        preview={
+          <ul className={`${grid} ${featured.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+            {featured.map((m) => (
+              <li key={m.id}>
+                <ModelCard model={m} onOpen={handleOpen} />
+              </li>
+            ))}
+          </ul>
+        }
+      >
+        <h3 id="catalogo-title" className="text-h3">
+          {orologi.catalog.title}
+        </h3>
+        <div id="edizioni-limitate" className="mt-6 scroll-mt-[calc(var(--header-h)+1rem)]">
           <CatalogFilters models={models} facetsFor={facetsFor} filters={filters} onChange={update} resultCount={shown.length} />
         </div>
-
         {error && <p role="status" className="mt-6 text-small">{t(error)}</p>}
         {shown.length === 0 && models.length > 0 ? (
           <div className="mt-10 max-w-[60ch]">
             <p className="text-ink-2">{t('Nessun modello corrisponde ai filtri scelti.')}</p>
-            <button type="button" className="btn mt-6" onClick={() => update({ ...EMPTY_FILTERS, sort: filters.sort })}>
+            <button type="button" className="btn mt-6 rounded-full" onClick={() => update({ ...EMPTY_FILTERS, sort: filters.sort })}>
               {t('Azzera filtri')}
             </button>
           </div>
         ) : (
-          <ul
-            aria-labelledby="catalogo-title"
-            className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-3 lg:gap-x-10 lg:gap-y-20"
-          >
+          <ul aria-labelledby="catalogo-title" className={`mt-10 ${grid} lg:grid-cols-3`}>
             {shown.map((m) => (
               <li key={m.id}>
                 <ModelCard model={m} onOpen={handleOpen} />
@@ -108,7 +101,7 @@ export default function Orologi() {
             ))}
           </ul>
         )}
-      </div>
+      </Panel>
 
       <ModelDialog
         model={open ? models.find((model) => model.id === open.model.id) ?? null : null}
@@ -119,6 +112,6 @@ export default function Orologi() {
         onClose={handleClose}
         onSelect={handleSelect}
       />
-    </section>
+    </>
   )
 }

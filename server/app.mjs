@@ -8,7 +8,7 @@ import { randomBytes, createHash, timingSafeEqual, randomUUID } from 'node:crypt
 import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { z } from 'zod'
-import { models, site, storia, profumo } from '../src/data/content.ts'
+import { models, site, storia, profumo, officina } from '../src/data/content.ts'
 import { LOCALES, TRANSLATION_LOCALES, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../src/data/localization.ts'
 import { createTranslator } from './translate.mjs'
 
@@ -74,6 +74,7 @@ const modelSchema = z.object({
   translations,
 })
 const perfumeSchema = z.object({
+  id,
   name: text.min(1).max(120),
   code: text.max(80),
   priceCents: cents,
@@ -95,6 +96,7 @@ const certificateSchema = z
   .optional()
 const limitedEditions = new Set(['tutus-ab-uno', 'takimo', 'bauletto'])
 const placeImages = (storia.place?.images ?? []).map(({ src, alt }) => ({ src, alt }))
+const officinaImage = { src: officina.image.src, alt: officina.image.alt }
 // Blank quote parts are dropped: no author key without an author.
 const cleanQuote = ({ text, author }) => (author ? { text, author } : { text })
 
@@ -127,21 +129,26 @@ export function createApp(options = {}) {
         site.hero.image,
         ...storia.chapters.flatMap((c) => (c.image ? [c.image] : [])),
         ...placeImages,
+        officinaImage,
         ...profumo.images,
       ],
-      catalogVersion: 3,
+      perfumes: [{ ...profumo, priceCents: initialPrice(profumo.price) }],
+      featured: [],
+      catalogVersion: 4,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
   const storedCatalog = db.prepare('SELECT body FROM catalog WHERE id=1').get()
   const existing = JSON.parse(storedCatalog.body)
-  if (!Object.hasOwn(existing, 'perfume')) {
+  // Pre-v4 catalogs held one optional perfume; a missing key means it predates the perfume editor.
+  if (!Object.hasOwn(existing, 'perfume') && !Object.hasOwn(existing, 'perfumes')) {
     existing.perfume = { ...profumo, priceCents: initialPrice(profumo.price) }
     db.prepare('UPDATE catalog SET body=? WHERE id=1').run(JSON.stringify(existing))
   }
   if (existing.localizationVersion !== 1) {
     existing.models = existing.models.map(seedModelTranslations)
     if (existing.perfume) existing.perfume = seedPerfumeTranslations(existing.perfume)
+    if (existing.perfumes) existing.perfumes = existing.perfumes.map(seedPerfumeTranslations)
     existing.hero = seedImageTranslations(existing.hero)
     existing.photos = existing.photos.map(seedImageTranslations)
     existing.siteImages = existing.siteImages.map(seedImageTranslations)
@@ -171,6 +178,16 @@ export function createApp(options = {}) {
     // The retired sold state reads as out of stock.
     existing.models = existing.models.map((m) => (m.availability === 'sold' ? { ...m, availability: 'out-of-stock' } : m))
     existing.catalogVersion = 3
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.catalogVersion < 4) {
+    // One optional perfume becomes a list; the homepage watch picks start empty.
+    existing.perfumes = existing.perfume ? [{ id: profumo.id, ...existing.perfume }] : []
+    delete existing.perfume
+    existing.featured ??= []
+    // The workshop portrait joins the replaceable site photos.
+    if (!existing.siteImages.some((im) => im.src === officinaImage.src)) existing.siteImages.push(seedImageTranslations(officinaImage))
+    existing.catalogVersion = 4
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   const catalog = () => {
@@ -335,6 +352,17 @@ export function createApp(options = {}) {
     body.models = body.models
       .filter((m) => m.id !== req.params.id)
       .map((m) => (m.similar?.includes(req.params.id) ? { ...m, similar: m.similar.filter((s) => s !== req.params.id) } : m))
+    body.featured = (body.featured ?? []).filter((f) => f !== req.params.id)
+    res.json(save(body, revision(req)))
+  })
+  app.put('/api/admin/featured', admin, csrf, (req, res) => {
+    const ids = z.array(id).max(50).parse(req.body.ids)
+    const body = catalog()
+    // Homepage picks: known, distinct; order is the owner's.
+    const known = new Set(body.models.map((m) => m.id))
+    const featured = [...new Set(ids)].filter((f) => known.has(f))
+    if (featured.length > 4) fail(400, 'Massimo 4 orologi in evidenza.')
+    body.featured = featured
     res.json(save(body, revision(req)))
   })
   app.put('/api/admin/hero', admin, csrf, (req, res) => {
@@ -372,7 +400,7 @@ export function createApp(options = {}) {
       images: m.images.map(replace),
       ...(m.variants ? { variants: m.variants.map((v) => ({ ...v, images: v.images.map(replace) })) } : {}),
     }))
-    if (body.perfume) body.perfume.images = body.perfume.images.map(replace)
+    body.perfumes = body.perfumes.map((p) => ({ ...p, images: p.images.map(replace) }))
     const shown = body.siteImages.map((s) => body.imageOverrides[s.src] ?? s)
     body.siteImages.forEach((s, index) => {
       const next = bySource.get(shown[index].src)
@@ -384,12 +412,21 @@ export function createApp(options = {}) {
     if (used.size !== bySource.size) fail(400, 'Foto non trovata nel sito.')
     res.json(save(body, revision(req)))
   })
-  app.put('/api/admin/perfume', admin, csrf, (req, res) => {
+  app.put('/api/admin/perfumes/:id', admin, csrf, (req, res) => {
+    const product = perfumeSchema.parse(req.body.product)
+    if (product.id !== req.params.id) fail(400, 'Identificativo non valido.')
+    product.images.forEach(validImage)
+    product.quote = cleanQuote(product.quote)
     const body = catalog()
-    const product = req.body.product === null ? null : perfumeSchema.parse(req.body.product)
-    product?.images.forEach(validImage)
-    if (product) product.quote = cleanQuote(product.quote)
-    body.perfume = product ? { ...profumo, ...product, price: displayPrice(product.priceCents) } : null
+    const complete = { eyebrow: profumo.eyebrow, labels: profumo.labels, ...product, price: displayPrice(product.priceCents) }
+    const index = body.perfumes.findIndex((p) => p.id === product.id)
+    if (index < 0) body.perfumes.push(complete)
+    else body.perfumes[index] = complete
+    res.json(save(body, revision(req)))
+  })
+  app.delete('/api/admin/perfumes/:id', admin, csrf, (req, res) => {
+    const body = catalog()
+    body.perfumes = body.perfumes.filter((p) => p.id !== req.params.id)
     res.json(save(body, revision(req)))
   })
   // Browsers send filenames as raw UTF-8; busboy would otherwise read them as latin1.
@@ -439,7 +476,7 @@ export function createApp(options = {}) {
     const references = [
       body.hero,
       ...Object.values(body.imageOverrides),
-      ...(body.perfume?.images ?? []),
+      ...body.perfumes.flatMap((p) => p.images),
       ...body.models.flatMap((m) => [...m.images, ...(m.variants ?? []).flatMap((v) => v.images)]),
     ]
     if (references.some((im) => im.src === src)) fail(409, 'Foto in uso. Rimuovila dai prodotti o sostituiscila prima.')

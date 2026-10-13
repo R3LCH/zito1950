@@ -642,5 +642,9 @@
   "img/cards/vintage.jpg": {
     "w": 640,
     "h": 640
+  },
+  "img/storia/owner.jpg": {
+    "w": 1400,
+    "h": 1211
   }
 }

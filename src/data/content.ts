@@ -1,4 +1,4 @@
-import type { Contatti, Img, Model, Orologi, Profumo, Site, Storia } from './types'
+import type { Contatti, Img, Model, Officina, Orologi, Profumo, SectionCopy, Site, Storia } from './types'
 
 export const site: Site = {
   name: 'ZITO 1950',
@@ -6,15 +6,25 @@ export const site: Site = {
   description:
     'Casa fondata nel 1950 dal Cav. Luigi Antonio Zito a Scalea, sulla Riviera dei Cedri.',
   nav: [
+    { href: '#storia', label: 'Storia' },
     { href: '#orologi', label: 'Orologi' },
     { href: '#profumi', label: 'Profumi' },
-    { href: '#storia', label: 'Storia' },
     { href: '#social', label: 'Social' },
     { href: '#contatti', label: 'Dove siamo' },
   ],
+  sections: [
+    { href: '#storia', label: 'Storia', hint: 'Dal 1945 a Scalea', icon: 'storia' },
+    { href: '#orologi', label: 'Orologi', hint: 'La collezione', icon: 'orologi' },
+    { href: '#edizioni-limitate', label: 'Edizioni limitate', hint: 'Pezzi numerati', icon: 'limited' },
+    { href: '#officina', label: 'Officina', hint: 'Il laboratorio', icon: 'officina' },
+    { href: '#scalea', label: 'Scalea', hint: 'Riviera dei Cedri', icon: 'luogo' },
+    { href: '#profumi', label: 'Profumi', hint: 'Eau de parfum', icon: 'profumi' },
+    { href: '#social', label: 'Social', hint: 'Instagram e Facebook', icon: 'social' },
+    { href: '#contatti', label: 'Dove siamo', hint: 'Via Michele Bianchi 23', icon: 'contatti' },
+  ],
+  panel: { more: 'Mostra tutto', less: 'Mostra meno', fullCatalog: 'Catalogo completo' },
   cta: {
-    story: 'Scopri la storia',
-    limited: 'Edizioni limitate',
+    collection: 'Scopri la collezione',
     social: 'Social',
     info: 'Richiedi informazioni',
     whereToFind: 'Dove siamo',
@@ -521,6 +531,7 @@ export const storia: Storia = {
     paragraphs: [
       'Scalea è un comune della provincia di Cosenza, in Calabria, affacciato sul Mar Tirreno lungo la Riviera dei Cedri.',
       '«Piccolo e incontaminato borgo della Riviera dei Cedri, oggi rinomata meta turistica internazionale.»',
+      'Il centro storico sale a gradoni sulla collina sopra il mare, tra vicoli, scalinate e palazzi antichi; sulla spiaggia si alza la Torre Talao. Alle spalle del paese cominciano le montagne del Parco nazionale del Pollino.',
       'Qui nel 1945 apre il primo negozio di famiglia e nel 1950 nasce la ditta Zito. Qui la casa è ancora oggi, in via Michele Bianchi n. 23.',
     ],
     images: [
@@ -653,6 +664,26 @@ export const orologi: Orologi = {
   },
 }
 
+export const officina: Officina = {
+  eyebrow: 'Officina',
+  title: 'Il tempo, costruito con cura',
+  paragraphs: [
+    'Ogni orologio ZITO 1950 nasce al banco di lavoro di Scalea: la stessa passione di tre generazioni di orologiai, oggi nelle mani del titolare.',
+    'Cassa e movimento, vetro zaffiro e finiture vengono scelti e controllati uno per uno, prima che l’orologio arrivi al polso.',
+  ],
+  image: {
+    src: 'img/storia/owner.jpg',
+    alt: 'Il titolare di ZITO 1950 al banco di lavoro mentre regola un orologio con il monocolo da orologiaio',
+    caption: 'Il laboratorio ZITO 1950',
+  },
+}
+
+export const profumiSection: SectionCopy = {
+  eyebrow: 'Profumi',
+  title: 'Le essenze',
+  intro: 'Eau de parfum firmate ZITO 1950.',
+}
+
 export const profumo: Profumo = {
   id: 'n7-oud',
   eyebrow: 'Profumi',
@@ -696,7 +727,7 @@ export const contatti: Contatti = {
   pec: 'granalida@pec.it',
   piva: '03012360784',
   website: 'www.zito1950.it',
-  instagram: 'https://www.instagram.com/zito1950lifestyle/',
+  instagram: 'https://www.instagram.com/zito1950/',
   facebook: 'http://www.facebook.com/zito1950',
   mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Via+Michele+Bianchi+23+Scalea+CS',
   labels: {

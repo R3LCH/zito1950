@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { models, profumo, site, storia } from '../data/content'
+import { models, officina, profumo, site, storia } from '../data/content'
 import type { Img, Model, Profumo } from '../data/types'
 import { localizeImage, localizeModel, localizePerfume, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../data/localization'
 import { formatMoney, useLocale } from './i18n'
@@ -10,7 +10,9 @@ export const STATIC_PREVIEW = import.meta.env.VITE_STATIC_PREVIEW === 'true'
 export interface Catalog {
   revision: number
   models: Model[]
-  perfume: Profumo | null
+  perfumes: Profumo[]
+  /** Model ids shown on the homepage before the catalog is expanded, owner order, max 4. */
+  featured: string[]
   hero: Img
   photos: Img[]
   imageOverrides: Record<string, Img>
@@ -66,11 +68,12 @@ const initial: Catalog = {
     piecesRemaining: null,
     variants: model.variants?.map(variant => ({ ...variant, priceCents: seedPrice(variant.price) })),
   })),
-  perfume: seedPerfumeTranslations({ ...profumo, priceCents: seedPrice(profumo.price) }),
+  perfumes: [seedPerfumeTranslations({ ...profumo, priceCents: seedPrice(profumo.price) })],
+  featured: [],
   hero: seedImageTranslations(site.hero.image),
   photos: [],
   imageOverrides: {},
-  siteImages: [site.hero.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), ...storia.place.images, ...profumo.images],
+  siteImages: [site.hero.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), ...storia.place.images, officina.image, ...profumo.images],
 }
 interface ShopState {
   catalog: Catalog
@@ -117,7 +120,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       const localized = localizeModel(model, locale)
       return { ...localized, price: formatMoney(model.priceCents ?? seedPrice(model.price)), variants: localized.variants?.map(variant => ({ ...variant, price: formatMoney(variant.priceCents ?? seedPrice(variant.price)) })) }
     }),
-    perfume: catalog.perfume ? { ...localizePerfume(catalog.perfume, locale), price: formatMoney(catalog.perfume.priceCents ?? seedPrice(catalog.perfume.price)) } : null,
+    perfumes: catalog.perfumes.map(perfume => ({ ...localizePerfume(perfume, locale), price: formatMoney(perfume.priceCents ?? seedPrice(perfume.price)) })),
     imageOverrides: Object.fromEntries(Object.entries(catalog.imageOverrides).map(([source, image]) => [source, localizeImage(image, locale)])),
   }), [catalog, locale])
   const reload = async () => {

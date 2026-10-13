@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { AVAILABILITIES, type Availability, type CertificateHolder, type Img, type Model, type Profumo, type Variant, type TextTranslation } from '../data/types'
 import { api, euro, getSession, STATIC_PREVIEW, useShop, type Catalog } from '../lib/shop'
-import { profumo as originalPerfume } from '../data/content'
+import { officina, profumo as originalPerfume, storia } from '../data/content'
 import { asset } from '../lib/asset'
 import { t, LanguageSelector, useLocale } from '../lib/i18n'
 import { LOCALES, LANGUAGE_NAMES, LANGUAGE_TAGS, missingTranslationFields, type Locale } from '../data/localization'
@@ -15,6 +15,34 @@ const altOf = (image: Img, locale: Locale) => (locale === 'it' ? image.alt : ima
 const withAlt = (image: Img, locale: Locale, alt: string): Img => (locale === 'it' ? { ...image, alt } : { ...image, altTranslations: { ...image.altTranslations, [locale]: alt } })
 /** Admin label for a photo: uploaded file name, then description, then path. */
 const photoLabel = (image: Img) => image.name?.trim() || image.alt.trim() || image.src
+/** Public section showing each original site photo, keyed by its original src. Hero and perfume slots are labelled from the live catalog instead. */
+const SITE_SECTIONS: Record<string, string> = Object.fromEntries([
+  ...storia.chapters.flatMap((c) => (c.image ? [[c.image.src, 'Storia']] : [])),
+  ...storia.place.images.map((im) => [im.src, 'Scalea e la Calabria']),
+  [officina.image.src, 'Officina'],
+])
+/** Lowercase ASCII id from a name, unique among `taken`. */
+function slugId(name: string, taken: string[]) {
+  const base = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70) || 'profumo'
+  let candidate = base
+  for (let n = 2; taken.includes(candidate); n++) candidate = `${base}-${n}`
+  return candidate
+}
+/** A new perfume: the seed's section labels, everything else blank. */
+const blankPerfume = (): Profumo => ({
+  id: '',
+  eyebrow: originalPerfume.eyebrow,
+  labels: originalPerfume.labels,
+  code: '',
+  name: '',
+  price: '',
+  priceCents: 12000,
+  quote: { text: '' },
+  paragraphs: [],
+  specs: [],
+  ingredients: [],
+  images: [],
+})
 /** Uploads files to the library and resolves to the new photos (empty when the upload failed). */
 type UploadPhotos = (files: File[]) => Promise<Img[]>
 const PHOTO_TYPES = 'image/jpeg,image/png,image/webp'
@@ -602,24 +630,103 @@ function ProductEditor({
     </form>
   )
 }
+/** Homepage watch picks, owner order, at most four; same picking style as the similar-models editor. */
+function FeaturedEditor({
+  featured,
+  models,
+  busy,
+  onSave,
+}: {
+  featured: string[]
+  /** Whole catalog, hidden included. */
+  models: Model[]
+  busy: boolean
+  onSave: (ids: string[]) => void
+}) {
+  const [ids, setIds] = useState(() => featured.filter((id) => models.some((m) => m.id === id)))
+  return (
+    <form
+      className="max-w-2xl space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault()
+        onSave(ids)
+      }}
+    >
+      <fieldset disabled={busy} className="min-w-0 space-y-3">
+        <legend className="mb-3 text-h2">{t("In evidenza in home")}</legend>
+        <p className="text-xs text-muted">{t("Fino a 4 orologi mostrati in home prima di aprire il catalogo, in quest’ordine. Se la lista è vuota compaiono i primi 4 del catalogo. Gli orologi nascosti non vengono mostrati.")}</p>
+        {ids.length > 0 && (
+          <ol className="border-t border-line">
+            {ids.map((fid, i) => {
+              const other = models.find((m) => m.id === fid)
+              const name = other?.name ?? fid
+              const move = (to: number) =>
+                setIds(current => {
+                  const next = [...current]
+                  next.splice(to, 0, ...next.splice(i, 1))
+                  return next
+                })
+              return (
+                <li key={fid} className="flex items-center gap-2 border-b border-line py-2 text-small">
+                  <span className="w-6 tabular-nums text-muted">{i + 1}.</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {name}
+                    {other?.availability === 'hidden' && <span className="text-xs text-muted"> · {t("Nascosto")}</span>}
+                  </span>
+                  <button type="button" className="min-h-11 min-w-11 underline disabled:no-underline" disabled={i === 0} aria-label={t("Sposta su: {name}", { name })} onClick={() => move(i - 1)}>↑</button>
+                  <button type="button" className="min-h-11 min-w-11 underline disabled:no-underline" disabled={i === ids.length - 1} aria-label={t("Sposta giù: {name}", { name })} onClick={() => move(i + 1)}>↓</button>
+                  <button type="button" className="min-h-11 px-2 underline" aria-label={t("Rimuovi {name}", { name })} onClick={() => setIds(current => current.filter((s) => s !== fid))}>{t("Rimuovi")}</button>
+                </li>
+              )
+            })}
+          </ol>
+        )}
+        {ids.length < 4 && (
+          <label className="shop-label">
+            {t("Aggiungi orologio in evidenza")}
+            <select
+              className="shop-input"
+              value=""
+              onChange={(e) => {
+                const value = e.target.value
+                if (value) setIds(current => [...current, value])
+              }}
+            >
+              <option value="">{t("Scegli un modello…")}</option>
+              {models
+                .filter((m) => !ids.includes(m.id))
+                .map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+            </select>
+          </label>
+        )}
+        <button type="submit" className="btn" disabled={STATIC_PREVIEW}>
+          {t("Salva in evidenza")}
+        </button>
+      </fieldset>
+    </form>
+  )
+}
 function PerfumeEditor({
   product,
+  isNew,
   library,
   busy,
   onSave,
   onDelete,
   onUpload,
 }: {
-  product: Profumo | null
+  product: Profumo
+  /** A draft not yet on the site: deleting only discards it. */
+  isNew: boolean
   library: Img[]
   busy: boolean
   onSave: (product: Profumo) => void
   onDelete: () => void
   onUpload: UploadPhotos
 }) {
-  const [draft, setDraft] = useState<Profumo>(() =>
-    structuredClone(product ?? { ...originalPerfume, priceCents: 12000 }),
-  )
+  const [draft, setDraft] = useState<Profumo>(() => structuredClone(product))
   const [language, setLanguage] = useState<Locale>('it')
   const { status: translationStatus, handle: onTranslateKey } = useAutoTranslate()
   const text = perfumeText(draft, language)
@@ -636,7 +743,7 @@ function PerfumeEditor({
         onSave(draft)
       }}
     >
-      <h2 className="text-h2">{product ? t('Il profumo') : t('Aggiungi il profumo')}</h2>
+      <h2 className="text-h2">{isNew ? t('Aggiungi il profumo') : t('Il profumo')}</h2>
       <fieldset disabled={busy} className="min-w-0 space-y-6">
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <label className="shop-label">
@@ -707,11 +814,9 @@ function PerfumeEditor({
           <button className="btn" type="submit" disabled={STATIC_PREVIEW}>
             {t("Salva profumo")}
           </button>
-          {product && (
-            <button className="underline text-small" type="button" disabled={STATIC_PREVIEW} onClick={onDelete}>
-              {t("Elimina profumo")}
-            </button>
-          )}
+          <button className="underline text-small" type="button" disabled={STATIC_PREVIEW} onClick={onDelete}>
+            {t("Elimina profumo")}
+          </button>
         </div>
       </fieldset>
     </form>
@@ -743,6 +848,8 @@ export default function Admin() {
   const [status, setStatus] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [newProduct, setNewProduct] = useState<Model | null>(null)
+  const [selectedPerfume, setSelectedPerfume] = useState<string | null>(null)
+  const [newPerfume, setNewPerfume] = useState<Profumo | null>(null)
   const [tab, setTab] = useState<'products' | 'perfume' | 'photos' | 'orders'>('products')
   const [orders, setOrders] = useState<Order[]>([])
   const [photos, setPhotos] = useState<File[]>([])
@@ -785,12 +892,13 @@ export default function Admin() {
       [
         ...catalog.photos,
         ...catalog.siteImages,
-        ...(catalog.perfume?.images ?? []),
+        ...catalog.perfumes.flatMap((p) => p.images),
         ...catalog.models.flatMap((m) => [...m.images, ...(m.variants ?? []).flatMap((v) => v.images)]),
       ].map((im) => [im.src, im]),
     ).values(),
   ]
   const model = newProduct ?? catalog.models.find((m) => m.id === selected)
+  const perfume = newPerfume ?? catalog.perfumes.find((p) => p.id === selectedPerfume)
   // Hero picker groups: every model and variant photo first, then site photos, then uploads; each src listed once.
   const heroSeen = new Set<string>()
   const heroGroup = (entries: { image: Img; label: string }[]) =>
@@ -805,7 +913,11 @@ export default function Admin() {
     },
     {
       label: 'Foto del sito',
-      entries: heroGroup([catalog.hero, ...catalog.siteImages, ...(catalog.perfume?.images ?? [])].map((image) => ({ image, label: photoLabel(image) }))),
+      entries: heroGroup([
+        catalog.hero,
+        ...catalog.siteImages,
+        ...catalog.perfumes.flatMap((p) => p.images),
+      ].map((image) => ({ image, label: photoLabel(image) }))),
     },
     { label: 'Libreria', entries: heroGroup(catalog.photos.map((image) => ({ image, label: photoLabel(image) }))) },
   ]
@@ -849,13 +961,14 @@ export default function Admin() {
     const entry = inUse.get(image.src) ?? inUse.set(image.src, { image, places: [] }).get(image.src)!
     if (place && !entry.places.includes(place)) entry.places.push(place)
   }
-  use(catalog.hero)
-  catalog.siteImages.forEach((slot) => use(catalog.imageOverrides[slot.src] ?? slot, t('Foto del sito')))
+  use(catalog.hero, t('Foto principale'))
+  // Hero and perfume slots get their places from the live hero and perfumes below, not from the seed.
+  catalog.siteImages.forEach((slot) => use(catalog.imageOverrides[slot.src] ?? slot, SITE_SECTIONS[slot.src] && t(SITE_SECTIONS[slot.src])))
   catalog.models.forEach((m) => {
     m.images.forEach((image) => use(image, m.name))
     m.variants?.forEach((v) => v.images.forEach((image) => use(image, `${m.name} · ${v.label}`)))
   })
-  catalog.perfume?.images.forEach((image) => use(image, t('Profumo')))
+  catalog.perfumes.forEach((p) => p.images.forEach((image) => use(image, p.name)))
   const photoNeedle = photoQuery.trim().toLowerCase()
   const shownInUse = [...inUse.values()].filter(({ image, places }) =>
     !photoNeedle || [photoLabel(image), image.src, ...places].join(' ').toLowerCase().includes(photoNeedle))
@@ -941,7 +1054,7 @@ export default function Admin() {
             {(
               [
                 ['products', t('Prodotti')],
-                ['perfume', t('Profumo')],
+                ['perfume', t('Profumi')],
                 ['photos', t('Fotografie')],
                 ['orders', t('Ordini')],
               ] as const
@@ -970,6 +1083,8 @@ export default function Admin() {
                   setCatalog(await api<Catalog>('/catalog'))
                   setSelected(null)
                   setNewProduct(null)
+                  setSelectedPerfume(null)
+                  setNewPerfume(null)
                 }, 'Catalogo aggiornato.')
               }
             >
@@ -977,24 +1092,82 @@ export default function Admin() {
             </button>
           </nav>
           {tab === 'perfume' && (
-            <PerfumeEditor
-              key={editorRevision}
-              product={catalog.perfume}
-              library={library}
-              busy={busy}
-              onUpload={uploadPhotos}
-              onSave={(product) =>
-                void perform(async () =>
-                  setCatalog(await api<Catalog>('/admin/perfume', 'PUT', { product, revision: catalog.revision })), 'Profumo salvato e pubblicato.')
-              }
-              onDelete={() => {
-                if (window.confirm(t('Eliminare il profumo dal sito?')))
-                  void perform(async () =>
-                    setCatalog(
-                      await api<Catalog>('/admin/perfume', 'PUT', { product: null, revision: catalog.revision }),
-                    ), 'Profumo eliminato.')
-              }}
-            />
+            <div className="grid grid-cols-1 gap-10 md:grid-cols-[250px_minmax(0,1fr)]">
+              <aside>
+                <button
+                  type="button"
+                  className="btn mb-5 w-full"
+                  disabled={busy}
+                  onClick={() => {
+                    setSelectedPerfume(null)
+                    setNewPerfume(blankPerfume())
+                  }}
+                >
+                  {t("Aggiungi profumo")}
+                </button>
+                <ul className="max-h-[70vh] overflow-y-auto">
+                  {catalog.perfumes.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        className={`w-full border-b border-line py-4 text-left ${selectedPerfume === p.id ? 'font-medium' : ''}`}
+                        disabled={busy}
+                        onClick={() => {
+                          if (perfume && !window.confirm(t('Aprire un altro profumo? Le modifiche non salvate saranno perse.')))
+                            return
+                          setSelectedPerfume(p.id)
+                          setNewPerfume(null)
+                        }}
+                      >
+                        <span className="block font-serif text-xl">{p.name}</span>
+                        {p.code && <span className="text-xs text-muted">{p.code}</span>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+              <section>
+                {perfume ? (
+                  <PerfumeEditor
+                    key={`${perfume.id}-${editorRevision}`}
+                    product={perfume}
+                    isNew={!!newPerfume}
+                    library={library}
+                    busy={busy}
+                    onUpload={uploadPhotos}
+                    onSave={(draft) =>
+                      void perform(async () => {
+                        // A new perfume takes a stable id from its first name; later renames keep it.
+                        const product = newPerfume ? { ...draft, id: slugId(draft.name, catalog.perfumes.map((p) => p.id)) } : draft
+                        setCatalog(await api<Catalog>(`/admin/perfumes/${product.id}`, 'PUT', { product, revision: catalog.revision }))
+                        setNewPerfume(null)
+                        setSelectedPerfume(product.id)
+                      }, 'Profumo salvato e pubblicato.')
+                    }
+                    onDelete={() => {
+                      if (newPerfume) {
+                        setNewPerfume(null)
+                        return
+                      }
+                      if (window.confirm(t('Eliminare {name} dal sito?', { name: perfume.name })))
+                        void perform(async () => {
+                          setCatalog(await api<Catalog>(`/admin/perfumes/${perfume.id}`, 'DELETE', { revision: catalog.revision }))
+                          setSelectedPerfume(null)
+                        }, 'Profumo eliminato.')
+                    }}
+                  />
+                ) : (
+                  <div className="border-t border-line pt-8">
+                    <h2 className="text-h2">{t("I profumi")}</h2>
+                    <p className="mt-4 text-ink-2">
+                      {catalog.perfumes.length
+                        ? t("Seleziona un profumo per modificarne descrizione, prezzo e fotografie, oppure aggiungine uno nuovo.")
+                        : t("Nessun profumo sul sito. Aggiungine uno per mostrare la sezione Profumi.")}
+                    </p>
+                  </div>
+                )}
+              </section>
+            </div>
           )}
           {tab === 'products' && (
             <div className="grid grid-cols-1 gap-10 md:grid-cols-[250px_minmax(0,1fr)]">
@@ -1087,11 +1260,23 @@ export default function Admin() {
                     }}
                   />
                 ) : (
-                  <div className="border-t border-line pt-8">
-                    <h2 className="text-h2">{t("La collezione")}</h2>
-                    <p className="mt-4 text-ink-2">
-                      {t("Seleziona un orologio per modificare descrizioni, prezzi, varianti e fotografie. Per ogni prodotto puoi scegliere la disponibilità e segnalare un’edizione limitata.")}
-                    </p>
+                  <div className="space-y-12 border-t border-line pt-8">
+                    <div>
+                      <h2 className="text-h2">{t("La collezione")}</h2>
+                      <p className="mt-4 text-ink-2">
+                        {t("Seleziona un orologio per modificare descrizioni, prezzi, varianti e fotografie. Per ogni prodotto puoi scegliere la disponibilità e segnalare un’edizione limitata.")}
+                      </p>
+                    </div>
+                    <FeaturedEditor
+                      key={editorRevision}
+                      featured={catalog.featured}
+                      models={catalog.models}
+                      busy={busy}
+                      onSave={(ids) =>
+                        void perform(async () =>
+                          setCatalog(await api<Catalog>('/admin/featured', 'PUT', { ids, revision: catalog.revision })), 'Orologi in evidenza salvati e pubblicati.')
+                      }
+                    />
                   </div>
                 )}
               </section>

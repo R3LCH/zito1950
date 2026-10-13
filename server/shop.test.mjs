@@ -298,7 +298,10 @@ test('legacy catalog migrates buyEnabled, limited editions and default hero once
   const { admin, buyer, application, dir, env } = await fixture(t, true, legacyBody)
   const catalog = (await admin.request('/catalog')).body
   const n7 = catalog.models.find((m) => m.id === 'n7')
-  assert.equal(catalog.catalogVersion, 3)
+  assert.equal(catalog.catalogVersion, 4)
+  assert.equal(Object.hasOwn(catalog, 'perfume'), false)
+  assert.deepEqual(catalog.perfumes.map((p) => p.id), ['n7-oud'])
+  assert.deepEqual(catalog.featured, [])
   assert.equal(n7.availability, 'buy')
   assert.equal(n7.buyEnabled, undefined)
   assert.equal(n7.limitedEdition, false)
@@ -444,14 +447,14 @@ test('version-2 catalog migrates sold models to out-of-stock once', async (t) =>
   }
   const { admin, dir, env } = await fixture(t, false, legacyBody)
   const catalog = (await admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 3)
-  assert.equal(catalog.revision, 2)
+  assert.equal(catalog.catalogVersion, 4)
+  assert.equal(catalog.revision, 3)
   assert.equal(catalog.models.find((m) => m.id === 'takimo').availability, 'out-of-stock')
   assert.equal(catalog.models.find((m) => m.id === 'n7').availability, 'buy')
   const reopened = createApp({ env, dataDir: dir })
   const reopenedRevision = reopened.db.prepare('SELECT revision FROM catalog').get().revision
   reopened.close()
-  assert.equal(reopenedRevision, 2)
+  assert.equal(reopenedRevision, 3)
 })
 
 test('limited edition with zero pieces is sold out; unknown or positive pieces stay purchasable', async (t) => {
@@ -571,7 +574,7 @@ test('image replacement rewrites products and site slots, keeps slot alt, and re
       s.alt.trim() &&
       s.src !== catalog.hero.src &&
       !catalog.models.some((m) => [...m.images, ...(m.variants ?? []).flatMap((v) => v.images)].some((im) => im.src === s.src)) &&
-      !(catalog.perfume?.images ?? []).some((im) => im.src === s.src),
+      !catalog.perfumes.some((p) => p.images.some((im) => im.src === s.src)),
   )
   assert.ok(slot)
   assert.equal((await admin.request('/admin/image', 'PUT', { source: slot.src, image: photo, revision: catalog.revision })).status, 404)
@@ -627,10 +630,121 @@ test('product quotes drop blank parts', async (t) => {
   assert.deepEqual((await quoteAfterSave({ text: ' Testo ', author: ' ' })).quote, { text: 'Testo' })
   assert.deepEqual((await quoteAfterSave({ text: '', author: 'Autore' })).quote, { text: '', author: 'Autore' })
   const current = (await admin.request('/catalog')).body
-  const perfume = await admin.request('/admin/perfume', 'PUT', {
-    product: { ...current.perfume, quote: { text: '', author: '' } },
+  const perfume = await admin.request(`/admin/perfumes/${current.perfumes[0].id}`, 'PUT', {
+    product: { ...current.perfumes[0], quote: { text: '', author: '' } },
     revision: current.revision,
   })
   assert.equal(perfume.status, 200, JSON.stringify(perfume.body))
-  assert.deepEqual(perfume.body.perfume.quote, { text: '' })
+  assert.deepEqual(perfume.body.perfumes[0].quote, { text: '' })
+})
+
+test('perfumes are added, edited, protect their photos and are removed by id', async (t) => {
+  const { admin } = await fixture(t)
+  const form = new FormData()
+  form.append('photo', await pngFile('#000'), 'Flacone.png')
+  form.append('revision', String((await admin.request('/catalog')).body.revision))
+  const { catalog, images: [photo] } = (await admin.request('/admin/photos', 'POST', form)).body
+  const product = {
+    id: 'ambra',
+    name: 'Ambra',
+    code: 'ZPR08',
+    priceCents: 9500,
+    paragraphs: ['Calda.'],
+    specs: [],
+    ingredients: ['Ambra'],
+    quote: { text: 'Citazione', author: '' },
+    images: [photo],
+  }
+  const mismatch = await admin.request('/admin/perfumes/other', 'PUT', { product, revision: catalog.revision })
+  assert.equal(mismatch.status, 400)
+  const missingPhoto = await admin.request('/admin/perfumes/ambra', 'PUT', {
+    product: { ...product, images: [{ src: 'uploads/missing.webp', alt: '' }] },
+    revision: catalog.revision,
+  })
+  assert.equal(missingPhoto.status, 400)
+  const added = await admin.request('/admin/perfumes/ambra', 'PUT', { product, revision: catalog.revision })
+  assert.equal(added.status, 200, JSON.stringify(added.body))
+  assert.deepEqual(added.body.perfumes.map((p) => p.id), ['n7-oud', 'ambra'])
+  const stored = added.body.perfumes[1]
+  assert.equal(stored.price, '95 EUR')
+  assert.deepEqual(stored.quote, { text: 'Citazione' })
+  assert.ok(stored.eyebrow && stored.labels.ingredients && stored.labels.mailSubject)
+  const fileId = photo.src.slice('uploads/'.length, -'.webp'.length)
+  assert.equal((await admin.request(`/admin/photos/${fileId}`, 'DELETE', { revision: added.body.revision })).status, 409)
+  const edited = await admin.request('/admin/perfumes/ambra', 'PUT', {
+    product: { ...stored, name: 'Ambra Nera' },
+    revision: added.body.revision,
+  })
+  assert.equal(edited.status, 200, JSON.stringify(edited.body))
+  assert.equal(edited.body.perfumes.length, 2)
+  assert.equal(edited.body.perfumes[1].name, 'Ambra Nera')
+  const stale = await admin.request('/admin/perfumes/ambra', 'DELETE', { revision: added.body.revision })
+  assert.equal(stale.status, 409)
+  const removed = await admin.request('/admin/perfumes/ambra', 'DELETE', { revision: edited.body.revision })
+  assert.equal(removed.status, 200)
+  assert.deepEqual(removed.body.perfumes.map((p) => p.id), ['n7-oud'])
+  assert.equal((await admin.request(`/admin/photos/${fileId}`, 'DELETE', { revision: removed.body.revision })).status, 200)
+  assert.equal((await admin.request('/admin/perfume', 'PUT', { product: null, revision: removed.body.revision })).status, 404)
+})
+
+test('featured picks keep owner order, drop unknown/duplicates, reject more than 4 and lose deleted models', async (t) => {
+  const { admin, buyer } = await fixture(t)
+  const catalog = (await admin.request('/catalog')).body
+  assert.deepEqual(catalog.featured, [])
+  const [a, b, c, d, e] = catalog.models.map((m) => m.id)
+  assert.equal((await buyer.request('/admin/featured', 'PUT', { ids: [a], revision: catalog.revision })).status, 401)
+  const tooMany = await admin.request('/admin/featured', 'PUT', { ids: [a, b, c, d, e], revision: catalog.revision })
+  assert.equal(tooMany.status, 400)
+  const saved = await admin.request('/admin/featured', 'PUT', {
+    ids: [c, 'missing-model', a, c, b, d],
+    revision: catalog.revision,
+  })
+  assert.equal(saved.status, 200, JSON.stringify(saved.body))
+  assert.deepEqual(saved.body.featured, [c, a, b, d])
+  const deleted = await admin.request(`/admin/products/${a}`, 'DELETE', { revision: saved.body.revision })
+  assert.equal(deleted.status, 200)
+  assert.deepEqual(deleted.body.featured, [c, b, d])
+  assert.deepEqual((await buyer.request('/catalog')).body.featured, [c, b, d])
+})
+
+test('version-3 catalog turns the single perfume into a list once, and a removed perfume stays removed', async (t) => {
+  const { models, profumo } = await import('../src/data/content.ts')
+  const v3 = (perfume) => ({
+    hero: { src: 'img/models/takimo.jpg', alt: 'Takimo' },
+    models: models.map((m) => ({
+      ...m,
+      priceCents: 100000,
+      availability: 'buy',
+      limitedEdition: false,
+      piecesRemaining: null,
+      variants: m.variants?.map((v) => ({ ...v, priceCents: 100000 })),
+    })),
+    perfume,
+    photos: [],
+    imageOverrides: {},
+    siteImages: [],
+    localizationVersion: 1,
+    catalogVersion: 3,
+  })
+  const kept = await fixture(t, false, v3({ ...profumo, name: 'Oud del titolare', priceCents: 15000 }))
+  const catalog = (await kept.admin.request('/catalog')).body
+  assert.equal(catalog.catalogVersion, 4)
+  assert.equal(catalog.revision, 2)
+  assert.equal(Object.hasOwn(catalog, 'perfume'), false)
+  assert.deepEqual(catalog.perfumes.map((p) => [p.id, p.name, p.priceCents]), [[profumo.id, 'Oud del titolare', 15000]])
+  assert.deepEqual(catalog.featured, [])
+  assert.equal(catalog.siteImages.filter((im) => im.src === 'img/storia/owner.jpg').length, 1)
+  const reopened = createApp({ env: kept.env, dataDir: kept.dir })
+  const reopenedBody = reopened.db.prepare('SELECT revision, body FROM catalog').get()
+  reopened.close()
+  assert.equal(reopenedBody.revision, 2)
+  assert.equal(JSON.parse(reopenedBody.body).perfumes.length, 1)
+  const removed = await fixture(t, false, v3(null))
+  const empty = (await removed.admin.request('/catalog')).body
+  assert.deepEqual(empty.perfumes, [])
+  const again = createApp({ env: removed.env, dataDir: removed.dir })
+  const body = JSON.parse(again.db.prepare('SELECT body FROM catalog').get().body)
+  again.close()
+  assert.deepEqual(body.perfumes, [])
+  assert.equal(Object.hasOwn(body, 'perfume'), false)
 })

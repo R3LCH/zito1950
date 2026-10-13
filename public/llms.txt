@@ -4,12 +4,14 @@
 
 Pagina unica, in questo ordine, con sezioni ad ancora:
 
-- #home: fotografia del prodotto configurabile in amministrazione, predefinita Tutus ab uno; “Orologiai a Scalea dal 1950”; link a storia, edizioni limitate e social.
-- #orologi: la collezione di modelli con codici, prezzi, specifiche, immagini e schede di dettaglio; disponibilità e indicazioni per le edizioni limitate.
-- #edizioni-limitate: catalogo Orologi con il filtro “Edizioni limitate” attivo; il pannello “Filtri e ordinamento” filtra anche per novità, disponibilità, movimento, funzioni, cassa e prezzo.
-- #profumi: il profumo N°7 Oud.
-- #storia: apertura “Scalea e la Calabria” con fotografie reali del luogo, poi capitoli cronologici sulla famiglia e sul marchio.
-- #social: link a Instagram (zito1950lifestyle) e Facebook (zito1950).
+- #home: fotografia del prodotto configurabile in amministrazione; “Orologiai a Scalea dal 1950”; pulsante “Scopri la collezione”. Sotto, pulsanti rotondi verso ogni sezione.
+- #storia: capitoli cronologici sulla famiglia e sul marchio (il primo visibile, gli altri con “Mostra tutto”).
+- #orologi: 3–4 modelli in evidenza scelti in amministrazione; “Catalogo completo” apre filtri e tutti i modelli con codici, prezzi, specifiche e schede di dettaglio.
+- #edizioni-limitate: catalogo Orologi aperto con il filtro “Edizioni limitate” attivo.
+- #officina: il titolare al banco di lavoro; note su movimenti, cassa e vetro zaffiro.
+- #scalea: “Scalea e la Calabria”, la città e le sue fotografie d’epoca.
+- #profumi: i profumi ZITO 1950 (elenco gestito in amministrazione).
+- #social: link a Instagram (zito1950) e Facebook (zito1950).
 - #contatti: “Dove siamo”, indirizzo, mappa, PEC granalida@pec.it e P.IVA 03012360784.
 
 ## Design

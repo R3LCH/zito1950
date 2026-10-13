@@ -2,8 +2,11 @@ import Contatti from './components/Contatti'
 import Footer from './components/Footer'
 import Header from './components/Header'
 import Hero from './components/Hero'
+import Officina from './components/Officina'
 import Orologi from './components/Orologi'
 import Profumi from './components/Profumi'
+import Scalea from './components/Scalea'
+import SectionButtons from './components/SectionButtons'
 import Social from './components/Social'
 import Storia from './components/Storia'
 import Admin from './components/Admin'
@@ -25,11 +28,16 @@ export default function App() {
       <Header />
       <main id="contenuto" tabIndex={-1} className="outline-none">
         <Hero />
-        <Orologi />
-        <Profumi />
-        <Storia />
-        <Social />
-        <Contatti />
+        <div className="container-site mt-10 flex flex-col gap-4 pb-[var(--section-y)] md:mt-14 md:gap-6">
+          <SectionButtons />
+          <Storia />
+          <Orologi />
+          <Officina />
+          <Scalea />
+          <Profumi />
+          <Social />
+          <Contatti />
+        </div>
       </main>
       <Footer />
       <Cart />
