@@ -74,32 +74,14 @@ export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyC
     setOpen(!open)
   }
 
-  const button = (className: string) => (
-    <button
-      type="button"
-      aria-expanded={open}
-      aria-controls={bodyId}
-      onClick={toggle}
-      className={`min-h-11 shrink-0 items-center gap-2 rounded-full border border-ink bg-bg px-5 text-small font-medium text-ink transition-colors duration-200 hover:bg-ink hover:text-bg ${className}`}
-    >
-      {open ? site.panel.less : moreLabel ?? site.panel.more}
-      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" className={`transition-transform duration-300 ${open ? 'rotate-180' : ''}`}>
-        <path d="M3 5l4 4 4-4" />
-      </svg>
-    </button>
-  )
-
   return (
     <section id={id} ref={ref} aria-labelledby={titleId} className="reveal border-t border-line py-[clamp(3rem,7vw,6rem)]">
-      <div className="flex items-end justify-between gap-6">
-        <div className="max-w-[60ch]">
-          {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-          <h2 id={titleId} className={`${eyebrow ? 'mt-3 ' : ''}text-h2 text-ink`}>
-            {title}
-          </h2>
-          {intro && <div className="mt-4 text-ink-2">{intro}</div>}
-        </div>
-        {expandable && button('hidden md:inline-flex')}
+      <div className="max-w-[60ch]">
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+        <h2 id={titleId} className={`${eyebrow ? 'mt-3 ' : ''}text-h2 text-ink`}>
+          {title}
+        </h2>
+        {intro && <div className="mt-4 text-ink-2">{intro}</div>}
       </div>
 
       {preview && !(previewOnlyCollapsed && open) && <div className="mt-8 md:mt-10">{preview}</div>}
@@ -110,7 +92,22 @@ export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyC
         </div>
       )}
 
-      {expandable && <div className={`mt-8 flex justify-center ${open ? '' : 'md:hidden'}`}>{button('inline-flex')}</div>}
+      {expandable && (
+        <div className="mt-8 flex justify-center">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={bodyId}
+            onClick={toggle}
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-ink bg-bg px-5 text-small font-medium text-ink transition-colors duration-200 hover:bg-ink hover:text-bg"
+          >
+            {open ? site.panel.less : moreLabel ?? site.panel.more}
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" className={`transition-transform duration-300 ${open ? 'rotate-180' : ''}`}>
+              <path d="M3 5l4 4 4-4" />
+            </svg>
+          </button>
+        </div>
+      )}
     </section>
   )
 }

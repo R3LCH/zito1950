@@ -55,7 +55,14 @@ export default function Storia() {
       preview={
         <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-10">
           <figure className="md:col-span-5">
-            <Picture src={image.src} alt={image.alt} sizes="(min-width: 768px) 36vw, 100vw" pictureClassName="block overflow-hidden rounded-[1.25rem] bg-well" className="w-full" />
+            {/* Portrait archive scan: fixed-height crop keeps the collapsed panel compact; 35% keeps the documents' upper text in frame. */}
+            <Picture
+              src={image.src}
+              alt={image.alt}
+              sizes="(min-width: 768px) 36vw, 100vw"
+              pictureClassName="block overflow-hidden rounded-[1.25rem] bg-well"
+              className="h-[60vw] w-full object-cover object-[50%_35%] md:h-[min(26rem,55vh)]"
+            />
             <figcaption className="mt-3 text-small text-muted">{image.caption}</figcaption>
           </figure>
           <p className="max-w-[40ch] font-serif text-[clamp(1.375rem,2.2vw,1.875rem)] leading-[1.4] text-ink md:col-span-6 md:col-start-7">
