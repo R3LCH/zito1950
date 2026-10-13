@@ -68,10 +68,14 @@ export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyC
     }
   }, [expandable])
 
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const toggle = () => {
-    // Closing from deep inside a long body brings the section's top back into view.
-    if (open && (ref.current?.getBoundingClientRect().top ?? 0) < 0) ref.current?.scrollIntoView({ block: 'start' })
-    setOpen(!open)
+    if (!open) return setOpen(true)
+    // Closing removes the body above the button; keep the button where it was so the reader lands at the end of the collapsed section.
+    const before = buttonRef.current?.getBoundingClientRect().top ?? 0
+    flushSync(() => setOpen(false))
+    const after = buttonRef.current?.getBoundingClientRect().top ?? 0
+    window.scrollBy({ top: after - before, behavior: 'instant' })
   }
 
   return (
@@ -95,6 +99,7 @@ export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyC
       {expandable && (
         <div className="mt-8 flex justify-center">
           <button
+            ref={buttonRef}
             type="button"
             aria-expanded={open}
             aria-controls={bodyId}
