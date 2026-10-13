@@ -55,18 +55,21 @@ export default function Storia() {
       title={storia.title}
       moreLabel={storia.more}
       preview={({ header, toggle }) => (
-        <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-12">
+        <div className="grid gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:items-center md:gap-x-16 lg:gap-x-24">
           {/* Portrait archive poster shown whole; capped near its 533px native width so it stays sharp. */}
-          <Picture
-            src={image.src}
-            alt={image.alt}
-            width={size?.w}
-            height={size?.h}
-            sizes="(min-width: 768px) 460px, 100vw"
-            pictureClassName="mx-auto block w-full max-w-[460px] md:col-span-5"
-            className="h-auto w-full"
-          />
-          <div className="md:col-span-7 md:pl-4">
+          <figure className="mx-auto w-full max-w-[460px]">
+            <Picture
+              src={image.src}
+              alt={image.alt}
+              width={size?.w}
+              height={size?.h}
+              sizes="(min-width: 768px) 460px, 100vw"
+              pictureClassName="block overflow-hidden rounded-[1.25rem] bg-well"
+              className="h-auto w-full"
+            />
+            {image.caption && <figcaption className="mt-3 text-small text-muted">{image.caption}</figcaption>}
+          </figure>
+          <div>
             {header}
             <div className="mt-6 max-w-[40ch] space-y-4 font-serif text-[clamp(1.25rem,1.8vw,1.5rem)] leading-[1.45] text-ink-2">
               <p>{storia.intro}</p>
