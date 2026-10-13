@@ -136,6 +136,8 @@
     transition: opacity var(--duration-reveal) var(--ease-out-quint), transform var(--duration-reveal) var(--ease-out-quint);
   }
   .reveal.is-visible { opacity: 1; transform: none; }
+  .panel-body:not([hidden]) { animation: panel-in 400ms var(--ease-out-quint); }
+  @keyframes panel-in { from { opacity: 0; transform: translateY(6px); } }
 }
 
 @media (prefers-reduced-motion: reduce) {

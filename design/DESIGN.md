@@ -26,10 +26,10 @@ No accent hue. Color comes from the photographs.
 - Container 1240px, gutter `clamp(1.25rem,4vw,4rem)`, section padding `clamp(3.5rem,8vw,8rem)`.
 - Spacing scale 4, 8, 12, 16, 24, 32, 40, 48, 64, 96, 128px.
 - 12-column editorial grid on desktop; below 768px one column, natural reading order, no horizontal overflow.
-- Sections are white cards: 1px `line` border, radius 2rem (photos inside 1.25rem), no shadows, gradients, glass or grain. Buttons and the section jump buttons are fully rounded. Line icons only on functional controls (cart, section buttons).
+- Sections flow on the white page, separated by a 1px `line` hairline top border; no card shells. Photos radius 1.25rem; no shadows, gradients, glass or grain. Buttons and the section jump buttons are fully rounded. Line icons only on functional controls (cart, section buttons).
 - Sticky header 72px; anchors use `scroll-margin-top: 72px`.
 - Section order: compact Hero → section buttons (Storia, Orologi, Edizioni limitate, Officina, Scalea, Profumi, Social, Dove siamo) → Storia (`#storia`) → Orologi (`#orologi`) → Officina (`#officina`) → Scalea (`#scalea`) → Profumi (`#profumi`) → Social (`#social`) → Dove siamo (`#contatti`).
-- Expandable sections (`Panel`): a short preview is always visible; "Mostra tutto" opens the rest with a height transition, body `inert` while closed; links into a closed body (e.g. `#edizioni-limitate`) open it first.
+- Expandable sections (`Panel`): a short preview is always visible; "Mostra tutto" opens the rest with a short fade, body `hidden` while closed so it adds no height; sections without extra content (Scalea) have no toggle. Links into a closed body (e.g. `#edizioni-limitate`) open it, update the hash and scroll once after rendering.
 
 ## Components
 - Header: white sticky bar, `logo.svg` left, anchor nav (Storia, Orologi, Profumi, Social, Dove siamo) right; functional outline-SVG shopping-bag button opens Cart, square ink count badge when non-empty; no floating cart button; hairline after scroll; mobile menu as modal with focus trap.
@@ -41,9 +41,9 @@ No accent hue. Color comes from the photographs.
 - Badge/labels: “Nuovo” and “Edizione limitata” at the image’s top-left corner, ink fill, white uppercase small type with tracking, radius 0; “Venduto” / “Esaurito” status tags outlined. Limited editions with positive `piecesRemaining` show “Ancora N pezzi” or “Ultimo pezzo disponibile”; empty or 0 shows no count.
 - ModelDialog: native `<dialog>`; image views, name, codes, price, labels, remaining pieces, quote, description, specs list; close button, Esc, backdrop; focus returns to opener; body scroll locked.
 - Recommended: “Scopri anche” inside ModelDialog, every other public model in one horizontal row: owner’s `similar` picks first, then by similarity. Square outlined prev/next buttons page by whole cards; wheel scrolls the row and releases at its ends. Selection replaces the current model in the open dialog, resets variant/photo, scrolls to top and focuses its title.
-- Profumi: `#profumi`, card grid of every `catalog.perfumes` entry (photo, name, code, price); expanded shows full details per perfume.
+- Profumi: `#profumi`, each `catalog.perfumes` entry visible with photo, name, code, price, quote, opening text and ingredients; expanded shows the full description per perfume.
 - Storia: `#storia`, first chronological chapter visible, the rest and the closing quote in the expanded body; chapter images alternate sides on desktop.
-- Scalea: `#scalea`, “Scalea e la Calabria” with `img/storia/scalea-borgo.jpg`; expanded adds the remaining text and `img/storia/scalea-palazzo.jpg`.
+- Scalea: `#scalea`, “Scalea e la Calabria”, all text beside `img/storia/scalea-borgo.jpg`, with `img/storia/scalea-palazzo.jpg` under the text; not expandable.
 - Social: `#social`, Instagram (@zito1950) and Facebook as link rows; no embedded feed.
 - Contatti: “Dove siamo” at `#contatti`; `<address>`, map and Google Maps link, PEC as `mailto:`, P.IVA; no phone rows.
 - Cart: opened from Header; native `<dialog>` with quantities, total and PayPal checkout. “Certificato personalizzato” toggle reveals required Nome, Cognome, Email; off uses PayPal payer name/email from capture. The owner assigns the certificate code in Admin → Ordini.

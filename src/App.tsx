@@ -28,7 +28,7 @@ export default function App() {
       <Header />
       <main id="contenuto" tabIndex={-1} className="outline-none">
         <Hero />
-        <div className="container-site mt-10 flex flex-col gap-4 pb-[var(--section-y)] md:mt-14 md:gap-6">
+        <div className="container-site mt-10 flex flex-col md:mt-14">
           <SectionButtons />
           <Storia />
           <Orologi />

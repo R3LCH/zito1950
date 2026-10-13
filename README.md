@@ -2,7 +2,7 @@
 
 React 19 + Vite 8 + TypeScript + Tailwind 4 storefront, with a Node 24 / Express backend and persistent SQLite catalog, sessions, orders and uploaded photos. Design system: `design/DESIGN.md`.
 
-Page order: compact Hero → rounded section buttons → white expandable section cards: Storia (`#storia`) → Orologi (`#orologi`, 3–4 featured watches; “Catalogo completo” opens filters and the full grid) → Officina (`#officina`, the owner at the workbench) → Scalea (`#scalea`, the town) → Profumi (`#profumi`, all perfumes) → Social (`#social`, Instagram @zito1950 and Facebook) → Dove siamo (`#contatti`, address, map, PEC and P.IVA). The header shopping-bag control opens the cart and shows a square item-count badge.
+Page order: compact Hero → rounded section buttons → open sections separated by hairlines: Storia (`#storia`) → Orologi (`#orologi`, 3–4 featured watches; “Catalogo completo” opens filters and the full grid) → Officina (`#officina`, the owner at the workbench) → Scalea (`#scalea`, the town, fully shown) → Profumi (`#profumi`, every perfume with its main details; “Mostra tutto” adds the full descriptions) → Social (`#social`, Instagram @zito1950 and Facebook) → Dove siamo (`#contatti`, address, map, PEC and P.IVA). The header shopping-bag control opens the cart and shows a square item-count badge.
 
 ## Develop
 

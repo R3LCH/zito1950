@@ -12,21 +12,18 @@ interface PanelProps {
   preview?: ReactNode
   /** Hide the preview while expanded, when the body shows the same items in full. */
   previewOnlyCollapsed?: boolean
-  /** Expandable part; no children = a plain card without a toggle. */
+  /** Expandable part; no children = a plain section without a toggle. */
   children?: ReactNode
   /** Label of the closed toggle; defaults to "Mostra tutto". */
   moreLabel?: string
 }
 
-/** White rounded section card; the body opens with a height transition and is inert while closed. */
+/** Page section separated by a hairline; the optional body stays `hidden` until opened. */
 export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyCollapsed = false, children, moreLabel }: PanelProps) {
   const { site } = useContent()
   const ref = useReveal<HTMLElement>()
   const bodyRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
-  // `instant` skips the animation when a link jumps into the closed body; `settled` lifts the clipping once open.
-  const [instant, setInstant] = useState(false)
-  const [settled, setSettled] = useState(false)
   const bodyId = useId()
   const titleId = `${id}-title`
   const expandable = children != null
@@ -39,27 +36,29 @@ export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyC
       const el = document.getElementById(decodeURIComponent(hash.slice(1)))
       return el && bodyRef.current?.contains(el) ? el : null
     }
-    const reveal = () =>
-      flushSync(() => {
-        setInstant(true)
-        setSettled(true)
-        setOpen(true)
-      })
+    // Scroll once, after the opened body and any hash-driven filters have rendered.
+    const scrollTo = (el: Element) => requestAnimationFrame(() => el.scrollIntoView({ block: 'start' }))
     const initial = inBody(location.hash)
     if (initial) {
-      reveal()
-      requestAnimationFrame(() => initial.scrollIntoView())
+      flushSync(() => setOpen(true))
+      scrollTo(initial)
     }
-    // Capture phase runs before the browser's own hash navigation.
+    // Capture phase runs before the browser's own hash navigation, which would race our scroll.
     const onClick = (e: MouseEvent) => {
       const link = (e.target as Element | null)?.closest?.('a[href^="#"]')
-      if (link && inBody(link.getAttribute('href'))) reveal()
+      const href = link?.getAttribute('href') ?? null
+      const el = inBody(href)
+      if (!el || !href) return
+      e.preventDefault()
+      flushSync(() => setOpen(true))
+      if (location.hash !== href) history.pushState(history.state, '', href)
+      window.dispatchEvent(new HashChangeEvent('hashchange'))
     }
     const onHash = () => {
       const el = inBody(location.hash)
       if (!el) return
-      reveal()
-      el.scrollIntoView()
+      flushSync(() => setOpen(true))
+      scrollTo(el)
     }
     document.addEventListener('click', onClick, true)
     window.addEventListener('hashchange', onHash)
@@ -70,10 +69,8 @@ export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyC
   }, [expandable])
 
   const toggle = () => {
-    // Closing from deep inside a long body brings the card's top back into view.
+    // Closing from deep inside a long body brings the section's top back into view.
     if (open && (ref.current?.getBoundingClientRect().top ?? 0) < 0) ref.current?.scrollIntoView({ block: 'start' })
-    setInstant(false)
-    setSettled(false)
     setOpen(!open)
   }
 
@@ -93,12 +90,7 @@ export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyC
   )
 
   return (
-    <section
-      id={id}
-      ref={ref}
-      aria-labelledby={titleId}
-      className="reveal scroll-mt-[calc(var(--header-h)+1rem)] rounded-[2rem] border border-line bg-bg px-[clamp(1.25rem,4vw,3.5rem)] py-[clamp(1.75rem,4vw,3.25rem)]"
-    >
+    <section id={id} ref={ref} aria-labelledby={titleId} className="reveal border-t border-line py-[clamp(3rem,7vw,6rem)]">
       <div className="flex items-end justify-between gap-6">
         <div className="max-w-[60ch]">
           {eyebrow && <p className="eyebrow">{eyebrow}</p>}
@@ -113,19 +105,12 @@ export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyC
       {preview && !(previewOnlyCollapsed && open) && <div className="mt-8 md:mt-10">{preview}</div>}
 
       {expandable && (
-        <div
-          id={bodyId}
-          inert={!open}
-          onTransitionEnd={(e) => e.target === e.currentTarget && setSettled(open)}
-          className={`grid ${instant ? '' : 'transition-[grid-template-rows] duration-500 ease-out-quint'} ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
-        >
-          <div ref={bodyRef} className={`min-h-0 ${open && settled ? '' : 'overflow-hidden'}`}>
-            <div className="pt-8 md:pt-10">{children}</div>
-          </div>
+        <div id={bodyId} ref={bodyRef} hidden={!open} className="panel-body pt-8 md:pt-10">
+          {children}
         </div>
       )}
 
-      {expandable && <div className={`mt-6 flex justify-center ${open ? '' : 'md:hidden'}`}>{button('inline-flex')}</div>}
+      {expandable && <div className={`mt-8 flex justify-center ${open ? '' : 'md:hidden'}`}>{button('inline-flex')}</div>}
     </section>
   )
 }
