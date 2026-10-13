@@ -700,17 +700,7 @@ export const profumiSection: ProfumiSection = {
   eyebrow: 'Profumi',
   title: 'Le essenze',
   intro: 'Eau de parfum firmate ZITO 1950.',
-  // Name and line as printed on the box (img/profumo/coming-soon.jpg); text from the client's announcement.
-  comingSoon: {
-    eyebrow: 'Prossimamente',
-    name: 'Tesoro di Alarico',
-    line: 'Pepe Nero',
-    text: 'Il profumo ispirato ad Alarico I, re dei Visigoti ed al suo Tesoro.',
-    image: {
-      src: 'img/profumo/coming-soon.jpg',
-      alt: 'Confezione nera del profumo Tesoro di Alarico, Pepe Nero, con medaglione dorato al centro',
-    },
-  },
+  soon: 'Prossimamente',
 }
 
 export const profumo: Profumo = {
@@ -744,6 +734,28 @@ export const profumo: Profumo = {
     ingredients: 'Ingredienti',
     mailSubject: 'Richiesta informazioni',
   },
+}
+
+/** Announced perfume: name and line as printed on the box (img/profumo/coming-soon.jpg), text from the client. No code or price yet. */
+export const tesoroDiAlarico: Profumo = {
+  id: 'tesoro-di-alarico',
+  eyebrow: 'Profumi',
+  code: '',
+  name: 'Tesoro di Alarico',
+  line: 'Pepe Nero',
+  price: '',
+  availability: 'coming-soon',
+  quote: { text: '' },
+  paragraphs: ['Il profumo ispirato ad Alarico I, re dei Visigoti ed al suo Tesoro.'],
+  specs: [],
+  ingredients: [],
+  images: [
+    {
+      src: 'img/profumo/coming-soon.jpg',
+      alt: 'Confezione nera del profumo Tesoro di Alarico, Pepe Nero, con medaglione dorato al centro',
+    },
+  ],
+  labels: profumo.labels,
 }
 
 export const contatti: Contatti = {

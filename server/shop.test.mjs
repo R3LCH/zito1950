@@ -290,7 +290,7 @@ test('mismatched PayPal capture amount is never recorded as paid', async (t) => 
 })
 
 test('legacy catalog migrates buyEnabled, limited editions and default hero once', async (t) => {
-  const { models, storia, profumiSection, officina, territorio } = await import('../src/data/content.ts')
+  const { models, storia, officina, territorio } = await import('../src/data/content.ts')
   const legacyBody = {
     hero: { src: 'img/hero/new_hero.jpg', alt: 'Boutique' },
     models: models.map((m) => ({ ...m, priceCents: 100000, buyEnabled: m.id === 'n7', variants: m.variants?.map((v) => ({ ...v, priceCents: 100000 })) })),
@@ -301,9 +301,9 @@ test('legacy catalog migrates buyEnabled, limited editions and default hero once
   const { admin, buyer, application, dir, env } = await fixture(t, true, legacyBody)
   const catalog = (await admin.request('/catalog')).body
   const n7 = catalog.models.find((m) => m.id === 'n7')
-  assert.equal(catalog.catalogVersion, 5)
+  assert.equal(catalog.catalogVersion, 6)
   assert.equal(Object.hasOwn(catalog, 'perfume'), false)
-  assert.deepEqual(catalog.perfumes.map((p) => p.id), ['n7-oud'])
+  assert.deepEqual(catalog.perfumes.map((p) => p.id), ['n7-oud', 'tesoro-di-alarico'])
   assert.deepEqual(catalog.featured, [])
   assert.equal(n7.availability, 'buy')
   assert.equal(n7.buyEnabled, undefined)
@@ -314,8 +314,9 @@ test('legacy catalog migrates buyEnabled, limited editions and default hero once
     assert.equal(catalog.models.find((m) => m.id === limited).limitedEdition, true)
   assert.equal(catalog.hero.src, 'img/models/tutus-ab-uno.jpg')
   assert.ok(catalog.hero.altTranslations)
-  for (const src of [storia.image.src, profumiSection.comingSoon.image.src, officina.image.src, territorio.image.src]) assert.equal(catalog.siteImages.filter((s) => s.src === src).length, 1)
-  for (const src of ['img/storia/scalea-borgo.jpg', 'img/storia/scalea-palazzo.jpg']) assert.ok(!catalog.siteImages.some((s) => s.src === src))
+  for (const src of [storia.image.src, officina.image.src, territorio.image.src]) assert.equal(catalog.siteImages.filter((s) => s.src === src).length, 1)
+  for (const src of ['img/storia/scalea-borgo.jpg', 'img/storia/scalea-palazzo.jpg', 'img/profumo/coming-soon.jpg'])
+    assert.ok(!catalog.siteImages.some((s) => s.src === src))
   const columns = application.db.prepare('PRAGMA table_info(orders)').all().map((c) => c.name)
   assert.ok(columns.includes('certificate') && columns.includes('certificate_code'))
   const order = await buyer.request('/payments/orders', 'POST', {
@@ -459,14 +460,14 @@ test('version-2 catalog migrates sold models to out-of-stock once', async (t) =>
   }
   const { admin, dir, env } = await fixture(t, false, legacyBody)
   const catalog = (await admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 5)
-  assert.equal(catalog.revision, 4)
+  assert.equal(catalog.catalogVersion, 6)
+  assert.equal(catalog.revision, 5)
   assert.equal(catalog.models.find((m) => m.id === 'takimo').availability, 'out-of-stock')
   assert.equal(catalog.models.find((m) => m.id === 'n7').availability, 'buy')
   const reopened = createApp({ env, dataDir: dir })
   const reopenedRevision = reopened.db.prepare('SELECT revision FROM catalog').get().revision
   reopened.close()
-  assert.equal(reopenedRevision, 4)
+  assert.equal(reopenedRevision, 5)
 })
 
 test('limited edition with zero pieces is sold out; unknown or positive pieces stay purchasable', async (t) => {
@@ -676,8 +677,8 @@ test('perfumes are added, edited, protect their photos and are removed by id', a
   assert.equal(missingPhoto.status, 400)
   const added = await admin.request('/admin/perfumes/ambra', 'PUT', { product, revision: catalog.revision })
   assert.equal(added.status, 200, JSON.stringify(added.body))
-  assert.deepEqual(added.body.perfumes.map((p) => p.id), ['n7-oud', 'ambra'])
-  const stored = added.body.perfumes[1]
+  assert.deepEqual(added.body.perfumes.map((p) => p.id), ['n7-oud', 'tesoro-di-alarico', 'ambra'])
+  const stored = added.body.perfumes[2]
   assert.equal(stored.price, '95,00 EUR')
   assert.deepEqual(stored.quote, { text: 'Citazione' })
   assert.ok(stored.eyebrow && stored.labels.ingredients && stored.labels.mailSubject)
@@ -688,13 +689,13 @@ test('perfumes are added, edited, protect their photos and are removed by id', a
     revision: added.body.revision,
   })
   assert.equal(edited.status, 200, JSON.stringify(edited.body))
-  assert.equal(edited.body.perfumes.length, 2)
-  assert.equal(edited.body.perfumes[1].name, 'Ambra Nera')
+  assert.equal(edited.body.perfumes.length, 3)
+  assert.equal(edited.body.perfumes[2].name, 'Ambra Nera')
   const stale = await admin.request('/admin/perfumes/ambra', 'DELETE', { revision: added.body.revision })
   assert.equal(stale.status, 409)
   const removed = await admin.request('/admin/perfumes/ambra', 'DELETE', { revision: edited.body.revision })
   assert.equal(removed.status, 200)
-  assert.deepEqual(removed.body.perfumes.map((p) => p.id), ['n7-oud'])
+  assert.deepEqual(removed.body.perfumes.map((p) => p.id), ['n7-oud', 'tesoro-di-alarico'])
   assert.equal((await admin.request(`/admin/photos/${fileId}`, 'DELETE', { revision: removed.body.revision })).status, 200)
   assert.equal((await admin.request('/admin/perfume', 'PUT', { product: null, revision: removed.body.revision })).status, 404)
 })
@@ -720,7 +721,7 @@ test('featured picks keep owner order, drop unknown/duplicates, reject more than
 })
 
 test('version-3 catalog turns the single perfume into a list once, and a removed perfume stays removed', async (t) => {
-  const { models, profumo, profumiSection, officina, storia, territorio } = await import('../src/data/content.ts')
+  const { models, profumo, tesoroDiAlarico, officina, storia, territorio } = await import('../src/data/content.ts')
   const v3 = (perfume) => ({
     hero: { src: 'img/models/takimo.jpg', alt: 'Takimo' },
     models: models.map((m) => ({
@@ -744,13 +745,16 @@ test('version-3 catalog turns the single perfume into a list once, and a removed
   })
   const kept = await fixture(t, false, v3({ ...profumo, name: 'Oud del titolare', priceCents: 15000 }))
   const catalog = (await kept.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 5)
-  assert.equal(catalog.revision, 3)
+  assert.equal(catalog.catalogVersion, 6)
+  assert.equal(catalog.revision, 4)
   assert.equal(Object.hasOwn(catalog, 'perfume'), false)
-  assert.deepEqual(catalog.perfumes.map((p) => [p.id, p.name, p.priceCents]), [[profumo.id, 'Oud del titolare', 15000]])
+  assert.deepEqual(catalog.perfumes.map((p) => [p.id, p.name, p.priceCents]), [
+    [profumo.id, 'Oud del titolare', 15000],
+    [tesoroDiAlarico.id, tesoroDiAlarico.name, 0],
+  ])
   assert.deepEqual(catalog.featured, [])
   // v5 drops the Scalea slots and adds the missing page photos; the workshop portrait keeps its replacement and the uploaded file stays in the library.
-  assert.deepEqual(catalog.siteImages.map((im) => im.src), [territorio.image.src, storia.image.src, profumiSection.comingSoon.image.src, officina.image.src])
+  assert.deepEqual(catalog.siteImages.map((im) => im.src), [territorio.image.src, storia.image.src, officina.image.src])
   assert.equal(catalog.siteImages[0].alt, 'Mare già presente')
   assert.deepEqual(Object.keys(catalog.imageOverrides), [officina.image.src])
   assert.equal(catalog.imageOverrides[officina.image.src].src, 'uploads/00000000-0000-0000-0000-000000000000.webp')
@@ -758,14 +762,157 @@ test('version-3 catalog turns the single perfume into a list once, and a removed
   const reopened = createApp({ env: kept.env, dataDir: kept.dir })
   const reopenedBody = reopened.db.prepare('SELECT revision, body FROM catalog').get()
   reopened.close()
-  assert.equal(reopenedBody.revision, 3)
-  assert.equal(JSON.parse(reopenedBody.body).perfumes.length, 1)
+  assert.equal(reopenedBody.revision, 4)
+  assert.equal(JSON.parse(reopenedBody.body).perfumes.length, 2)
   const removed = await fixture(t, false, v3(null))
   const empty = (await removed.admin.request('/catalog')).body
-  assert.deepEqual(empty.perfumes, [])
+  assert.deepEqual(empty.perfumes.map((p) => p.id), [tesoroDiAlarico.id])
   const again = createApp({ env: removed.env, dataDir: removed.dir })
   const body = JSON.parse(again.db.prepare('SELECT body FROM catalog').get().body)
   again.close()
-  assert.deepEqual(body.perfumes, [])
+  assert.deepEqual(body.perfumes.map((p) => p.id), [tesoroDiAlarico.id])
   assert.equal(Object.hasOwn(body, 'perfume'), false)
+})
+
+const savePerfume = async (admin, perfumeId, changes) => {
+  const current = (await admin.request('/catalog')).body
+  const product = { ...current.perfumes.find((p) => p.id === perfumeId), ...changes }
+  return admin.request(`/admin/perfumes/${perfumeId}`, 'PUT', { product, revision: current.revision })
+}
+const perfumeLine = (modelId, quantity = 1) => ({ kind: 'perfume', modelId, variantId: null, quantity })
+
+test('a perfume set to buy is sold at the server price and needs no certificate', async (t) => {
+  const { admin, buyer, enable, seen } = await fixture(t, true)
+  const saved = await savePerfume(admin, 'tesoro-di-alarico', { availability: 'buy', priceCents: 13500, code: 'ZPR09' })
+  assert.equal(saved.status, 200, JSON.stringify(saved.body))
+  assert.equal(saved.body.perfumes.find((p) => p.id === 'tesoro-di-alarico').price, '135,00 EUR')
+  const items = [{ ...perfumeLine('tesoro-di-alarico', 2), priceCents: 1 }]
+  const order = await buyer.request('/payments/orders', 'POST', { items, certificate: null, requestId: randomUUID() })
+  assert.equal(order.status, 200, JSON.stringify(order.body))
+  assert.deepEqual(seen.amounts, ['270.00'])
+  assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).body.status, 'COMPLETED')
+  const [row] = (await admin.request('/admin/orders')).body
+  assert.equal(row.status, 'COMPLETED')
+  assert.equal(row.total, 27000)
+  assert.equal(row.certificate, null)
+  assert.deepEqual(
+    row.items.map((i) => [i.kind, i.modelId, i.name, i.priceCents, i.codes]),
+    [['perfume', 'tesoro-di-alarico', 'Tesoro di Alarico', 13500, ['ZPR09']]],
+  )
+  // A perfume never takes a variant.
+  const variant = await buyer.request('/payments/orders', 'POST', {
+    items: [{ ...perfumeLine('tesoro-di-alarico'), variantId: 'blu' }],
+    certificate: null,
+    requestId: randomUUID(),
+  })
+  assert.equal(variant.status, 409)
+  // Any watch in the cart still requires the warranty holder.
+  await enable('takimo')
+  const watch = { modelId: 'takimo', variantId: null, quantity: 1 }
+  for (const cart of [[watch], [watch, perfumeLine('tesoro-di-alarico')]])
+    for (const missing of [null, undefined])
+      assert.equal((await buyer.request('/payments/orders', 'POST', { items: cart, certificate: missing, requestId: randomUUID() })).status, 400)
+  const mixed = await buyer.request('/payments/orders', 'POST', {
+    items: [watch, perfumeLine('tesoro-di-alarico')],
+    certificate,
+    requestId: randomUUID(),
+  })
+  assert.equal(mixed.status, 200, JSON.stringify(mixed.body))
+  // Takimo at 2.390,00 EUR plus the perfume at 135,00 EUR.
+  assert.equal(seen.amounts.at(-1), '2525.00')
+})
+
+test('coming-soon, showcase, out-of-stock and hidden perfumes are not purchasable', async (t) => {
+  const { admin, buyer } = await fixture(t, true)
+  const seeded = (await admin.request('/catalog')).body.perfumes
+  assert.deepEqual(seeded.map((p) => [p.id, p.availability]), [['n7-oud', 'no-buy'], ['tesoro-di-alarico', 'coming-soon']])
+  const order = (perfumeId) =>
+    buyer.request('/payments/orders', 'POST', { items: [perfumeLine(perfumeId)], certificate: null, requestId: randomUUID() })
+  for (const perfumeId of ['n7-oud', 'tesoro-di-alarico', 'missing-perfume']) {
+    const refused = await order(perfumeId)
+    assert.equal(refused.status, 409, perfumeId)
+    assert.equal(refused.body.error, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
+  }
+  for (const availability of ['out-of-stock', 'hidden']) {
+    assert.equal((await savePerfume(admin, 'n7-oud', { availability })).status, 200)
+    assert.equal((await order('n7-oud')).status, 409, availability)
+  }
+  assert.equal((await savePerfume(admin, 'n7-oud', { availability: 'buy' })).status, 200)
+  assert.equal((await order('n7-oud')).status, 200)
+})
+
+test('a perfume without a price cannot be set to buy', async (t) => {
+  const { admin } = await fixture(t)
+  assert.equal((await savePerfume(admin, 'tesoro-di-alarico', { availability: 'buy' })).status, 400)
+  assert.equal((await savePerfume(admin, 'tesoro-di-alarico', { availability: 'buy', priceCents: -1 })).status, 400)
+  const kept = await savePerfume(admin, 'tesoro-di-alarico', { availability: 'coming-soon', line: 'Pepe Nero' })
+  assert.equal(kept.status, 200, JSON.stringify(kept.body))
+  const stored = kept.body.perfumes.find((p) => p.id === 'tesoro-di-alarico')
+  assert.deepEqual([stored.priceCents, stored.price, stored.code, stored.line], [0, '', '', 'Pepe Nero'])
+  // A missing availability reads as showcase.
+  const { availability, ...noState } = stored
+  const current = (await admin.request('/catalog')).body
+  const defaulted = await admin.request('/admin/perfumes/tesoro-di-alarico', 'PUT', { product: noState, revision: current.revision })
+  assert.equal(defaulted.status, 200, JSON.stringify(defaulted.body))
+  assert.equal(defaulted.body.perfumes.find((p) => p.id === 'tesoro-di-alarico').availability, 'no-buy')
+})
+
+test('hidden perfumes are omitted from the public catalog but kept for admin', async (t) => {
+  const { admin, buyer } = await fixture(t)
+  assert.equal((await savePerfume(admin, 'n7-oud', { availability: 'hidden' })).status, 200)
+  assert.deepEqual((await buyer.request('/catalog')).body.perfumes.map((p) => p.id), ['tesoro-di-alarico'])
+  assert.equal((await admin.request('/catalog')).body.perfumes.find((p) => p.id === 'n7-oud').availability, 'hidden')
+})
+
+test('version-5 catalog adds Tesoro di Alarico once, defaults perfume availability and drops the coming-soon slot', async (t) => {
+  const { models, profumo, tesoroDiAlarico, officina } = await import('../src/data/content.ts')
+  const upload = 'uploads/00000000-0000-0000-0000-000000000000.webp'
+  const v5 = (perfumes) => ({
+    hero: { src: 'img/models/takimo.jpg', alt: 'Takimo' },
+    models: models.map((m) => ({
+      ...m,
+      priceCents: 100000,
+      availability: 'buy',
+      limitedEdition: false,
+      piecesRemaining: null,
+      variants: m.variants?.map((v) => ({ ...v, priceCents: 100000 })),
+    })),
+    perfumes,
+    imageOverrides: { 'img/profumo/coming-soon.jpg': { src: upload, alt: 'Scatola caricata' } },
+    siteImages: [
+      { src: 'img/profumo/coming-soon.jpg', alt: 'Prossimamente' },
+      { src: officina.image.src, alt: officina.image.alt },
+    ],
+    photos: [{ src: upload, alt: 'Scatola caricata' }],
+    featured: [],
+    localizationVersion: 1,
+    catalogVersion: 5,
+  })
+  const legacyOud = { ...profumo, priceCents: 12000 }
+  const migrated = await fixture(t, false, v5([legacyOud]))
+  const catalog = (await migrated.admin.request('/catalog')).body
+  assert.equal(catalog.catalogVersion, 6)
+  assert.equal(catalog.revision, 2)
+  assert.deepEqual(catalog.perfumes.map((p) => [p.id, p.availability, p.priceCents]), [
+    [profumo.id, 'no-buy', 12000],
+    [tesoroDiAlarico.id, 'coming-soon', 0],
+  ])
+  const tesoro = catalog.perfumes[1]
+  assert.equal(tesoro.line, 'Pepe Nero')
+  assert.ok(tesoro.translations && tesoro.images[0].altTranslations)
+  assert.deepEqual(catalog.siteImages.map((im) => im.src), [officina.image.src])
+  assert.deepEqual(catalog.imageOverrides, {})
+  assert.deepEqual(catalog.photos.map((p) => p.src), [upload])
+  const reopened = createApp({ env: migrated.env, dataDir: migrated.dir })
+  const reopenedBody = reopened.db.prepare('SELECT revision, body FROM catalog').get()
+  reopened.close()
+  assert.equal(reopenedBody.revision, 2)
+  assert.equal(JSON.parse(reopenedBody.body).perfumes.length, 2)
+  // An owner who already added Tesoro keeps their entry; no duplicate is appended.
+  const owned = await fixture(t, false, v5([legacyOud, { ...tesoroDiAlarico, availability: 'buy', priceCents: 9000 }]))
+  const ownedPerfumes = (await owned.admin.request('/catalog')).body.perfumes
+  assert.deepEqual(ownedPerfumes.map((p) => [p.id, p.availability, p.priceCents]), [
+    [profumo.id, 'no-buy', 12000],
+    [tesoroDiAlarico.id, 'buy', 9000],
+  ])
 })

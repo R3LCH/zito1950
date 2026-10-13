@@ -8,7 +8,8 @@ import { randomBytes, createHash, timingSafeEqual, randomUUID } from 'node:crypt
 import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { z } from 'zod'
-import { models, site, storia, profumo, profumiSection, officina, territorio } from '../src/data/content.ts'
+import { models, site, storia, profumo, tesoroDiAlarico, officina, territorio } from '../src/data/content.ts'
+import { PERFUME_AVAILABILITIES } from '../src/data/types.ts'
 import { LOCALES, TRANSLATION_LOCALES, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../src/data/localization.ts'
 import { createTranslator } from './translate.mjs'
 
@@ -77,7 +78,10 @@ const perfumeSchema = z.object({
   id,
   name: text.min(1).max(120),
   code: text.max(80),
-  priceCents: cents,
+  // 0 = no price yet (e.g. a coming-soon perfume); selling needs a price, checked on save.
+  priceCents: z.number().int().min(0).max(100000000),
+  availability: z.enum(PERFUME_AVAILABILITIES).default('no-buy'),
+  line: text.max(120).optional(),
   paragraphs: z.array(text).max(50),
   specs: z.array(text).max(50),
   ingredients: z.array(text).max(100),
@@ -86,16 +90,28 @@ const perfumeSchema = z.object({
   translations,
 })
 const cartSchema = z
-  .array(z.object({ modelId: id, variantId: id.nullable(), quantity: z.number().int().min(1).max(10) }))
+  .array(
+    z.object({
+      kind: z.enum(['model', 'perfume']).default('model'),
+      modelId: id,
+      variantId: id.nullable(),
+      quantity: z.number().int().min(1).max(10),
+    }),
+  )
   .min(1)
   .max(30)
-// Every order carries the warranty certificate holder; there is no PayPal-name fallback.
+// The warranty certificate holder; required whenever the cart holds a watch, null for perfume-only orders. No PayPal-name fallback.
 const certificateSchema = z
   .object({ firstName: text.min(1).max(80), lastName: text.min(1).max(80), email: z.string().trim().email().max(254) })
   .strict()
+  .nullable()
 const limitedEditions = new Set(['tutus-ab-uno', 'takimo', 'bauletto'])
-// Site photos shown outside the catalog that v5 ensures: the Storia main photo, the coming-soon perfume, the workshop portrait and the territory view.
-const pageImages = [storia.image, profumiSection.comingSoon.image, officina.image, territorio.image].map(({ src, alt }) => ({ src, alt }))
+// Site photos shown outside the catalog that v5 ensures: the Storia main photo, the workshop portrait and the territory view.
+const pageImages = [storia.image, officina.image, territorio.image].map(({ src, alt }) => ({ src, alt }))
+// The coming-soon box was a site photo until v6; it is now Tesoro di Alarico's own image.
+const comingSoonImage = 'img/profumo/coming-soon.jpg'
+// Seeded perfumes carry cents from their display price (0 while unpriced) and an explicit availability.
+const seedPerfume = (p) => ({ ...p, priceCents: p.price ? initialPrice(p.price) : 0, availability: p.availability ?? 'no-buy' })
 // Photos of the retired Scalea section; v5 drops their slots.
 const retiredImages = ['img/storia/scalea-borgo.jpg', 'img/storia/scalea-palazzo.jpg']
 // Blank quote parts are dropped: no author key without an author.
@@ -130,14 +146,13 @@ export function createApp(options = {}) {
         site.hero.image,
         storia.image,
         ...storia.chapters.flatMap((c) => (c.image ? [c.image] : [])),
-        profumiSection.comingSoon.image,
         officina.image,
         territorio.image,
         ...profumo.images,
       ],
-      perfumes: [{ ...profumo, priceCents: initialPrice(profumo.price) }],
+      perfumes: [profumo, tesoroDiAlarico].map(seedPerfume),
       featured: [],
-      catalogVersion: 5,
+      catalogVersion: 6,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
@@ -187,13 +202,24 @@ export function createApp(options = {}) {
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   if (existing.catalogVersion < 5) {
-    // The redesigned page: Storia main photo, coming-soon perfume and territory view join, the workshop portrait stays; Scalea photos leave.
+    // The redesigned page: Storia main photo and territory view join, the workshop portrait stays; Scalea photos leave.
     // Uploaded library files stay; only the slots and their replacements go.
     existing.siteImages = existing.siteImages.filter((im) => !retiredImages.includes(im.src))
     for (const src of retiredImages) delete existing.imageOverrides[src]
     for (const im of pageImages)
       if (!existing.siteImages.some((s) => s.src === im.src)) existing.siteImages.push(seedImageTranslations(im))
     existing.catalogVersion = 5
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.catalogVersion < 6) {
+    // Perfumes gain an availability state; Tesoro di Alarico is announced and takes over the coming-soon photo, which leaves the site slots.
+    // Uploaded library files stay; only the slot and its replacement go.
+    existing.perfumes = existing.perfumes.map((p) => ({ ...p, availability: p.availability ?? 'no-buy' }))
+    if (!existing.perfumes.some((p) => p.id === tesoroDiAlarico.id))
+      existing.perfumes.push(seedPerfumeTranslations(seedPerfume(tesoroDiAlarico)))
+    existing.siteImages = existing.siteImages.filter((im) => im.src !== comingSoonImage)
+    delete existing.imageOverrides[comingSoonImage]
+    existing.catalogVersion = 6
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   const catalog = () => {
@@ -303,7 +329,10 @@ export function createApp(options = {}) {
   })
   app.get('/api/catalog', (req, res) => {
     const body = catalog()
-    if (!req.session?.admin) body.models = body.models.filter((m) => m.availability !== 'hidden')
+    if (!req.session?.admin) {
+      body.models = body.models.filter((m) => m.availability !== 'hidden')
+      body.perfumes = body.perfumes.filter((p) => p.availability !== 'hidden')
+    }
     res.json(body)
   })
   const translateText = createTranslator({ fetch: options.translateFetch ?? fetch, email: env.MYMEMORY_EMAIL })
@@ -422,9 +451,12 @@ export function createApp(options = {}) {
     const product = perfumeSchema.parse(req.body.product)
     if (product.id !== req.params.id) fail(400, 'Identificativo non valido.')
     product.images.forEach(validImage)
+    if (product.availability === 'buy' && product.priceCents <= 0) fail(400, 'Prezzo richiesto per vendere il profumo.')
     product.quote = cleanQuote(product.quote)
     const body = catalog()
-    const complete = { eyebrow: profumo.eyebrow, labels: profumo.labels, ...product, price: displayPrice(product.priceCents) }
+    // An unpriced perfume shows no price, as seeded.
+    const price = product.priceCents ? displayPrice(product.priceCents) : ''
+    const complete = { eyebrow: profumo.eyebrow, labels: profumo.labels, ...product, price }
     const index = body.perfumes.findIndex((p) => p.id === product.id)
     if (index < 0) body.perfumes.push(complete)
     else body.perfumes[index] = complete
@@ -547,9 +579,11 @@ export function createApp(options = {}) {
   }
   // Limited-edition units held by captures awaiting PayPal. One app instance owns the SQLite catalog, so memory suffices.
   const reserved = new Map()
+  // Only watches have counted pieces; stored lines from before perfume sales have no kind and are watches.
   const unitsByModel = (rows) => {
     const units = new Map()
-    for (const row of rows) units.set(row.modelId, (units.get(row.modelId) ?? 0) + row.quantity)
+    for (const row of rows)
+      if ((row.kind ?? 'model') === 'model') units.set(row.modelId, (units.get(row.modelId) ?? 0) + row.quantity)
     return units
   }
   const hold = (rows) => {
@@ -584,9 +618,15 @@ export function createApp(options = {}) {
     const current = catalog()
     const keys = new Set()
     const items = rows.map((row) => {
-      const key = `${row.modelId}:${row.variantId}`
+      const key = `${row.kind}:${row.modelId}:${row.variantId ?? ''}`
       if (keys.has(key)) fail(400, 'Articolo duplicato nel carrello.')
       keys.add(key)
+      if (row.kind === 'perfume') {
+        const p = current.perfumes.find((p) => p.id === row.modelId)
+        if (p?.availability !== 'buy' || row.variantId !== null)
+          fail(409, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
+        return { ...row, name: p.name, priceCents: p.priceCents, codes: p.code ? [p.code] : [] }
+      }
       const m = current.models.find((m) => m.id === row.modelId)
       if (m?.availability !== 'buy' || (m.limitedEdition === true && m.piecesRemaining === 0))
         fail(409, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
@@ -626,7 +666,10 @@ export function createApp(options = {}) {
       const total = items.reduce((sum, row) => sum + row.priceCents * row.quantity, 0)
       if (total > 100000000) fail(400, 'Importo ordine troppo alto.')
       const requestId = z.string().uuid().parse(req.body.requestId)
-      const certificateJson = JSON.stringify(certificateSchema.parse(req.body.certificate))
+      // The warranty certificate belongs to watches: required when the cart holds one, null for perfume-only orders.
+      const holderSchema = items.some((row) => row.kind === 'model') ? certificateSchema.unwrap() : certificateSchema
+      const holder = holderSchema.parse(req.body.certificate)
+      const certificateJson = holder ? JSON.stringify(holder) : null
       const fingerprint = digest(JSON.stringify(items))
       let order = db.prepare('SELECT * FROM orders WHERE id=?').get(requestId)
       if (order && (order.session !== req.session.id || order.fingerprint !== fingerprint))

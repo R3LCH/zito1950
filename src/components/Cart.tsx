@@ -70,13 +70,19 @@ export default function Cart() {
   }
   const certificateValid = !errors.firstName && !errors.lastName && !errors.email
   const rows = cart.map((line) => {
+    if (line.kind === 'perfume') {
+      const perfume = catalog.perfumes.find((p) => p.id === line.modelId)
+      return { line, name: perfume?.name, variant: null, available: perfume?.availability === 'buy', price: perfume?.priceCents ?? 0 }
+    }
     const model = catalog.models.find((m) => m.id === line.modelId)
     const variant = line.variantId ? model?.variants?.find((v) => v.id === line.variantId) : null
     const available = !!model && availabilityOf(model) === 'buy' && (!model.variants?.length || !!variant)
-    return { line, model, variant, available, price: variant?.priceCents ?? model?.priceCents ?? 0 }
+    return { line, name: model?.name, variant, available, price: variant?.priceCents ?? model?.priceCents ?? 0 }
   })
   const total = rows.reduce((sum, row) => sum + row.price * row.line.quantity, 0)
   const unavailable = rows.some((row) => !row.available)
+  // The warranty certificate belongs to watches; a perfume-only order needs no holder.
+  const hasWatch = cart.some((line) => (line.kind ?? 'model') === 'model')
   useEffect(() => {
     try {
       sessionStorage.setItem(CERTIFICATE_KEY, JSON.stringify(certificate))
@@ -114,7 +120,7 @@ export default function Cart() {
   }, [])
   async function checkout() {
     if (lock.current) return
-    if (!certificateValid || !certificateForm.current?.reportValidity()) {
+    if ((hasWatch && !certificateValid) || !certificateForm.current?.reportValidity()) {
       setTouched({ firstName: true, lastName: true, email: true })
       return
     }
@@ -122,13 +128,16 @@ export default function Cart() {
     setBusy(true)
     setMessage('Preparazione del pagamento…')
     try {
-      const holder: CertificateHolder = {
-        firstName: certificate.firstName.trim(),
-        lastName: certificate.lastName.trim(),
-        email: certificate.email.trim(),
-      }
+      const holder: CertificateHolder | null = hasWatch
+        ? {
+            firstName: certificate.firstName.trim(),
+            lastName: certificate.lastName.trim(),
+            email: certificate.email.trim(),
+          }
+        : null
+      const items = cart.map((line) => ({ kind: line.kind ?? 'model', modelId: line.modelId, variantId: line.variantId, quantity: line.quantity }))
       // A changed certificate holder is a different order request.
-      const serialized = JSON.stringify({ cart, certificate: holder })
+      const serialized = JSON.stringify({ cart: items, certificate: holder })
       let request: { id: string; cart: string } | null = null
       try {
         request = JSON.parse(sessionStorage.getItem('zito-checkout-request') ?? 'null')
@@ -140,7 +149,7 @@ export default function Cart() {
         sessionStorage.setItem('zito-checkout-request', JSON.stringify(request))
       }
       const order = await api<{ id: string; approvalUrl: string }>('/payments/orders', 'POST', {
-        items: cart,
+        items,
         certificate: holder,
         requestId: request.id,
       })
@@ -206,11 +215,11 @@ export default function Cart() {
         {!paid && rows.length === 0 && <p className="py-10">{t("Il carrello è vuoto. Scopri la nostra collezione.")}</p>}
         {!paid && (
           <ul>
-            {rows.map(({ line, model, variant, available, price }) => (
+            {rows.map(({ line, name, variant, available, price }) => (
               <li key={lineKey(line)} className="grid gap-4 border-b border-line py-6 sm:grid-cols-[1fr_auto]">
                 <div>
                   <h3 className="text-h3">
-                    {model?.name ?? t('Prodotto rimosso')}
+                    {name ?? t('Prodotto rimosso')}
                     {variant ? ` · ${variant.label}` : ''}
                   </h3>
                   <p className="text-small">{euro(price)}{' ' + t("/ pezzo")}</p>
@@ -286,12 +295,14 @@ export default function Cart() {
             <form
               ref={certificateForm}
               className="mt-8 border-t border-line pt-6"
-              aria-labelledby="certificate-title"
+              aria-labelledby={hasWatch ? 'certificate-title' : undefined}
               onSubmit={(event) => {
                 event.preventDefault()
                 void checkout()
               }}
             >
+              {hasWatch && (
+              <>
               <h3 id="certificate-title" className="text-small font-medium">{t('Certificato di proprietà')}</h3>
               <div className="mt-3 flex items-start gap-4">
                 <ul className="flex shrink-0 gap-2" aria-label={t('Certificato di proprietà')}>
@@ -347,10 +358,12 @@ export default function Cart() {
                   )
                 })}
               </fieldset>
+              </>
+              )}
               <button
                 type="submit"
                 className="btn mt-6 w-full"
-                disabled={busy || unavailable || !!shopError || !payments?.enabled || !certificateValid}
+                disabled={busy || unavailable || !!shopError || !payments?.enabled || (hasWatch && !certificateValid)}
               >
                 {busy ? t('Connessione a PayPal…') : t('Paga con PayPal')}
               </button>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { models, officina, profumiSection, profumo, site, storia, territorio } from '../data/content'
+import { models, officina, profumo, site, storia, tesoroDiAlarico, territorio } from '../data/content'
 import type { Img, Model, Profumo } from '../data/types'
 import { localizeImage, localizeModel, localizePerfume, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../data/localization'
 import { formatMoney, useLocale } from './i18n'
@@ -19,7 +19,11 @@ export interface Catalog {
   siteImages: Img[]
 }
 export interface CartLine {
+  /** Missing = 'model', so carts stored before perfumes were sold keep working. */
+  kind?: 'model' | 'perfume'
+  /** Watch model id, or the perfume id when kind is 'perfume'. */
   modelId: string
+  /** Always null for perfumes. */
   variantId: string | null
   quantity: number
 }
@@ -53,7 +57,7 @@ export async function api<T>(path: string, method = 'GET', body?: unknown): Prom
   return result as T
 }
 export const euro = formatMoney
-export const lineKey = (line: CartLine) => `${line.modelId}:${line.variantId ?? ''}`
+export const lineKey = (line: CartLine) => `${line.kind ?? 'model'}:${line.modelId}:${line.variantId ?? ''}`
 // Original catalog prices use Italian thousands separators and decimal commas.
 const seedPrice = (price: string) => Math.round(Number(price.replaceAll('.', '').replace(',', '.').replace(' EUR', '')) * 100)
 // Seed models whose specs read "Edizione limitata".
@@ -68,12 +72,12 @@ const initial: Catalog = {
     piecesRemaining: null,
     variants: model.variants?.map(variant => ({ ...variant, priceCents: seedPrice(variant.price) })),
   })),
-  perfumes: [seedPerfumeTranslations({ ...profumo, priceCents: seedPrice(profumo.price) })],
+  perfumes: [profumo, tesoroDiAlarico].map(perfume => seedPerfumeTranslations({ ...perfume, priceCents: perfume.price.trim() ? seedPrice(perfume.price) : 0 })),
   featured: [],
   hero: seedImageTranslations(site.hero.image),
   photos: [],
   imageOverrides: {},
-  siteImages: [site.hero.image, storia.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), profumiSection.comingSoon.image, officina.image, territorio.image, ...profumo.images],
+  siteImages: [site.hero.image, storia.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), officina.image, territorio.image, ...profumo.images],
 }
 interface ShopState {
   catalog: Catalog
@@ -82,6 +86,7 @@ interface ShopState {
   cart: CartLine[]
   setCart: (cart: CartLine[]) => void
   add: (model: Model, variant: number) => void
+  addPerfume: (perfume: Profumo) => void
   cartOpen: boolean
   setCartOpen: (open: boolean) => void
   error: string
@@ -96,6 +101,7 @@ function storedCart(): CartLine[] {
       .filter(
         (v): v is CartLine =>
           !!v &&
+          (v.kind === undefined || v.kind === 'model' || v.kind === 'perfume') &&
           typeof v.modelId === 'string' &&
           (v.variantId === null || typeof v.variantId === 'string') &&
           Number.isInteger(v.quantity) &&
@@ -120,7 +126,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       const localized = localizeModel(model, locale)
       return { ...localized, price: formatMoney(model.priceCents ?? seedPrice(model.price)), variants: localized.variants?.map(variant => ({ ...variant, price: formatMoney(variant.priceCents ?? seedPrice(variant.price)) })) }
     }),
-    perfumes: catalog.perfumes.map(perfume => ({ ...localizePerfume(perfume, locale), price: formatMoney(perfume.priceCents ?? seedPrice(perfume.price)) })),
+    perfumes: catalog.perfumes
+      .filter(perfume => perfume.availability !== 'hidden')
+      .map(perfume => {
+        const cents = perfume.priceCents ?? seedPrice(perfume.price)
+        return { ...localizePerfume(perfume, locale), price: cents > 0 ? formatMoney(cents) : '' }
+      }),
     imageOverrides: Object.fromEntries(Object.entries(catalog.imageOverrides).map(([source, image]) => [source, localizeImage(image, locale)])),
   }), [catalog, locale])
   const reload = async () => {
@@ -143,9 +154,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       /* Cart still works without browser storage. */
     }
   }, [cart])
-  const add = (model: Model, variant: number) => {
-    if (availabilityOf(model) !== 'buy' || error) return
-    const line = { modelId: model.id, variantId: model.variants?.[variant]?.id ?? null, quantity: 1 }
+  const addLine = (line: CartLine) => {
     setCart((current) => {
       const old = current.find((item) => lineKey(item) === lineKey(line))
       return old
@@ -154,8 +163,16 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     })
     setCartOpen(true)
   }
+  const add = (model: Model, variant: number) => {
+    if (availabilityOf(model) !== 'buy' || error) return
+    addLine({ modelId: model.id, variantId: model.variants?.[variant]?.id ?? null, quantity: 1 })
+  }
+  const addPerfume = (perfume: Profumo) => {
+    if (perfume.availability !== 'buy' || error) return
+    addLine({ kind: 'perfume', modelId: perfume.id, variantId: null, quantity: 1 })
+  }
   return (
-    <Context.Provider value={{ catalog, localizedCatalog, setCatalog, cart, setCart, add, cartOpen, setCartOpen, error, reload }}>
+    <Context.Provider value={{ catalog, localizedCatalog, setCatalog, cart, setCart, add, addPerfume, cartOpen, setCartOpen, error, reload }}>
       {children}
     </Context.Provider>
   )

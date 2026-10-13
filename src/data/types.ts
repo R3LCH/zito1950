@@ -134,19 +134,14 @@ export interface SectionCopy {
   intro: string
 }
 
-/** A perfume announced before release: no code or price yet. */
-export interface ComingSoon {
-  eyebrow: string
-  name: string
-  line: string
-  text: string
-  image: Img
+/** Perfume section heading; `soon` labels perfumes announced before release. */
+export interface ProfumiSection extends SectionCopy {
+  soon: string
 }
 
-/** Perfume section heading plus the upcoming fragrance. */
-export interface ProfumiSection extends SectionCopy {
-  comingSoon: ComingSoon
-}
+/** Public state of a perfume, set in admin. coming-soon: shown as «Prossimamente», no price, not purchasable. */
+export const PERFUME_AVAILABILITIES = ['buy', 'no-buy', 'coming-soon', 'out-of-stock', 'hidden'] as const
+export type PerfumeAvailability = (typeof PERFUME_AVAILABILITIES)[number]
 
 /** The owner at the workbench: photo plus the craft notes (the former watch pillars). */
 export interface Officina {
@@ -205,6 +200,11 @@ export interface Profumo {
   name: string
   price: string
   priceCents?: number
+  /** Default no-buy. Only buy can be added to the cart; hidden is omitted from the public catalog. */
+  availability?: PerfumeAvailability
+  /** Short line under the name, e.g. «Pepe Nero». */
+  line?: string
+  /** Blank text = no quotation shown. */
   quote: Quote
   paragraphs: string[]
   specs: string[]

@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import { AVAILABILITIES, type Availability, type CertificateHolder, type Img, type Model, type Profumo, type Variant, type TextTranslation } from '../data/types'
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { AVAILABILITIES, PERFUME_AVAILABILITIES, type Availability, type CertificateHolder, type Img, type Model, type PerfumeAvailability, type Profumo, type Variant, type TextTranslation } from '../data/types'
 import { api, euro, getSession, STATIC_PREVIEW, useShop, type Catalog } from '../lib/shop'
-import { officina, profumiSection, profumo as originalPerfume, storia, territorio } from '../data/content'
+import { officina, profumo as originalPerfume, storia, territorio } from '../data/content'
 import { asset } from '../lib/asset'
 import { t, LanguageSelector, useLocale } from '../lib/i18n'
 import { LOCALES, LANGUAGE_NAMES, LANGUAGE_TAGS, missingTranslationFields, type Locale } from '../data/localization'
@@ -19,7 +19,6 @@ const photoLabel = (image: Img) => image.name?.trim() || image.alt.trim() || ima
 const SITE_SECTIONS: Record<string, string> = Object.fromEntries([
   [storia.image.src, 'Storia'],
   ...storia.chapters.flatMap((c) => (c.image ? [[c.image.src, 'Storia']] : [])),
-  [profumiSection.comingSoon.image.src, 'Profumi – in arrivo'],
   [officina.image.src, 'Officina'],
   [territorio.image.src, 'Scopri il territorio'],
 ])
@@ -39,6 +38,7 @@ const blankPerfume = (): Profumo => ({
   name: '',
   price: '',
   priceCents: 12000,
+  availability: 'no-buy',
   quote: { text: '' },
   paragraphs: [],
   specs: [],
@@ -60,12 +60,43 @@ function withPerfumeText(d: Profumo, locale: Locale, patch: TextTranslation): Pr
   if (locale !== 'it') return { ...d, translations: { ...d.translations, [locale]: { ...d.translations?.[locale], ...patch } } }
   return { ...d, ...(patch.paragraphs !== undefined ? { paragraphs: patch.paragraphs } : {}), ...(patch.specs !== undefined ? { specs: patch.specs } : {}), ...(patch.quoteText !== undefined ? { quote: { ...d.quote, text: patch.quoteText } } : {}) }
 }
-// Admin copy for each public availability state: tile title and one-line effect on the site.
-const AVAILABILITY_COPY: Record<Availability, { label: string; hint: string }> = {
+// Admin copy for each public availability state: tile title and one-line effect on the site. Watches use every state except coming-soon.
+const AVAILABILITY_COPY: Record<PerfumeAvailability, { label: string; hint: string }> = {
   buy: { label: 'Acquistabile', hint: 'Mostra il pulsante Acquista e il prezzo.' },
   'no-buy': { label: 'Solo vetrina', hint: 'Visibile, senza pulsante di acquisto.' },
+  'coming-soon': { label: 'Prossimamente', hint: 'Visibile come Prossimamente, senza codice, prezzo né pulsanti.' },
   'out-of-stock': { label: 'Esaurito', hint: 'Visibile con l’etichetta Esaurito.' },
   hidden: { label: 'Nascosto', hint: 'Non compare sul sito.' },
+}
+/** «Disponibilità» tile radio group shared by the watch and perfume editors; `children` render below the tiles. */
+function AvailabilityTiles<T extends PerfumeAvailability>({ values, value, onChange, children }: { values: readonly T[]; value: T; onChange: (value: T) => void; children?: ReactNode }) {
+  return (
+    <fieldset className="min-w-0">
+      <legend className="mb-3 text-small font-medium">{t("Disponibilità")}</legend>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {values.map((option) => (
+          <label
+            key={option}
+            className="flex cursor-pointer items-start gap-3 border border-line p-4 has-[:checked]:border-ink has-[:checked]:bg-well has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
+          >
+            <input
+              type="radio"
+              name="availability"
+              value={option}
+              className="mt-1 accent-ink focus-visible:outline-none"
+              checked={value === option}
+              onChange={() => onChange(option)}
+            />
+            <span className="min-w-0">
+              <span className="block text-small font-medium">{t(AVAILABILITY_COPY[option].label)}</span>
+              <span className="mt-1 block text-xs text-muted">{t(AVAILABILITY_COPY[option].hint)}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+      {children}
+    </fieldset>
+  )
 }
 
 function AutoTranslateHint({ status }: { status: string }) {
@@ -278,22 +309,25 @@ function PriceInput({
   value,
   onChange,
   label = 'Prezzo EUR',
+  optional = false,
 }: {
   value: number
   onChange: (cents: number) => void
   label?: string
+  /** Allows an empty field (0 cents), e.g. a perfume announced before its price is set. */
+  optional?: boolean
 }) {
-  const [raw, setRaw] = useState((value / 100).toFixed(2))
+  const [raw, setRaw] = useState(optional && value <= 0 ? '' : (value / 100).toFixed(2))
   return (
     <label className="shop-label">
       {t(label)}
       <input
         className="shop-input"
         type="number"
-        min="0.01"
+        min={optional ? '0' : '0.01'}
         max="1000000"
         step="0.01"
-        required
+        required={!optional}
         value={raw}
         onChange={(e) => {
           setRaw(e.target.value)
@@ -378,30 +412,7 @@ function ProductEditor({
           </label>
         </div>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <fieldset className="min-w-0">
-            <legend className="mb-3 text-small font-medium">{t("Disponibilità")}</legend>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {AVAILABILITIES.map((value) => (
-                <label
-                  key={value}
-                  className="flex cursor-pointer items-start gap-3 border border-line p-4 has-[:checked]:border-ink has-[:checked]:bg-well has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
-                >
-                  <input
-                    type="radio"
-                    name="availability"
-                    value={value}
-                    className="mt-1 accent-ink focus-visible:outline-none"
-                    checked={(draft.availability ?? 'no-buy') === value}
-                    onChange={() => setDraft(d => ({ ...d, availability: value }))}
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-small font-medium">{t(AVAILABILITY_COPY[value].label)}</span>
-                    <span className="mt-1 block text-xs text-muted">{t(AVAILABILITY_COPY[value].hint)}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
+          <AvailabilityTiles values={AVAILABILITIES} value={draft.availability ?? 'no-buy'} onChange={(availability: Availability) => setDraft(d => ({ ...d, availability }))} />
           <fieldset className="min-w-0 space-y-4">
             <legend className="mb-3 text-small font-medium">{t("Edizione limitata")}</legend>
             <label className="flex items-center gap-3 text-small">
@@ -728,7 +739,13 @@ function PerfumeEditor({
   onDelete: () => void
   onUpload: UploadPhotos
 }) {
-  const [draft, setDraft] = useState<Profumo>(() => structuredClone(product))
+  // Perfumes saved before availability existed read as showcase only.
+  const [draft, setDraft] = useState<Profumo>(() => {
+    const copy = structuredClone(product)
+    return { ...copy, availability: copy.availability ?? 'no-buy' }
+  })
+  // Selling needs a real price; the server rejects the same case.
+  const priceMissing = draft.availability === 'buy' && !((draft.priceCents ?? 0) > 0)
   const [language, setLanguage] = useState<Locale>('it')
   const { status: translationStatus, handle: onTranslateKey } = useAutoTranslate()
   const text = perfumeText(draft, language)
@@ -742,6 +759,7 @@ function PerfumeEditor({
       className="max-w-3xl space-y-6"
       onSubmit={(event) => {
         event.preventDefault()
+        if (priceMissing) return
         onSave(draft)
       }}
     >
@@ -757,7 +775,17 @@ function PerfumeEditor({
               onChange={(event) => setDraft({ ...draft, name: event.target.value })}
             />
           </label>
-          <PriceInput value={draft.priceCents ?? 12000} onChange={(priceCents) => setDraft({ ...draft, priceCents })} />
+          <PriceInput optional value={draft.priceCents ?? 0} onChange={(priceCents) => setDraft(d => ({ ...d, priceCents }))} />
+          <label className="shop-label">
+            {t("Linea")}
+            <input
+              className="shop-input"
+              maxLength={120}
+              placeholder="Pepe Nero"
+              value={draft.line ?? ''}
+              onChange={(event) => setDraft({ ...draft, line: event.target.value })}
+            />
+          </label>
           <label className="shop-label">
             {t("Codice")}
             <input
@@ -767,6 +795,13 @@ function PerfumeEditor({
             />
           </label>
         </div>
+        <AvailabilityTiles values={PERFUME_AVAILABILITIES} value={draft.availability ?? 'no-buy'} onChange={(availability) => setDraft(d => ({ ...d, availability }))}>
+          {priceMissing && (
+            <p role="alert" className="mt-3 text-small font-medium">
+              {t("Prezzo richiesto per vendere il profumo.")}
+            </p>
+          )}
+        </AvailabilityTiles>
         <TextLanguages language={language} onChange={setLanguage} product={draft} translationStatus={translationStatus} />
         <label className="shop-label">
           {t("Descrizione (paragrafi separati da una riga vuota)")}
@@ -1121,7 +1156,11 @@ export default function Admin() {
                         }}
                       >
                         <span className="block font-serif text-xl">{p.name}</span>
-                        {p.code && <span className="text-xs text-muted">{p.code}</span>}
+                        <span className="text-xs text-muted">
+                          {t(AVAILABILITY_COPY[p.availability ?? 'no-buy'].label)}
+                          {p.line && ` · ${p.line}`}
+                          {p.code && ` · ${p.code}`}
+                        </span>
                       </button>
                     </li>
                   ))}
@@ -1555,7 +1594,7 @@ export default function Admin() {
                       </div>
                     )}
                     {(() => {
-                      // Checkout requires the holder; orders placed before that may still lack one.
+                      // Orders with a watch require the holder; perfume-only orders and older orders have none.
                       const holder = order.certificate
                       return (
                         <section className="mt-5 border border-line p-5" aria-labelledby={`certificate-${order.id}`}>
