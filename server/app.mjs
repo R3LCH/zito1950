@@ -114,6 +114,9 @@ const comingSoonImage = 'img/profumo/coming-soon.jpg'
 const seedPerfume = (p) => ({ ...p, priceCents: p.price ? initialPrice(p.price) : 0, availability: p.availability ?? 'no-buy' })
 // Photos of the retired Scalea section; v5 drops their slots.
 const retiredImages = ['img/storia/scalea-borgo.jpg', 'img/storia/scalea-palazzo.jpg']
+// N°7 Oud's original bottle photo; v7 swaps it, in the perfume and the site slots, for the client's new one.
+const retiredOudImage = 'img/profumo/n7-oud.jpg'
+const oudImage = (({ src, alt }) => ({ src, alt }))(profumo.images[0])
 // Blank quote parts are dropped: no author key without an author.
 const cleanQuote = ({ text, author }) => (author ? { text, author } : { text })
 
@@ -152,7 +155,7 @@ export function createApp(options = {}) {
       ],
       perfumes: [profumo, tesoroDiAlarico].map(seedPerfume),
       featured: [],
-      catalogVersion: 6,
+      catalogVersion: 7,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
@@ -220,6 +223,18 @@ export function createApp(options = {}) {
     existing.siteImages = existing.siteImages.filter((im) => im.src !== comingSoonImage)
     delete existing.imageOverrides[comingSoonImage]
     existing.catalogVersion = 6
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.catalogVersion < 7) {
+    // N°7 Oud gets the client's new bottle photo; other photos and owner uploads stay, and an owner replacement of the old slot moves to the new one.
+    const swapOud = (im) => (im.src === retiredOudImage ? seedImageTranslations(oudImage) : im)
+    existing.perfumes = existing.perfumes.map((p) => (p.id === profumo.id ? { ...p, images: p.images.map(swapOud) } : p))
+    existing.siteImages = existing.siteImages.map(swapOud)
+    if (Object.hasOwn(existing.imageOverrides, retiredOudImage)) {
+      existing.imageOverrides[oudImage.src] = existing.imageOverrides[retiredOudImage]
+      delete existing.imageOverrides[retiredOudImage]
+    }
+    existing.catalogVersion = 7
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   const catalog = () => {

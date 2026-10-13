@@ -727,7 +727,7 @@ export const profumo: Profumo = {
     'BHT',
   ],
   images: [
-    { src: 'img/profumo/n7-oud.jpg', alt: 'Flacone di eau de parfum N°7 Oud con il marchio Z' },
+    { src: 'img/profumo/nuovo.jpg', alt: 'Flacone di eau de parfum N°7 Oud con tappo trasparente su fondo bianco' },
     { src: 'img/profumo/n7-oud-journal.jpg', alt: 'Flacone di N°7 Oud eau de parfum su fondo bianco' },
   ],
   labels: {
