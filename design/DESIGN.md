@@ -32,7 +32,7 @@ No accent hue. Color comes from the photographs.
 - Expandable sections (`Panel`): a short preview is always visible; "Mostra tutto" opens the rest with a height transition, body `inert` while closed; links into a closed body (e.g. `#edizioni-limitate`) open it first.
 
 ## Components
-- Header: white sticky bar, `logo.svg` left, anchor nav (Orologi, Profumi, Storia, Social, Dove siamo) right; functional outline-SVG shopping-bag button opens Cart, square ink count badge when non-empty; no floating cart button; hairline after scroll; mobile menu as modal with focus trap.
+- Header: white sticky bar, `logo.svg` left, anchor nav (Storia, Orologi, Profumi, Social, Dove siamo) right; functional outline-SVG shopping-bag button opens Cart, square ink count badge when non-empty; no floating cart button; hairline after scroll; mobile menu as modal with focus trap.
 - Hero: photo from admin-configurable `catalog.hero` beside h1 “Orologiai a Scalea dal 1950”, short text and one rounded ink button “Scopri la collezione” (`#orologi`).
 - Orologi: closed shows 3–4 watches from admin `catalog.featured` (fallback: first 4 of the featured sort); “Catalogo completo” opens filters and the full grid; exclude `hidden`; featured sort puts `isNew` first, then `buy`, `no-buy`, `out-of-stock`, price descending within each group.
 - Officina: owner photo `img/storia/owner.jpg` with craft text; opens to the movement/material notes. Scalea: town text and photos. Profumi: list of `catalog.perfumes`, opens to full details per perfume.
@@ -41,10 +41,11 @@ No accent hue. Color comes from the photographs.
 - Badge/labels: “Nuovo” and “Edizione limitata” at the image’s top-left corner, ink fill, white uppercase small type with tracking, radius 0; “Venduto” / “Esaurito” status tags outlined. Limited editions with positive `piecesRemaining` show “Ancora N pezzi” or “Ultimo pezzo disponibile”; empty or 0 shows no count.
 - ModelDialog: native `<dialog>`; image views, name, codes, price, labels, remaining pieces, quote, description, specs list; close button, Esc, backdrop; focus returns to opener; body scroll locked.
 - Recommended: “Scopri anche” inside ModelDialog, every other public model in one horizontal row: owner’s `similar` picks first, then by similarity. Square outlined prev/next buttons page by whole cards; wheel scrolls the row and releases at its ends. Selection replaces the current model in the open dialog, resets variant/photo, scrolls to top and focuses its title.
-- Profumi: `#profumi`, N°7 Oud image + source text.
-- Storia: `#storia`, opening place block “Scalea e la Calabria” with real photographs `img/storia/scalea-borgo.jpg` and `img/storia/scalea-palazzo.jpg`, then chronological chapters; narrow reading columns, optional chapter images alternating sides on desktop.
-- Social: `#social`, Instagram and Facebook as full-width link rows, separated by hairlines; no embedded feed.
-- Contatti: “Dove siamo” at `#contatti`; `<address>`, map and Google Maps link, PEC as `mailto:`, P.IVA; no phone or social rows.
+- Profumi: `#profumi`, card grid of every `catalog.perfumes` entry (photo, name, code, price); expanded shows full details per perfume.
+- Storia: `#storia`, first chronological chapter visible, the rest and the closing quote in the expanded body; chapter images alternate sides on desktop.
+- Scalea: `#scalea`, “Scalea e la Calabria” with `img/storia/scalea-borgo.jpg`; expanded adds the remaining text and `img/storia/scalea-palazzo.jpg`.
+- Social: `#social`, Instagram (@zito1950) and Facebook as link rows; no embedded feed.
+- Contatti: “Dove siamo” at `#contatti`; `<address>`, map and Google Maps link, PEC as `mailto:`, P.IVA; no phone rows.
 - Cart: opened from Header; native `<dialog>` with quantities, total and PayPal checkout. “Certificato personalizzato” toggle reveals required Nome, Cognome, Email; off uses PayPal payer name/email from capture. The owner assigns the certificate code in Admin → Ordini.
 - Footer: white, hairline top, logo mark, GRANALIDA s.r.l., nav repeat.
 

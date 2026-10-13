@@ -2,7 +2,7 @@
 
 React 19 + Vite 8 + TypeScript + Tailwind 4 storefront, with a Node 24 / Express backend and persistent SQLite catalog, sessions, orders and uploaded photos. Design system: `design/DESIGN.md`.
 
-Page order: Hero → Orologi (`#orologi`) → Profumi (`#profumi`) → Storia (`#storia`, opening with “Scalea e la Calabria” and real place photographs) → Social (`#social`, Instagram and Facebook) → Dove siamo (`#contatti`, address, map, PEC and P.IVA). The header shopping-bag control opens the cart and shows a square item-count badge.
+Page order: compact Hero → rounded section buttons → white expandable section cards: Storia (`#storia`) → Orologi (`#orologi`, 3–4 featured watches; “Catalogo completo” opens filters and the full grid) → Officina (`#officina`, the owner at the workbench) → Scalea (`#scalea`, the town) → Profumi (`#profumi`, all perfumes) → Social (`#social`, Instagram @zito1950 and Facebook) → Dove siamo (`#contatti`, address, map, PEC and P.IVA). The header shopping-bag control opens the cart and shows a square item-count badge.
 
 ## Develop
 
@@ -48,7 +48,7 @@ The catalog's featured order puts **Nuovo** models first, then purchasable, show
 
 In **Prodotti**, **Nuovo** marks a model as new, and **Modelli simili** picks and orders the models shown first in its **Scopri anche** row. The server drops unknown ids, duplicates and the product itself, and deleting a product removes it from every other product's picks.
 
-The hero uses `catalog.hero`, defaulting to the most expensive seed model, **Tutus ab uno** (`img/models/tutus-ab-uno.jpg`), with **Orologiai a Scalea dal 1950** and links to the story, limited editions and social section. In **Fotografie → Foto principale**, the picker includes model photographs, site photographs and the library, labelled by file name; save the form to publish the choice.
+The hero uses `catalog.hero`, defaulting to the most expensive seed model, **Tutus ab uno** (`img/models/tutus-ab-uno.jpg`), with **Orologiai a Scalea dal 1950** and one **Scopri la collezione** button; the section buttons below it jump to every card. In **Fotografie → Foto principale**, the picker includes model photographs, site photographs and the library, labelled by file name; save the form to publish the choice.
 
 On backend startup, existing databases migrate `buyEnabled: true` to `availability: buy`, and false/missing to `no-buy`, preserving any existing availability state and removing the old flag. Catalogs below `catalogVersion` 3 have the retired `sold` state rewritten to `out-of-stock`. The former default hero `img/hero/new_hero.jpg` becomes the Tutus ab uno photograph; custom hero choices are kept. Missing `certificate` and `certificate_code` columns are automatically added to the orders table.
 

@@ -669,7 +669,6 @@ export const officina: Officina = {
   title: 'Il tempo, costruito con cura',
   paragraphs: [
     'Ogni orologio ZITO 1950 nasce al banco di lavoro di Scalea: la stessa passione di tre generazioni di orologiai, oggi nelle mani del titolare.',
-    'Cassa e movimento, vetro zaffiro e finiture vengono scelti e controllati uno per uno, prima che l’orologio arrivi al polso.',
   ],
   image: {
     src: 'img/storia/owner.jpg',
