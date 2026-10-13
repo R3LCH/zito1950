@@ -666,7 +666,7 @@ test('perfumes are added, edited, protect their photos and are removed by id', a
   assert.equal(added.status, 200, JSON.stringify(added.body))
   assert.deepEqual(added.body.perfumes.map((p) => p.id), ['n7-oud', 'ambra'])
   const stored = added.body.perfumes[1]
-  assert.equal(stored.price, '95 EUR')
+  assert.equal(stored.price, '95,00 EUR')
   assert.deepEqual(stored.quote, { text: 'Citazione' })
   assert.ok(stored.eyebrow && stored.labels.ingredients && stored.labels.mailSubject)
   const fileId = photo.src.slice('uploads/'.length, -'.webp'.length)
