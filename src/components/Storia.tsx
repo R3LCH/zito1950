@@ -2,6 +2,7 @@ import { useContent } from '../lib/i18n'
 import type { StoriaChapter } from '../data/types'
 import Picture from './Picture'
 import Panel from './Panel'
+import { dims } from '../lib/imageMeta'
 
 function Chapter({ chapter, index }: { chapter: StoriaChapter; index: number }) {
   const titleId = `storia-capitolo-${index + 1}`
@@ -41,10 +42,11 @@ function Chapter({ chapter, index }: { chapter: StoriaChapter; index: number }) 
   )
 }
 
-/** Archive composite beside the 1951 railway assignment; "Scopri la storia" opens every chapter. */
+/** Archive poster beside the 1951 railway assignment; "Scopri la storia" opens every chapter. */
 export default function Storia() {
   const { storia } = useContent()
   const { image } = storia
+  const size = dims(image.src)
 
   return (
     <Panel
@@ -54,8 +56,17 @@ export default function Storia() {
       moreLabel={storia.more}
       preview={({ header, toggle }) => (
         <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-12">
-          {/* Landscape composite shown whole: intrinsic size, no crop and no well behind it. */}
-          <Picture src={image.src} alt={image.alt} sizes="(min-width: 768px) 55vw, 100vw" pictureClassName="block md:col-span-7" className="h-auto w-full" />
+          {/* Portrait archive poster shown whole; capped near its 533px native width so it stays sharp. */}
+          <Picture
+            src={image.src}
+            alt={image.alt}
+            width={size?.w}
+            height={size?.h}
+            sizes="(min-width: 768px) 460px, 100vw"
+            pictureClassName="mx-auto block w-full max-w-[460px] md:col-span-5"
+            className="h-auto w-full"
+          />
+          <div className="md:col-span-7 md:pl-4">
           <div className="md:col-span-5">
             {header}
             <div className="mt-6 max-w-[40ch] space-y-4 font-serif text-[clamp(1.25rem,1.8vw,1.5rem)] leading-[1.45] text-ink-2">

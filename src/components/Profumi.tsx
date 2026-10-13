@@ -31,7 +31,7 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
           width={size?.w}
           height={size?.h}
           sizes="(min-width: 640px) 46vw, 100vw"
-          pictureClassName="block aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-bg"
+          pictureClassName="block aspect-square overflow-hidden rounded-[1.25rem] bg-bg"
           className="h-full w-full object-contain"
         />
       )}
