@@ -525,6 +525,7 @@ export const storia: Storia = {
   title: 'Non ereditiamo un mestiere. Continuiamo un tempo.',
   intro:
     'Nel 1951 Luigi Zito viene incaricato dalle Ferrovie dello Stato per la riparazione e manutenzione degli orologi delle stazioni.',
+  introMore: 'Da allora, il tempo è diventato il mestiere della nostra famiglia.',
   more: 'Scopri la storia',
   image: {
     src: 'img/storia/storia-nuova.jpg',
@@ -652,7 +653,7 @@ export const officina: Officina = {
   eyebrow: 'L’officina',
   title: 'Il tempo, costruito con cura.',
   paragraphs: [
-    'Ogni orologio ZITO 1950 unisce tradizione orologiaia, design italiano e selezione di materiali di alta qualità.',
+    'Ogni orologio Zito1950 unisce tradizione orologiera, design italiano e selezione di materiali di alta qualità.',
   ],
   more: 'Scopri il laboratorio',
   image: {

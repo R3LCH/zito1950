@@ -118,6 +118,8 @@ export interface Storia {
   eyebrow: string
   title: string
   intro: string
+  /** Second preview paragraph, under the intro. */
+  introMore: string
   /** Label of the button that opens the full story. */
   more: string
   image: Img & { caption: string }

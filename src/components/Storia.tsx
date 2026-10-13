@@ -41,7 +41,7 @@ function Chapter({ chapter, index }: { chapter: StoriaChapter; index: number }) 
   )
 }
 
-/** Archive photo beside the 1951 railway assignment; "Scopri la storia" opens every chapter. */
+/** Archive composite beside the 1951 railway assignment; "Scopri la storia" opens every chapter. */
 export default function Storia() {
   const { storia } = useContent()
   const { image } = storia
@@ -52,24 +52,20 @@ export default function Storia() {
       eyebrow={storia.eyebrow}
       title={storia.title}
       moreLabel={storia.more}
-      preview={
-        <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-10">
-          <figure className="md:col-span-5">
-            {/* Portrait archive scan: fixed-height crop keeps the collapsed panel compact; 35% keeps the documents' upper text in frame. */}
-            <Picture
-              src={image.src}
-              alt={image.alt}
-              sizes="(min-width: 768px) 36vw, 100vw"
-              pictureClassName="block overflow-hidden rounded-[1.25rem] bg-well"
-              className="h-[60vw] w-full object-cover object-[50%_35%] md:h-[min(26rem,55vh)]"
-            />
-            <figcaption className="mt-3 text-small text-muted">{image.caption}</figcaption>
-          </figure>
-          <p className="max-w-[40ch] font-serif text-[clamp(1.375rem,2.2vw,1.875rem)] leading-[1.4] text-ink md:col-span-6 md:col-start-7">
-            {storia.intro}
-          </p>
+      preview={({ header, toggle }) => (
+        <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-12">
+          {/* Landscape composite shown whole: intrinsic size, no crop and no well behind it. */}
+          <Picture src={image.src} alt={image.alt} sizes="(min-width: 768px) 55vw, 100vw" pictureClassName="block md:col-span-7" className="h-auto w-full" />
+          <div className="md:col-span-5">
+            {header}
+            <div className="mt-6 max-w-[40ch] space-y-4 font-serif text-[clamp(1.25rem,1.8vw,1.5rem)] leading-[1.45] text-ink-2">
+              <p>{storia.intro}</p>
+              <p>{storia.introMore}</p>
+            </div>
+            {toggle && <div className="mt-8">{toggle}</div>}
+          </div>
         </div>
-      }
+      )}
     >
       {storia.chapters.map((chapter, i) => (
         <Chapter key={chapter.title} chapter={chapter} index={i} />

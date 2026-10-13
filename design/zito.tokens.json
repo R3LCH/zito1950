@@ -7,7 +7,8 @@
     "ink-2": { "$value": "#3A3A3A", "$description": "Secondary prose" },
     "muted": { "$value": "#6B6B6B", "$description": "Captions, meta; 5.33:1 on white" },
     "line": { "$value": "#E7E7E5", "$description": "Hairline dividers" },
-    "well": { "$value": "#F5F5F3", "$description": "Image wells behind isolated products" }
+    "well": { "$value": "#F5F5F3", "$description": "Image wells behind isolated products" },
+    "brand": { "$value": "#D42E2E", "$description": "Logo red (public/logo.svg); split-section eyebrows and toggles" }
   },
   "font": {
     "$type": "fontFamily",

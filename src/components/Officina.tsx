@@ -2,7 +2,7 @@ import { useContent } from '../lib/i18n'
 import Picture from './Picture'
 import Panel from './Panel'
 
-/** The owner at the workbench; the craft notes on movements and materials open below. */
+/** The owner at the workbench; header, craft line and toggle sit in the column beside the photo. */
 export default function Officina() {
   const { officina, orologi } = useContent()
   const { image } = officina
@@ -13,19 +13,23 @@ export default function Officina() {
       eyebrow={officina.eyebrow}
       title={officina.title}
       moreLabel={officina.more}
-      preview={
-        <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-10">
+      preview={({ header, toggle }) => (
+        <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-12">
           <figure className="md:col-span-7">
             <Picture src={image.src} alt={image.alt} sizes="(min-width: 768px) 52vw, 100vw" pictureClassName="block overflow-hidden rounded-[1.25rem] bg-well" className="w-full" />
             <figcaption className="mt-3 text-small text-muted">{image.caption}</figcaption>
           </figure>
-          <div className="max-w-[52ch] space-y-5 text-ink-2 md:col-span-5">
-            {officina.paragraphs.map((p) => (
-              <p key={p}>{p}</p>
-            ))}
+          <div className="md:col-span-5">
+            {header}
+            <div className="mt-6 max-w-[52ch] space-y-5 text-ink-2">
+              {officina.paragraphs.map((p) => (
+                <p key={p}>{p}</p>
+              ))}
+            </div>
+            {toggle && <div className="mt-8">{toggle}</div>}
           </div>
         </div>
-      }
+      )}
     >
       <ul className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-4">
         {orologi.pillars.map((p) => (

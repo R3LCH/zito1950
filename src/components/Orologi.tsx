@@ -56,6 +56,16 @@ export default function Orologi() {
   const handleClose = useCallback(() => setOpen(null), [])
   // Same trigger: focus returns to the card that opened the dialog in the first place.
   const handleSelect = useCallback((model: Model) => setOpen((o) => o && { ...o, model, variant: 0, image: 0 }), [])
+  // Opening the full catalogue: the second row lands under the sticky header, so the first row stays roughly where the preview was.
+  // Runs after the body rendered synchronously and replaces any scroll-anchoring adjustment with one absolute position.
+  const handleCatalogOpen = useCallback(() => {
+    const items = document.querySelectorAll<HTMLElement>('#orologi ul[aria-labelledby="catalogo-title"] > li')
+    const first = items[0]
+    if (!first) return
+    const target = Array.from(items).find((li) => li.offsetTop > first.offsetTop) ?? first
+    const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 72
+    window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - headerH - 16, behavior: 'instant' })
+  }, [])
 
   const grid = 'grid grid-cols-2 gap-x-4 gap-y-10 lg:gap-x-8 lg:gap-y-14'
 
@@ -68,6 +78,7 @@ export default function Orologi() {
         intro={<p>{orologi.intro}</p>}
         previewOnlyCollapsed
         moreLabel={site.panel.fullCatalog}
+        onOpen={handleCatalogOpen}
         preview={
           <ul className={`${grid} ${featured.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
             {featured.map((m) => (
