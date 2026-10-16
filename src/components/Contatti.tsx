@@ -40,43 +40,23 @@ export function ContactLink({
   )
 }
 
+/** Dove siamo: the map alone, centred, with the email link right under it. No postal address is shown. */
 export default function Contatti() {
-  const { contatti, site } = useContent()
+  const { contatti } = useContent()
 
   return (
     <Panel
       id="contatti"
       eyebrow={contatti.eyebrow}
       title={contatti.title}
-      intro={<p>{contatti.intro}</p>}
       preview={
-        <div className="grid gap-10 md:grid-cols-2 md:gap-16">
-          <div>
-            <h3 className="text-h3">{site.cta.whereToFind}</h3>
-            <address className="mt-5 not-italic">
-              <p className="font-medium">{contatti.company}</p>
-              <p className="mt-1 text-ink-2">
-                <span className="sr-only">{contatti.labels.address}: </span>
-                {contatti.address}
-                <br />
-                {contatti.city}
-              </p>
-              <p className="mt-3 text-small text-muted">
-                {contatti.labels.piva} {contatti.piva}
-              </p>
-            </address>
-            <a href={contatti.mapsUrl} target="_blank" rel="noopener noreferrer" className="link-arrow mt-5 min-h-11">
-              <span>{contatti.labels.maps}</span>
-              <span className="sr-only"> {contatti.labels.newTab}</span>
-            </a>
-            <h3 className="mt-10 text-h3">{site.cta.visit}</h3>
-            <ul className="mt-5 border-t border-line">
-              <ContactLink label={contatti.labels.email} value={contatti.email} href={`mailto:${contatti.email}`} />
-            </ul>
-          </div>
-          <div className="aspect-[4/3] w-full overflow-hidden rounded-[1.25rem] border border-line bg-well">
+        <div className="mx-auto max-w-[56rem]">
+          <div className="aspect-[4/3] w-full overflow-hidden rounded-[1.25rem] border border-line bg-well sm:aspect-[16/9]">
             <iframe src={mapEmbed} title={contatti.labels.mapTitle} loading="lazy" referrerPolicy="no-referrer-when-downgrade" className="h-full w-full grayscale" />
           </div>
+          <ul className="mx-auto mt-8 max-w-[32rem] border-t border-line">
+            <ContactLink label={contatti.labels.email} value={contatti.email} href={`mailto:${contatti.email}`} />
+          </ul>
         </div>
       }
     />

@@ -94,7 +94,6 @@ export interface Site {
     collection: string
     info: string
     whereToFind: string
-    visit: string
   }
   hero: { image: Img; motto: string; lead: string; text: string }
   labels: {
@@ -229,22 +228,15 @@ export interface Profumo {
 export interface Contatti {
   eyebrow: string
   title: string
-  intro: string
-  company: string
+  /** Map query only; never rendered. */
   address: string
   city: string
   email: string
-  piva: string
-  website: string
   instagram: string
   facebook: string
-  mapsUrl: string
   labels: {
-    address: string
     email: string
     social: string
-    piva: string
-    maps: string
     mapTitle: string
     instagram: string
     facebook: string

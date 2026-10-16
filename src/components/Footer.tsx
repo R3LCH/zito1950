@@ -96,12 +96,7 @@ export default function Footer() {
 
       <div className="container-site">
         <div className="flex flex-col gap-2 border-t border-line py-6 text-small text-muted md:flex-row md:items-center md:justify-between md:gap-6">
-          <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-4">
-            <p>{site.footer.copyright.replace('©', `© ${year}`)}</p>
-            <p>
-              {contatti.company} · {contatti.address}, {contatti.city}
-            </p>
-          </div>
+          <p>{site.footer.copyright.replace('©', `© ${year}`)}</p>
           <p>{t('Design italiano · Calabria · Dal 1950')}</p>
         </div>
       </div>

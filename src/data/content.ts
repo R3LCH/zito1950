@@ -17,14 +17,13 @@ export const site: Site = {
   sections: [
     { href: '#storia', label: 'La nostra storia', hint: 'Una storia autentica di orologiai italiani.', icon: 'storia' },
     { href: '#edizioni-limitate', label: 'Collezione limitata', hint: 'Produzioni selezionate per durare nel tempo.', icon: 'limited' },
-    { href: '#perche-zito', label: 'Perché ZITO 1950®?', hint: 'Stile, qualità e carattere senza compromessi.', icon: 'perche' },
+    { href: '#perche-zito', label: 'Perché ZITO 1950®', hint: 'Stile, qualità e carattere senza compromessi.', icon: 'perche' },
   ],
   panel: { more: 'Mostra tutto', less: 'Mostra meno', fullCatalog: 'Catalogo completo' },
   cta: {
     collection: 'Scopri la collezione',
     info: 'Richiedi informazioni',
     whereToFind: 'Dove siamo',
-    visit: 'Scrivici',
   },
   hero: {
     image: {
@@ -783,23 +782,16 @@ export const tesoroDiAlarico: Profumo = {
 export const contatti: Contatti = {
   eyebrow: 'Contatti',
   title: 'Dove siamo',
-  intro: 'Scalea, piccolo borgo della Riviera dei Cedri.',
-  company: 'GRANALIDA s.r.l. soc. unipers.',
+  // Used only to centre the map; the address is not shown on the site.
   address: 'via Michele Bianchi n. 23',
   city: 'Scalea (CS)',
   email: 'customer@zito1950.it',
-  piva: '03012360784',
-  website: 'www.zito1950.it',
   instagram: 'https://www.instagram.com/zito1950/',
   facebook: 'http://www.facebook.com/zito1950',
-  mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Via+Michele+Bianchi+23+Scalea+CS',
   labels: {
-    address: 'Indirizzo',
     email: 'Email',
     social: 'Social',
-    piva: 'P. IVA',
-    maps: 'Apri in Google Maps',
-    mapTitle: 'Mappa: via Michele Bianchi n. 23, Scalea (CS)',
+    mapTitle: 'Mappa: dove siamo',
     instagram: 'Instagram',
     facebook: 'Facebook',
     newTab: '(si apre in una nuova scheda)',

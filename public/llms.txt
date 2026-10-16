@@ -1,6 +1,6 @@
 # ZITO 1950®
 
-> Sito del marchio di orologi di famiglia ZITO 1950®, GRANALIDA s.r.l., via Michele Bianchi 23, Scalea (CS), Italia. Italiano come lingua predefinita. www.zito1950.it
+> Sito del marchio di orologi di famiglia ZITO 1950®. Italiano come lingua predefinita. www.zito1950.it
 
 Pagina unica, in questo ordine, con sezioni ad ancora:
 
@@ -12,7 +12,7 @@ Pagina unica, in questo ordine, con sezioni ad ancora:
 - #scalea: “Scalea e la Calabria”, la città e le sue fotografie d’epoca.
 - #profumi: i profumi ZITO 1950® (elenco gestito in amministrazione).
 - #social: link a Instagram (zito1950) e Facebook (zito1950).
-- #contatti: “Dove siamo”, indirizzo, mappa, email customer@zito1950.it e P.IVA 03012360784.
+- #contatti: “Dove siamo”, mappa e, sotto, email customer@zito1950.it.
 
 ## Design
 

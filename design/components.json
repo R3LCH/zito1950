@@ -11,8 +11,8 @@
     { "name": "Profumi", "path": "src/components/Profumi.tsx", "props": {}, "behaviour": "#profumi: N°7 Oud image and source text from catalog.perfume; omitted when the perfume is removed." },
     { "name": "Storia", "path": "src/components/Storia.tsx", "props": {}, "behaviour": "#storia: opens with Scalea e la Calabria and real photographs img/storia/scalea-borgo.jpg and img/storia/scalea-palazzo.jpg, then chronological chapters. Narrow reading columns, optional chapter images alternating sides on desktop, single-column reading below 768px." },
     { "name": "Social", "path": "src/components/Social.tsx", "props": {}, "behaviour": "#social: Instagram and Facebook external link rows separated by hairlines, with whole-row tap targets; no embedded feed." },
-    { "name": "Contatti", "path": "src/components/Contatti.tsx", "props": {}, "behaviour": "Dove siamo at #contatti: company and postal address in <address>, P.IVA, lazy map, Google Maps link and email mailto: row (customer@zito1950.it). No phone; social links belong to Social." },
+    { "name": "Contatti", "path": "src/components/Contatti.tsx", "props": {}, "behaviour": "Dove siamo at #contatti: centred lazy map only, with the email mailto: row (customer@zito1950.it) under it. No postal address, company, P.IVA or phone." },
     { "name": "Cart", "path": "src/components/Cart.tsx", "props": {}, "behaviour": "Native <dialog> opened from Header; quantities, total, PayPal approval and explicit capture confirmation. Certificato personalizzato toggle reveals required Nome, Cognome, Email; sends certificate { firstName, lastName, email } or null to POST /api/payments/orders. Off uses PayPal payer name/email from capture; owner assigns the code in Admin → Ordini." },
-    { "name": "Footer", "path": "src/components/Footer.tsx", "props": {}, "behaviour": "White footer, hairline top, logo-mark, legal name GRANALIDA s.r.l., nav repeat." }
+    { "name": "Footer", "path": "src/components/Footer.tsx", "props": {}, "behaviour": "White footer, hairline top, logo-mark, nav repeat, copyright line; no postal address." }
   ]
 }
