@@ -7,8 +7,8 @@ import Picture from './Picture'
 
 const CERTIFICATE_KEY = 'zito-certificate'
 const CERTIFICATE_IMAGES = [
-  { src: 'img/certificato/fronte.jpg', alt: 'Certificato di proprietà ZITO 1950, fronte' },
-  { src: 'img/certificato/retro.jpg', alt: 'Certificato di proprietà ZITO 1950, retro' },
+  { src: 'img/certificato/fronte.jpg', alt: 'Certificato di proprietà ZITO 1950®, fronte' },
+  { src: 'img/certificato/retro.jpg', alt: 'Certificato di proprietà ZITO 1950®, retro' },
 ]
 // Mirrors the server's email check closely enough to keep the button honest; the server stays authoritative.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -203,7 +203,7 @@ export default function Cart() {
       >
         <div className="flex items-center justify-between gap-6 border-b border-line pb-5">
           <div>
-            <p className="eyebrow">{t("ZITO 1950 · Boutique")}</p>
+            <p className="eyebrow">{t("ZITO 1950® · Boutique")}</p>
             <h2 id="cart-title" className="mt-2 text-h2">
               {t("Il tuo carrello")}
             </h2>

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { AVAILABILITIES, PERFUME_AVAILABILITIES, type Availability, type CertificateHolder, type Img, type Model, type PerfumeAvailability, type Profumo, type Variant, type TextTranslation } from '../data/types'
+import { AVAILABILITIES, GENDERS, PERFUME_AVAILABILITIES, type Availability, type CertificateHolder, type Gender, type Img, type Model, type PerfumeAvailability, type Profumo, type Variant, type TextTranslation } from '../data/types'
 import { api, euro, getSession, STATIC_PREVIEW, useShop, type Catalog } from '../lib/shop'
 import { officina, profumo as originalPerfume, storia, territorio } from '../data/content'
 import { asset } from '../lib/asset'
@@ -95,6 +95,42 @@ function AvailabilityTiles<T extends PerfumeAvailability>({ values, value, onCha
         ))}
       </div>
       {children}
+    </fieldset>
+  )
+}
+// Admin copy for each watch line: tile title and which storefront filter shows it.
+const GENDER_COPY: Record<Gender, { label: string; hint: string }> = {
+  uomo: { label: 'Uomo', hint: 'Compare nel filtro Uomo.' },
+  donna: { label: 'Donna', hint: 'Compare nel filtro Donna.' },
+  unisex: { label: 'Unisex', hint: 'Compare in entrambi i filtri.' },
+}
+/** «Linea» tile radio group of the watch editor; shared by every content language. */
+function GenderTiles({ value, onChange }: { value: Gender; onChange: (value: Gender) => void }) {
+  const name = useId()
+  return (
+    <fieldset className="min-w-0">
+      <legend className="mb-3 text-small font-medium">{t("Linea")}</legend>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {GENDERS.map((option) => (
+          <label
+            key={option}
+            className="flex cursor-pointer items-start gap-3 border border-line p-4 has-[:checked]:border-ink has-[:checked]:bg-well has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
+          >
+            <input
+              type="radio"
+              name={name}
+              value={option}
+              className="mt-1 accent-ink focus-visible:outline-none"
+              checked={value === option}
+              onChange={() => onChange(option)}
+            />
+            <span className="min-w-0">
+              <span className="block text-small font-medium">{t(GENDER_COPY[option].label)}</span>
+              <span className="mt-1 block text-xs text-muted">{t(GENDER_COPY[option].hint)}</span>
+            </span>
+          </label>
+        ))}
+      </div>
     </fieldset>
   )
 }
@@ -411,6 +447,7 @@ function ProductEditor({
             />
           </label>
         </div>
+        <GenderTiles value={draft.gender ?? 'unisex'} onChange={(gender) => setDraft(d => ({ ...d, gender }))} />
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <AvailabilityTiles values={AVAILABILITIES} value={draft.availability ?? 'no-buy'} onChange={(availability: Availability) => setDraft(d => ({ ...d, availability }))} />
           <fieldset className="min-w-0 space-y-4">
@@ -1033,7 +1070,7 @@ export default function Admin() {
       </aside>}
       <header className="flex flex-wrap items-end justify-between gap-6 border-b border-line pb-8">
         <div>
-          <p className="eyebrow">ZITO 1950 · {STATIC_PREVIEW ? t('Anteprima UI') : t('Area riservata')}</p>
+          <p className="eyebrow">ZITO 1950® · {STATIC_PREVIEW ? t('Anteprima UI') : t('Area riservata')}</p>
           <h1 className="mt-3 text-display">{t("Amministrazione")}</h1>
         </div>
         <div className="flex gap-5">
@@ -1225,6 +1262,7 @@ export default function Admin() {
                       price: '',
                       priceCents: 100,
                       availability: 'no-buy',
+                      gender: 'unisex',
                       limitedEdition: false,
                       piecesRemaining: null,
                       isNew: false,

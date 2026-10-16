@@ -15,7 +15,7 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
   const { addPerfume, error } = useShop()
   const availability = profumo.availability ?? 'no-buy'
   const soon = availability === 'coming-soon'
-  const mailHref = `mailto:${contatti.pec}?subject=${encodeURIComponent(`${profumo.labels.mailSubject} – ${profumo.name}${profumo.code ? ` (${profumo.code})` : ''}`)}`
+  const mailHref = `mailto:${contatti.email}?subject=${encodeURIComponent(`${profumo.labels.mailSubject} – ${profumo.name}${profumo.code ? ` (${profumo.code})` : ''}`)}`
   const [image] = profumo.images
   const size = image && dims(image.src)
   const titleId = `profumo-${profumo.id}`

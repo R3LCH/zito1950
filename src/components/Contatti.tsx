@@ -71,7 +71,7 @@ export default function Contatti() {
             </a>
             <h3 className="mt-10 text-h3">{site.cta.visit}</h3>
             <ul className="mt-5 border-t border-line">
-              <ContactLink label={contatti.labels.pec} value={contatti.pec} href={`mailto:${contatti.pec}`} />
+              <ContactLink label={contatti.labels.email} value={contatti.email} href={`mailto:${contatti.email}`} />
             </ul>
           </div>
           <div className="aspect-[4/3] w-full overflow-hidden rounded-[1.25rem] border border-line bg-well">

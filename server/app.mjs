@@ -9,7 +9,7 @@ import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { z } from 'zod'
 import { models, site, storia, profumo, tesoroDiAlarico, officina, territorio } from '../src/data/content.ts'
-import { PERFUME_AVAILABILITIES } from '../src/data/types.ts'
+import { GENDERS, PERFUME_AVAILABILITIES } from '../src/data/types.ts'
 import { LOCALES, TRANSLATION_LOCALES, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../src/data/localization.ts'
 import { createTranslator } from './translate.mjs'
 
@@ -63,6 +63,7 @@ const modelSchema = z.object({
   codes: z.array(text.max(80)).max(20),
   priceCents: cents,
   availability: z.enum(['buy', 'no-buy', 'out-of-stock', 'hidden']),
+  gender: z.enum(GENDERS).default('unisex'),
   limitedEdition: z.boolean().optional(),
   piecesRemaining: z.number().int().min(0).max(9999).nullable().optional(),
   isNew: z.boolean().optional(),
@@ -155,7 +156,7 @@ export function createApp(options = {}) {
       ],
       perfumes: [profumo, tesoroDiAlarico].map(seedPerfume),
       featured: [],
-      catalogVersion: 7,
+      catalogVersion: 8,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
@@ -235,6 +236,15 @@ export function createApp(options = {}) {
       delete existing.imageOverrides[retiredOudImage]
     }
     existing.catalogVersion = 7
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.catalogVersion < 8) {
+    // Watches gain a line (Uomo/Donna/Unisex): seed watches take the old site's menu, owner-added ones are unisex.
+    const seedGender = new Map(models.map((m) => [m.id, m.gender]))
+    existing.models = existing.models.map((m) =>
+      GENDERS.includes(m.gender) ? m : { ...m, gender: seedGender.get(m.id) ?? 'unisex' },
+    )
+    existing.catalogVersion = 8
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   const catalog = () => {
@@ -729,7 +739,7 @@ export function createApp(options = {}) {
           payment_source: {
             paypal: {
               experience_context: {
-                brand_name: 'ZITO 1950',
+                brand_name: 'ZITO 1950®',
                 user_action: 'PAY_NOW',
                 shipping_preference: 'GET_FROM_FILE',
                 return_url: `${origin}/?checkout=return`,

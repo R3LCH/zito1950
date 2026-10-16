@@ -1,7 +1,7 @@
 import type { Contatti, Img, Model, Officina, Orologi, Perche, Profumo, ProfumiSection, Site, Storia, Territorio } from './types'
 
 export const site: Site = {
-  name: 'ZITO 1950',
+  name: 'ZITO 1950®',
   tagline: 'Orologiai a Scalea dal 1950',
   description:
     'Casa fondata nel 1950 dal Cav. Luigi Antonio Zito a Scalea, sulla Riviera dei Cedri.',
@@ -17,7 +17,7 @@ export const site: Site = {
   sections: [
     { href: '#storia', label: 'La nostra storia', hint: 'Una storia autentica di orologiai italiani.', icon: 'storia' },
     { href: '#edizioni-limitate', label: 'Collezione limitata', hint: 'Produzioni selezionate per durare nel tempo.', icon: 'limited' },
-    { href: '#perche-zito', label: 'Perché Zito?', hint: 'Stile, qualità e carattere senza compromessi.', icon: 'perche' },
+    { href: '#perche-zito', label: 'Perché ZITO 1950®?', hint: 'Stile, qualità e carattere senza compromessi.', icon: 'perche' },
   ],
   panel: { more: 'Mostra tutto', less: 'Mostra meno', fullCatalog: 'Catalogo completo' },
   cta: {
@@ -46,7 +46,7 @@ export const site: Site = {
     skipToContent: 'Vai al contenuto',
     mainNav: 'Navigazione principale',
     footerNav: 'Navigazione nel piè di pagina',
-    home: 'ZITO 1950, torna all’inizio',
+    home: 'ZITO 1950®, torna all’inizio',
   },
   footer: { copyright: '© Granalida s.r.l. – P. IVA 03012360784' },
 }
@@ -61,6 +61,7 @@ const img = (id: string, alt: string, count = 3): Img[] =>
 export const models: Model[] = [
   {
     id: 'tutus-ab-uno',
+    gender: 'unisex',
     codes: ['ZP18K16'],
     name: 'Tutus ab uno',
     price: '3.890 EUR',
@@ -76,12 +77,13 @@ export const models: Model[] = [
   },
   {
     id: 'takimo',
+    gender: 'unisex',
     codes: ['ZPTAK15'],
     name: 'Takimo 65°',
     price: '2.390 EUR',
     quote: { text: 'Destinato a chi della passione ne fa uno stile di vita', author: 'L.A.Z.' },
     description:
-      "In occasione del sessantacinquesimo anno, ZITO1950 ha creato in edizione limitata sessantacinque esemplari che riprendono un tachimetro tra i più belli degli anni '30.",
+      "In occasione del sessantacinquesimo anno, ZITO 1950® ha creato in edizione limitata sessantacinque esemplari che riprendono un tachimetro tra i più belli degli anni '30.",
     specs: [
       'Peseux Eta 7001 carica manuale.',
       'Misura 10 linee e mezzo (23,3 mm) per 2,5 di spessore.',
@@ -94,6 +96,7 @@ export const models: Model[] = [
   },
   {
     id: 'n2',
+    gender: 'uomo',
     codes: ['ZP0213'],
     name: 'N°2',
     price: '750 EUR',
@@ -114,6 +117,7 @@ export const models: Model[] = [
   },
   {
     id: 'n3',
+    gender: 'uomo',
     codes: ['ZP0313'],
     name: 'N°3',
     price: '750 EUR',
@@ -134,6 +138,7 @@ export const models: Model[] = [
   },
   ...(['n5', 'n6'] as const).map((id): Model => ({
     id,
+    gender: 'uomo',
     codes: [id === 'n5' ? 'ZP0513' : 'ZP0613'],
     name: id === 'n5' ? 'N°5' : 'N°6',
     price: '550 EUR',
@@ -156,6 +161,7 @@ export const models: Model[] = [
   })),
   {
     id: 'n7',
+    gender: 'uomo',
     codes: ['ZP0713'],
     name: 'N°7',
     price: '630 EUR',
@@ -201,6 +207,7 @@ export const models: Model[] = [
   },
   {
     id: 'n9',
+    gender: 'donna',
     codes: ['ZP0913'],
     name: 'N°9',
     price: '780 EUR',
@@ -222,6 +229,7 @@ export const models: Model[] = [
   },
   {
     id: 'n12-tourbillon',
+    gender: 'unisex',
     codes: ['ZPTO13'],
     name: 'N°12 Tourbillon',
     price: '3.300 EUR',
@@ -239,6 +247,7 @@ export const models: Model[] = [
   },
   {
     id: '900-donna',
+    gender: 'donna',
     codes: ['ZP9016L'],
     name: "'900 Donna",
     price: '420 EUR',
@@ -254,6 +263,7 @@ export const models: Model[] = [
   },
   {
     id: '900-uomo',
+    gender: 'uomo',
     codes: ['ZP9016'],
     name: "'900 Uomo",
     price: '600 EUR',
@@ -271,6 +281,7 @@ export const models: Model[] = [
   },
   {
     id: 'n20',
+    gender: 'uomo',
     codes: ['ZP2013S'],
     name: 'N°20',
     price: '900 EUR',
@@ -295,6 +306,7 @@ export const models: Model[] = [
   },
   {
     id: 'shockproof-1970',
+    gender: 'uomo',
     codes: ['ZPSP16', 'ZPSP16B', 'ZPSP16P'],
     name: 'Shockproof 1970',
     price: '325 EUR',
@@ -331,6 +343,7 @@ export const models: Model[] = [
   },
   {
     id: 'italy',
+    gender: 'unisex',
     codes: ['ZPIT15'],
     name: 'Italy',
     price: '1.450 EUR',
@@ -347,6 +360,7 @@ export const models: Model[] = [
   },
   {
     id: 'cafe-racer',
+    gender: 'unisex',
     codes: ['ZPCR14'],
     name: 'Cafè Racer',
     price: '550 EUR',
@@ -363,6 +377,7 @@ export const models: Model[] = [
   },
   {
     id: 'gentleman',
+    gender: 'uomo',
     codes: ['ZPGM16'],
     name: 'Gentleman',
     price: '285 EUR',
@@ -381,6 +396,7 @@ export const models: Model[] = [
   },
   {
     id: '40000um',
+    gender: 'uomo',
     codes: ['ZP4015'],
     name: '40.000 µm',
     price: '470 EUR',
@@ -400,6 +416,7 @@ export const models: Model[] = [
   },
   {
     id: 'casuale',
+    gender: 'uomo',
     codes: ['ZPCA13'],
     name: 'Casuale',
     price: '190 EUR',
@@ -409,6 +426,7 @@ export const models: Model[] = [
   },
   {
     id: 'high-flight',
+    gender: 'uomo',
     codes: ['ZPHF16', 'ZPHF16B'],
     name: 'High Flight',
     price: '220 EUR',
@@ -449,6 +467,7 @@ export const models: Model[] = [
   },
   {
     id: 'tasca',
+    gender: 'unisex',
     codes: ['ZTOR0013', 'ZTAR0013'],
     name: 'Tasca N°0',
     price: '380 EUR',
@@ -486,6 +505,7 @@ export const models: Model[] = [
   },
   {
     id: 'bauletto',
+    gender: 'unisex',
     codes: ['ZVBA13'],
     name: 'Bauletto',
     price: '420 EUR',
@@ -505,6 +525,7 @@ export const models: Model[] = [
   },
   {
     id: 'vintage',
+    gender: 'unisex',
     codes: ['ZPV14U', 'ZPV15L'],
     name: 'Vintage',
     price: '220 EUR',
@@ -558,7 +579,7 @@ export const storia: Storia = {
       title: 'Francesco Zito',
       paragraphs: [
         "Verso la fine degli anni Cinquanta è Francesco Zito, mio padre, competente orologiaio, che ha il compito di traghettare l'azienda familiare verso il nuovo millennio.",
-        'E ci riesce benissimo con geniali intuizioni, ancora oggi punti fermi in ZITO1950.',
+        'E ci riesce benissimo con geniali intuizioni, ancora oggi punti fermi in ZITO 1950®.',
         'Nel 1970 apre lo showroom creato da un famoso architetto senese e brevetta, fra le tante creazioni, anche un ciondolo in oro giallo di notevole successo. Una storia, per certi versi sorprendente, che dà inizio alla mia più grande passione: gli orologi!',
       ],
       image: {
@@ -577,7 +598,7 @@ export const storia: Storia = {
       ],
       image: {
         src: 'img/storia/francesco-zito-1955-laboratorio.jpg',
-        alt: 'Francesco Zito al banco da orologiaio, sullo sfondo l’insegna Zito 1950',
+        alt: 'Francesco Zito al banco da orologiaio, sullo sfondo l’insegna ZITO 1950®',
         caption: 'Francesco Zito, 1955',
       },
     },
@@ -595,7 +616,7 @@ export const storia: Storia = {
     },
     {
       eyebrow: 'Una nuova era',
-      title: 'Passione Zito 1950',
+      title: 'Passione ZITO 1950®',
       paragraphs: [
         'Da bambino, spesso seduto accanto a mio nonno nel suo laboratorio, passavo ore a osservarlo mentre ricostruiva parti di orologio al tornio, alimentando sempre più la mia già smisurata curiosità!',
         "Inizia dunque una nuova era, caratterizzata dall'idea di Luigi Antonio Zito nipote, di trasferire la passione ai propri clienti attraverso creazioni vicine alle loro esigenze come il non voler rinunciare a un accessorio a volte elegante, a volte informale, a volte unico: in un mercato globalizzato, dove molto sembra uniformarsi alle regole di mercato, non basta più seguire le mode, bisogna proporle. In altri termini, bisogna avere la capacità di innovare ed essere originali.",
@@ -653,29 +674,29 @@ export const officina: Officina = {
   eyebrow: 'L’officina',
   title: 'Il tempo, costruito con cura.',
   paragraphs: [
-    'Ogni orologio Zito1950 unisce tradizione orologiera, design italiano e selezione di materiali di alta qualità.',
+    'Ogni orologio ZITO 1950® unisce tradizione orologiera, design italiano e selezione di materiali di alta qualità.',
   ],
   more: 'Scopri il laboratorio',
   image: {
     src: 'img/storia/owner.jpg',
-    alt: 'Il titolare di ZITO 1950 al banco di lavoro mentre regola un orologio con il monocolo da orologiaio',
-    caption: 'Il laboratorio ZITO 1950',
+    alt: 'Il titolare di ZITO 1950® al banco di lavoro mentre regola un orologio con il monocolo da orologiaio',
+    caption: 'Il laboratorio ZITO 1950®',
   },
 }
 
 /** Client copy: «Perché scegliere ZITO1950». */
 export const perche: Perche = {
-  title: 'Perché scegliere ZITO1950',
+  title: 'Perché scegliere ZITO 1950®',
   lead: 'Perché il valore di un orologio va oltre il nome sul quadrante.',
   paragraphs: [
-    'Scegliere ZITO1950 significa scegliere un’identità indipendente, uno stile riconoscibile e una diversa idea di eleganza.',
+    'Scegliere ZITO 1950® significa scegliere un’identità indipendente, uno stile riconoscibile e una diversa idea di eleganza.',
     'Significa indossare un orologio che unisce personalità, ricerca estetica e una storia italiana che affonda le proprie radici nel 1950.',
     'Non cerchiamo di essere come tutti gli altri. Vogliamo offrire un’alternativa a chi ama gli orologi, apprezza il design e desidera distinguersi senza inseguire necessariamente i marchi più celebrati.',
     'Crediamo in un lusso fatto di carattere, cura dei dettagli e valore concreto. In orologi capaci di esprimere chi li indossa, senza bisogno di ostentazione.',
     'Perché non è il prezzo a definire il tuo stile. Non è la notorietà di un marchio a determinare il tuo gusto.',
     'È la scelta che fai a raccontare chi sei.',
   ],
-  closing: 'ZITO1950. Non seguire il tempo. Scegli come viverlo.',
+  closing: 'ZITO 1950®. Non seguire il tempo. Scegli come viverlo.',
 }
 
 /** Client copy: «Scopri il territorio»; photo supplied by the client. */
@@ -686,11 +707,11 @@ export const territorio: Territorio = {
     'Ci sono luoghi che non hanno bisogno di essere inventati. Basta scoprirli.',
     'Affacciata sul Mar Tirreno, lungo la Riviera dei Cedri, Scalea custodisce l’anima autentica della Calabria: il blu del mare, la pietra antica del centro storico, i vicoli che raccontano generazioni e una luce capace di trasformare ogni giornata in un ricordo.',
     'Qui la storia incontra la bellezza della natura. Il ritmo del mare si alterna a quello lento delle strade antiche, mentre il paesaggio conserva il fascino di una terra orgogliosa delle proprie radici.',
-    'È in questo contesto che ZITO1950 sceglie di raccontare la propria identità: un marchio italiano che guarda al futuro senza dimenticare il valore della propria storia.',
+    'È in questo contesto che ZITO 1950® sceglie di raccontare la propria identità: un marchio italiano che guarda al futuro senza dimenticare il valore della propria storia.',
     'Perché il territorio non è soltanto un luogo sulla carta. È cultura, carattere, memoria e ispirazione.',
     'Scoprire Scalea significa entrare in contatto con una Calabria da vivere, conoscere e portare con sé.',
   ],
-  closing: 'ZITO1950. Il tempo ha una storia. La Calabria, mille da raccontare.',
+  closing: 'ZITO 1950®. Il tempo ha una storia. La Calabria, mille da raccontare.',
   image: {
     src: 'img/storia/scalea-mare.jpg',
     alt: 'Acqua turchese tra gli scogli e una canoa rossa sulla costa di Scalea',
@@ -700,7 +721,7 @@ export const territorio: Territorio = {
 export const profumiSection: ProfumiSection = {
   eyebrow: 'Profumi',
   title: 'Le essenze',
-  intro: 'Eau de parfum firmate ZITO 1950.',
+  intro: 'Eau de parfum firmate ZITO 1950®.',
   soon: 'Prossimamente',
 }
 
@@ -766,7 +787,7 @@ export const contatti: Contatti = {
   company: 'GRANALIDA s.r.l. soc. unipers.',
   address: 'via Michele Bianchi n. 23',
   city: 'Scalea (CS)',
-  pec: 'granalida@pec.it',
+  email: 'customer@zito1950.it',
   piva: '03012360784',
   website: 'www.zito1950.it',
   instagram: 'https://www.instagram.com/zito1950/',
@@ -774,7 +795,7 @@ export const contatti: Contatti = {
   mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Via+Michele+Bianchi+23+Scalea+CS',
   labels: {
     address: 'Indirizzo',
-    pec: 'PEC',
+    email: 'Email',
     social: 'Social',
     piva: 'P. IVA',
     maps: 'Apri in Google Maps',

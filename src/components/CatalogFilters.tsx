@@ -5,6 +5,7 @@ import { t, useLocale } from '../lib/i18n'
 import {
   EMPTY_FILTERS,
   FEATURES,
+  FILTER_GENDERS,
   MATERIALS,
   MOVEMENTS,
   PRICE_BANDS,
@@ -17,8 +18,9 @@ import {
   type SortKey,
 } from '../lib/catalogFilters'
 
-type ListKey = 'availability' | 'movement' | 'features' | 'material' | 'price'
+type ListKey = 'gender' | 'availability' | 'movement' | 'features' | 'material' | 'price'
 type FlagKey = 'isNew' | 'limited'
+type Group = { key: ListKey; legend: string; options: readonly string[] }
 
 const SORT_LABELS: Record<SortKey, string> = {
   featured: 'In evidenza',
@@ -27,6 +29,8 @@ const SORT_LABELS: Record<SortKey, string> = {
   name: 'Nome (A–Z)',
 }
 const OPTION_LABELS: Record<string, string> = {
+  uomo: 'Uomo',
+  donna: 'Donna',
   buy: 'Acquistabile',
   'no-buy': 'Solo vetrina',
   'out-of-stock': 'Esaurito',
@@ -41,7 +45,9 @@ const OPTION_LABELS: Record<string, string> = {
   'gold-plated': 'Laminato oro',
 }
 const FLAG_LABELS: Record<FlagKey, string> = { isNew: 'Novità', limited: 'Edizioni limitate' }
-const GROUPS: { key: ListKey; legend: string; options: readonly string[] }[] = [
+/** Shown first in the sheet, above the sort. */
+const GENDER_GROUP: Group = { key: 'gender', legend: 'Linea', options: FILTER_GENDERS }
+const GROUPS: Group[] = [
   { key: 'availability', legend: 'Disponibilità', options: PUBLIC_AVAILABILITIES },
   { key: 'movement', legend: 'Movimento', options: MOVEMENTS },
   { key: 'features', legend: 'Funzioni', options: FEATURES },
@@ -63,14 +69,16 @@ interface Props {
   resultCount: number
 }
 
-/** "Filtri e ordinamento" button, active-filter chips and the side sheet holding every option. */
+/** Name search, "Filtri e ordinamento" button, active-filter chips and the side sheet holding every option. */
 export default function CatalogFilters({ models, facetsFor, filters, onChange, resultCount }: Props) {
   const { locale } = useLocale()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDialogElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const titleId = useId()
+  const searchId = useId()
   const active = activeCount(filters)
+  const resettable = active > 0 || filters.query.trim() !== ''
 
   useEffect(() => {
     const dialog = ref.current
@@ -100,9 +108,11 @@ export default function CatalogFilters({ models, facetsFor, filters, onChange, r
     const list = filters[key] as string[]
     onChange({ ...filters, [key]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value] } as FilterState)
   }
+  // Clears filters and the name search; the sort stays.
   const reset = () => onChange({ ...EMPTY_FILTERS, sort: filters.sort })
 
   const chips = [
+    ...filters.gender.map((value) => ({ id: `gender-${value}`, label: labelOf('gender', value), remove: () => toggle('gender', value) })),
     ...(['isNew', 'limited'] as const).filter((k) => filters[k]).map((k) => ({ id: k, label: t(FLAG_LABELS[k]), remove: () => onChange({ ...filters, [k]: false }) })),
     ...GROUPS.flatMap(({ key }) =>
       (filters[key] as string[]).map((value) => ({ id: `${key}-${value}`, label: labelOf(key, value), remove: () => toggle(key, value) })),
@@ -129,9 +139,70 @@ export default function CatalogFilters({ models, facetsFor, filters, onChange, r
   }
   const flags = (['isNew', 'limited'] as const).map(flagRow).filter(Boolean)
 
+  const groupFieldset = ({ key, legend, options }: Group) => {
+    const selected = filters[key] as string[]
+    const visible = options.filter((v) => selected.includes(v) || count({ [key]: [v] }, EMPTY_FILTERS) > 0)
+    if (visible.length === 0) return null
+    return (
+      <fieldset key={key}>
+        <legend className={legendClass}>{t(legend)}</legend>
+        {visible.map((value) => {
+          const checked = selected.includes(value)
+          const n = count({ [key]: [value] })
+          return (
+            <label key={value} className={rowClass}>
+              <input
+                type="checkbox"
+                className={inputClass}
+                checked={checked}
+                disabled={!checked && n === 0}
+                onChange={() => toggle(key, value)}
+              />
+              <span className="flex-1">{labelOf(key, value)}</span>
+              <span className="tabular-nums text-muted">{n}</span>
+            </label>
+          )
+        })}
+      </fieldset>
+    )
+  }
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="group/search relative w-full sm:w-72">
+          <label htmlFor={searchId} className="sr-only">
+            {t('Cerca un orologio per nome')}
+          </label>
+          <svg
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors duration-200 group-focus-within/search:text-ink"
+          >
+            <circle cx="7" cy="7" r="5" />
+            <path d="M11 11l3.5 3.5" />
+          </svg>
+          <input
+            id={searchId}
+            type="search"
+            value={filters.query}
+            onChange={(e) => onChange({ ...filters, query: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key !== 'Escape' || filters.query === '') return
+              e.preventDefault()
+              onChange({ ...filters, query: '' })
+            }}
+            placeholder={t('Cerca per nome')}
+            autoComplete="off"
+            enterKeyHint="search"
+            className="min-h-11 w-full rounded-full border border-line bg-transparent pl-11 pr-4 font-sans text-small text-ink placeholder:text-muted transition-colors duration-200 focus:border-ink focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          />
+        </div>
         <button
           ref={triggerRef}
           type="button"
@@ -162,7 +233,7 @@ export default function CatalogFilters({ models, facetsFor, filters, onChange, r
           {t('Modelli: {count}', { count: resultCount })}
           {filters.sort !== 'featured' && ` · ${t(SORT_LABELS[filters.sort])}`}
         </p>
-        {active > 0 && (
+        {resettable && (
           <button type="button" onClick={reset} className="min-h-11 text-small underline decoration-line underline-offset-4 hover:decoration-current">
             {t('Azzera filtri')}
           </button>
@@ -209,6 +280,7 @@ export default function CatalogFilters({ models, facetsFor, filters, onChange, r
               </button>
             </div>
             <div className="flex-1 space-y-8 overflow-y-auto overscroll-contain px-6 py-6">
+              {groupFieldset(GENDER_GROUP)}
               <fieldset>
                 <legend className={legendClass}>{t('Ordina per')}</legend>
                 {SORTS.map((sort) => (
@@ -230,39 +302,13 @@ export default function CatalogFilters({ models, facetsFor, filters, onChange, r
                   {flags}
                 </fieldset>
               )}
-              {GROUPS.map(({ key, legend, options }) => {
-                const selected = filters[key] as string[]
-                const visible = options.filter((v) => selected.includes(v) || count({ [key]: [v] }, EMPTY_FILTERS) > 0)
-                if (visible.length === 0) return null
-                return (
-                  <fieldset key={key}>
-                    <legend className={legendClass}>{t(legend)}</legend>
-                    {visible.map((value) => {
-                      const checked = selected.includes(value)
-                      const n = count({ [key]: [value] })
-                      return (
-                        <label key={value} className={rowClass}>
-                          <input
-                            type="checkbox"
-                            className={inputClass}
-                            checked={checked}
-                            disabled={!checked && n === 0}
-                            onChange={() => toggle(key, value)}
-                          />
-                          <span className="flex-1">{labelOf(key, value)}</span>
-                          <span className="tabular-nums text-muted">{n}</span>
-                        </label>
-                      )
-                    })}
-                  </fieldset>
-                )
-              })}
+              {GROUPS.map(groupFieldset)}
             </div>
             <div className="flex items-center gap-4 border-t border-line px-6 py-4">
               <button
                 type="button"
                 onClick={reset}
-                disabled={active === 0}
+                disabled={!resettable}
                 className="min-h-11 text-small underline decoration-line underline-offset-4 hover:decoration-current"
               >
                 {t('Azzera filtri')}

@@ -103,7 +103,7 @@ export default function Header() {
       >
         <div className="container-site flex h-[var(--header-h)] items-center justify-between gap-2 md:gap-6">
           <a href="#home" className="-ml-1 flex min-h-11 items-center px-1" onClick={() => setOpen(false)}>
-            <img src={asset('logo.svg')} alt={site.labels.home} width={341} height={100} className="h-6 w-auto sm:h-7 md:h-8" />
+            <img src={asset('logo.svg')} alt={site.labels.home} width={355} height={100} className="h-6 w-auto sm:h-7 md:h-8" />
           </a>
 
           <nav aria-label={site.labels.mainNav} className="hidden md:block">

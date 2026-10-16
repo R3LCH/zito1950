@@ -42,6 +42,10 @@ export interface Variant {
 export const AVAILABILITIES = ['buy', 'no-buy', 'out-of-stock', 'hidden'] as const
 export type Availability = (typeof AVAILABILITIES)[number]
 
+/** Who a watch is made for; set per product in the admin panel. Unisex models are listed under both Uomo and Donna. */
+export const GENDERS = ['uomo', 'donna', 'unisex'] as const
+export type Gender = (typeof GENDERS)[number]
+
 export interface Model {
   id: string
   codes: string[]
@@ -51,6 +55,8 @@ export interface Model {
   priceCents?: number
   /** buy: Acquista button · no-buy: showcase only · out-of-stock: Esaurito · hidden: not listed. Default no-buy. A limited edition with 0 pieces left reads as out-of-stock. */
   availability?: Availability
+  /** Uomo, Donna or Unisex; seeded from the old site's Uomo/Donna menu. Default unisex. */
+  gender?: Gender
   limitedEdition?: boolean
   /** Pieces still available for a limited edition; null/undefined = not shown, 0 = Esaurito and not purchasable. */
   piecesRemaining?: number | null
@@ -227,7 +233,7 @@ export interface Contatti {
   company: string
   address: string
   city: string
-  pec: string
+  email: string
   piva: string
   website: string
   instagram: string
@@ -235,7 +241,7 @@ export interface Contatti {
   mapsUrl: string
   labels: {
     address: string
-    pec: string
+    email: string
     social: string
     piva: string
     maps: string

@@ -10,7 +10,7 @@ import { BuyButton } from './Cart'
 /** mailto link for an information request about a model (codes of the chosen variant). */
 export function infoHref(model: Model, codes: string[] = model.codes): string {
   const subject = `${t(orologi.catalog.mailSubject)}${model.name} (${codes.join(', ')})`
-  return `mailto:${contatti.pec}?subject=${encodeURIComponent(subject)}`
+  return `mailto:${contatti.email}?subject=${encodeURIComponent(subject)}`
 }
 
 /** Price style shared by the card, the dialog and the recommendations; colour comes from `priceTone`. */

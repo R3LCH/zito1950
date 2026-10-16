@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import Picture from './Picture'
 import Recommended from './Recommended'
-import { PiecesNote, Tags, infoHref, priceClass, priceTone } from './ModelCard'
+import { PiecesNote, Tags, infoHref, priceClass, priceTone, statusTag } from './ModelCard'
 import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
-import { useContent } from '../lib/i18n'
+import { t, useContent } from '../lib/i18n'
+import { genderOf } from '../lib/catalogFilters'
 import type { Model } from '../data/types'
 import { dims } from '../lib/imageMeta'
 import { BuyButton } from './Cart'
@@ -155,7 +156,13 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
                   <span className="sr-only">{site.labels.price}: </span>
                   {view!.price}
                 </p>
-                <Tags model={model} className="mt-3 flex-wrap" />
+                <div className="mt-3 flex flex-wrap items-start gap-1">
+                  <Tags model={model} className="flex-wrap" />
+                  <span className={statusTag}>
+                    <span className="sr-only">{t('Linea:')} </span>
+                    {t({ uomo: 'Uomo', donna: 'Donna', unisex: 'Unisex' }[genderOf(model)])}
+                  </span>
+                </div>
                 <PiecesNote model={model} className="mt-3" />
                 {model.variants && model.variants.length > 1 && (
                   <div className="-ml-3 mt-3">

@@ -1,4 +1,4 @@
-import type { Availability, Model } from '../data/types'
+import type { Availability, Gender, Model } from '../data/types'
 
 /**
  * Catalog facets derived from the Italian source text (specs, description, variant labels).
@@ -85,8 +85,18 @@ export function availabilityOf(model: Model): Availability {
 /** Public availabilities, in the order the catalog groups them. */
 export const PUBLIC_AVAILABILITIES = ['buy', 'no-buy', 'out-of-stock'] as const satisfies readonly Availability[]
 
+/** A model's line; models without one are unisex. */
+export const genderOf = (model: Model): Gender => model.gender ?? 'unisex'
+
+/** Lines offered in the catalog filter; unisex models match either. */
+export const FILTER_GENDERS = ['uomo', 'donna'] as const
+export type FilterGender = (typeof FILTER_GENDERS)[number]
+
 export interface FilterState {
   sort: SortKey
+  /** Free-text name search; not a filter, so not counted by `activeCount`. */
+  query: string
+  gender: FilterGender[]
   isNew: boolean
   limited: boolean
   availability: Availability[]
@@ -98,6 +108,8 @@ export interface FilterState {
 
 export const EMPTY_FILTERS: FilterState = {
   sort: 'featured',
+  query: '',
+  gender: [],
   isNew: false,
   limited: false,
   availability: [],
@@ -107,23 +119,42 @@ export const EMPTY_FILTERS: FilterState = {
   price: [],
 }
 
-/** Number of active filters (sort excluded). */
+/** Number of active filters (sort and name search excluded). */
 export const activeCount = (f: FilterState) =>
-  Number(f.isNew) + Number(f.limited) + f.availability.length + f.movement.length + f.features.length + f.material.length + f.price.length
+  f.gender.length +
+  Number(f.isNew) +
+  Number(f.limited) +
+  f.availability.length +
+  f.movement.length +
+  f.features.length +
+  f.material.length +
+  f.price.length
+
+/** Search key: lowercase, no diacritics, letters and digits only (so `n2` finds "N°2" and `cafe` finds "Cafè Racer"). */
+export const searchKey = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, '')
 
 const anyOf = <T,>(selected: T[], values: T[]) => selected.length === 0 || selected.some((v) => values.includes(v))
 
-/** OR inside a group, AND across groups. */
+/** OR inside a group, AND across groups; the name search narrows on top. */
 export function matches(model: Model, facets: Facets, f: FilterState): boolean {
   const price = priceOf(model)
+  const gender = genderOf(model)
+  const query = searchKey(f.query)
   return (
+    (f.gender.length === 0 || gender === 'unisex' || (f.gender as Gender[]).includes(gender)) &&
     (!f.isNew || !!model.isNew) &&
     (!f.limited || !!model.limitedEdition) &&
     anyOf(f.availability, [availabilityOf(model)]) &&
     anyOf(f.movement, facets.movement) &&
     anyOf(f.features, facets.features) &&
     anyOf(f.material, facets.material) &&
-    (f.price.length === 0 || PRICE_BANDS.some((b) => f.price.includes(b.id) && price >= b.min && price < b.max))
+    (f.price.length === 0 || PRICE_BANDS.some((b) => f.price.includes(b.id) && price >= b.min && price < b.max)) &&
+    (query === '' || searchKey(model.name).includes(query))
   )
 }
 

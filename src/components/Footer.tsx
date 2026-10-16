@@ -48,7 +48,7 @@ export default function Footer() {
       <div className="container-site grid gap-10 py-[clamp(3rem,6vw,5rem)] md:grid-cols-12 md:gap-x-10">
         <div className="md:col-span-5">
           <a href="#home" className="inline-flex min-h-11 items-center">
-            <img src={asset('logo.svg')} alt={site.labels.home} width={341} height={100} className="h-12 w-auto" />
+            <img src={asset('logo.svg')} alt={site.labels.home} width={355} height={100} className="h-12 w-auto" />
           </a>
           <p className="mt-2 font-serif text-small uppercase tracking-[0.2em] text-ink-2">{site.hero.motto}</p>
         </div>
