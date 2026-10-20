@@ -309,12 +309,14 @@ export default function Cart() {
   const rows = cart.map((line) => {
     if (line.kind === 'perfume') {
       const perfume = catalog.perfumes.find((p) => p.id === line.modelId)
-      return { line, name: perfume?.name, variant: null, available: perfume?.availability === 'buy', price: perfume?.priceCents ?? 0 }
+      return { line, name: perfume?.name, variant: null, image: perfume?.images[0] ?? null, available: perfume?.availability === 'buy', price: perfume?.priceCents ?? 0 }
     }
     const model = catalog.models.find((m) => m.id === line.modelId)
     const variant = line.variantId ? model?.variants?.find((v) => v.id === line.variantId) : null
     const available = !!model && availabilityOf(model) === 'buy' && (!model.variants?.length || !!variant)
-    return { line, name: model?.name, variant, available, price: variant?.priceCents ?? model?.priceCents ?? 0 }
+    // The chosen variant's photo first, so the cart shows the finish the buyer picked.
+    const image = variant?.images[0] ?? model?.images[0] ?? null
+    return { line, name: model?.name, variant, image, available, price: variant?.priceCents ?? model?.priceCents ?? 0 }
   })
   const total = rows.reduce((sum, row) => sum + row.price * row.line.quantity, 0)
   const unavailable = rows.some((row) => !row.available)
@@ -454,22 +456,30 @@ export default function Cart() {
         {!paid && rows.length === 0 && <p className="py-10">{t("Il carrello è vuoto. Scopri la nostra collezione.")}</p>}
         {!paid && (
           <ul>
-            {rows.map(({ line, name, variant, available, price }, index) => {
+            {rows.map(({ line, name, variant, image, available, price }, index) => {
               const key = lineKey(line)
               const personalized = isPersonalized(line)
               const locked = busy || !!pendingToken
               return (
                 <li key={key} className="border-b border-line pt-6">
                   <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-                    <div>
-                      <h3 className="text-h3">
-                        {name ?? t('Prodotto rimosso')}
-                        {variant ? ` · ${variant.label}` : ''}
-                      </h3>
-                      <p className="text-small">{euro(price)}{' ' + t("/ pezzo")}</p>
-                      {!available && <p className="text-small">{t("Non più acquistabile. Rimuovi l’articolo per procedere.")}</p>}
+                    <div className="flex items-start gap-4">
+                      <div className="aspect-[4/5] w-16 shrink-0 overflow-hidden border border-line bg-well sm:w-20">
+                        {image && (
+                          <Picture src={image.src} alt={image.alt} sizes="80px" pictureClassName="block h-full w-full" className="h-full w-full object-cover" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-h3">
+                          {name ?? t('Prodotto rimosso')}
+                          {variant ? ` · ${variant.label}` : ''}
+                        </h3>
+                        <p className="text-small">{euro(price)}{' ' + t("/ pezzo")}</p>
+                        {!available && <p className="text-small">{t("Non più acquistabile. Rimuovi l’articolo per procedere.")}</p>}
+                      </div>
                     </div>
-                    <div className="flex flex-col items-start gap-2 sm:items-end">
+                    {/* On mobile the controls line up with the name, past the 64px photo and its 16px gap. */}
+                    <div className="flex flex-col items-start gap-2 pl-20 sm:items-end sm:pl-0">
                       <div className="flex items-center gap-4">
                         <label className="text-small">
                           {t("Quantità")}
