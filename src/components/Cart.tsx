@@ -196,7 +196,8 @@ function Personalization({
           )}
         </div>
       </div>
-      <div className="border-b border-line">
+      {/* No bottom border: the cart line's own hairline closes the section. */}
+      <div>
         <button
           type="button"
           className={summaryClass}
@@ -458,7 +459,7 @@ export default function Cart() {
               const personalized = isPersonalized(line)
               const locked = busy || !!pendingToken
               return (
-                <li key={key} className="border-b border-line py-6">
+                <li key={key} className="border-b border-line pt-6">
                   <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
                     <div>
                       <h3 className="text-h3">
