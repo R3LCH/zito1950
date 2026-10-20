@@ -465,7 +465,7 @@ export default function Cart() {
                 <li key={key} className="border-b border-line pt-6">
                   <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
                     <div className="flex items-start gap-4">
-                      <div className="aspect-[4/5] w-16 shrink-0 overflow-hidden border border-line bg-well sm:w-20">
+                      <div className="aspect-[4/5] w-16 shrink-0 overflow-hidden sm:w-20">
                         {image && (
                           <Picture src={image.src} alt={image.alt} sizes="80px" pictureClassName="block h-full w-full" className="h-full w-full object-cover" />
                         )}
