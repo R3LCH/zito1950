@@ -768,7 +768,9 @@
     "inviata": "отправлено",
     "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Гравировка может содержать не более 10 слов и 120 символов.",
     "(da completare)": "(нужно заполнить)",
-    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Персонализация: одна штука на строку, остальные остаются без персонализации."
+    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Персонализация: одна штука на строку, остальные остаются без персонализации.",
+    "Diminuisci quantità": "Уменьшить количество",
+    "Aumenta quantità": "Увеличить количество"
   },
   "en": {
     "1957": "1957",
@@ -1539,7 +1541,9 @@
     "inviata": "sent",
     "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "The engraving can have at most 10 words and 120 characters.",
     "(da completare)": "(to complete)",
-    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Personalized: one piece per line, the others stay without personalization."
+    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Personalized: one piece per line, the others stay without personalization.",
+    "Diminuisci quantità": "Decrease quantity",
+    "Aumenta quantità": "Increase quantity"
   },
   "uk": {
     "1957": "1957",
@@ -2310,7 +2314,9 @@
     "inviata": "надіслано",
     "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Гравіювання може містити не більше 10 слів і 120 символів.",
     "(da completare)": "(потрібно заповнити)",
-    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Персоналізація: одна штука на рядок, решта залишаються без персоналізації."
+    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Персоналізація: одна штука на рядок, решта залишаються без персоналізації.",
+    "Diminuisci quantità": "Зменшити кількість",
+    "Aumenta quantità": "Збільшити кількість"
   },
   "de": {
     "1957": "1957",
@@ -3081,7 +3087,9 @@
     "inviata": "gesendet",
     "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Die Gravur darf höchstens 10 Wörter und 120 Zeichen enthalten.",
     "(da completare)": "(zu vervollständigen)",
-    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Personalisiert: ein Stück pro Zeile, die übrigen bleiben ohne Personalisierung."
+    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Personalisiert: ein Stück pro Zeile, die übrigen bleiben ohne Personalisierung.",
+    "Diminuisci quantità": "Menge verringern",
+    "Aumenta quantità": "Menge erhöhen"
   },
   "pl": {
     "1957": "1957",
@@ -3852,6 +3860,8 @@
     "inviata": "wysłano",
     "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Grawer może mieć maksymalnie 10 słów i 120 znaków.",
     "(da completare)": "(do uzupełnienia)",
-    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Personalizacja: jedna sztuka na pozycję, pozostałe bez personalizacji."
+    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Personalizacja: jedna sztuka na pozycję, pozostałe bez personalizacji.",
+    "Diminuisci quantità": "Zmniejsz ilość",
+    "Aumenta quantità": "Zwiększ ilość"
   }
 }

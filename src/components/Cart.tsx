@@ -425,6 +425,7 @@ export default function Cart() {
       }),
     )
   const iconButton = 'inline-flex h-11 w-11 shrink-0 items-center justify-center text-ink-2 transition-colors duration-200 hover:text-ink'
+  const stepButton = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[3px] border border-line text-ink transition-colors duration-200 hover:border-ink'
   return (
     <dialog
         ref={ref}
@@ -481,20 +482,38 @@ export default function Cart() {
                     {/* On mobile the controls line up with the name, past the 64px photo and its 16px gap. */}
                     <div className="flex flex-col items-start gap-2 pl-20 sm:items-end sm:pl-0">
                       <div className="flex items-center gap-4">
-                        <label className="text-small">
-                          {t("Quantità")}
-                          <select
-                            className="shop-input ml-2"
-                            disabled={locked}
-                            value={line.quantity}
-                            aria-describedby={personalized ? `${key}-single` : undefined}
-                            onChange={(e) => update(line, { quantity: Number(e.target.value) })}
+                        {/* Stepper as in the client's reference: − and + in light outlined squares, the count framed in ink between them. */}
+                        <div role="group" aria-label={t('Quantità')} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className={stepButton}
+                            disabled={locked || line.quantity <= 1}
+                            aria-label={t('Diminuisci quantità')}
+                            onClick={() => update(line, { quantity: line.quantity - 1 })}
                           >
-                            {Array.from({ length: 10 }, (_, i) => (
-                              <option key={i + 1}>{i + 1}</option>
-                            ))}
-                          </select>
-                        </label>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                              <path d="M5 12h14" />
+                            </svg>
+                          </button>
+                          <output
+                            aria-live="polite"
+                            aria-describedby={personalized ? `${key}-single` : undefined}
+                            className="inline-flex h-11 w-11 items-center justify-center border border-ink text-base tabular-nums"
+                          >
+                            {line.quantity}
+                          </output>
+                          <button
+                            type="button"
+                            className={stepButton}
+                            disabled={locked || line.quantity >= 10}
+                            aria-label={t('Aumenta quantità')}
+                            onClick={() => update(line, { quantity: line.quantity + 1 })}
+                          >
+                            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                              <path d="M5 12h14M12 5v14" />
+                            </svg>
+                          </button>
+                        </div>
                         <button
                           type="button"
                           className={iconButton}
