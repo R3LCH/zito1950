@@ -15,6 +15,8 @@ export default function Header() {
   const [active, setActive] = useState<string | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLElement>(null)
+  const [panelTop, setPanelTop] = useState(0)
 
   // Hairline after the page leaves the top.
   useEffect(() => {
@@ -97,6 +99,7 @@ export default function Header() {
       </a>
 
       <header
+        ref={headerRef}
         className={`sticky top-0 z-50 bg-bg transition-[border-color] duration-300 ease-out-quint border-b ${
           scrolled || open ? 'border-line' : 'border-transparent'
         }`}
@@ -156,12 +159,16 @@ export default function Header() {
           <button
             ref={buttonRef}
             type="button"
-            className="-mr-3 inline-flex min-h-11 min-w-11 items-center justify-center gap-3 px-3 text-small font-medium uppercase tracking-[0.12em] md:hidden"
+            className="-mr-3 inline-flex min-h-11 min-w-11 items-center justify-center px-3 md:hidden"
             aria-expanded={open}
             aria-controls={MENU_ID}
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => {
+              // The preview banner can push the header down; start the panel at its real bottom edge.
+              setPanelTop(headerRef.current?.getBoundingClientRect().bottom ?? 0)
+              setOpen((v) => !v)
+            }}
           >
-            <span>{open ? site.labels.close : site.labels.menu}</span>
+            <span className="sr-only">{open ? site.labels.close : site.labels.menu}</span>
             <span aria-hidden="true" className="relative block h-3 w-5">
               <span
                 className={`absolute left-0 top-0.5 h-px w-5 bg-ink transition-transform duration-300 ease-out-quint ${
@@ -182,7 +189,8 @@ export default function Header() {
           ref={panelRef}
           id={MENU_ID}
           hidden={!open}
-          className="fixed inset-x-0 bottom-0 top-[var(--header-h)] overflow-y-auto bg-bg md:hidden"
+          style={{ top: panelTop }}
+          className="fixed inset-x-0 bottom-0 overflow-y-auto bg-bg md:hidden"
         >
           <nav aria-label={site.labels.mainNav} className="container-site flex min-h-full flex-col py-10">
             <ul className="flex flex-col">

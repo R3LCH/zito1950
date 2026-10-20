@@ -780,7 +780,9 @@
     "Retro": "Оборотная сторона",
     "Mostra il retro del certificato": "Показать оборот сертификата",
     "Mostra il fronte del certificato": "Показать лицевую сторону сертификата",
-    "Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».": "Впишите имя и фамилию прямо на сертификате, рядом с «Titolare»."
+    "Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».": "Впишите имя и фамилию прямо на сертификате, рядом с «Titolare».",
+    "Aggiunto al carrello": "Добавлено в корзину",
+    "Vai al carrello ({count})": "Перейти в корзину ({count})"
   },
   "en": {
     "1957": "1957",
@@ -1563,7 +1565,9 @@
     "Retro": "Back",
     "Mostra il retro del certificato": "Show the back of the certificate",
     "Mostra il fronte del certificato": "Show the front of the certificate",
-    "Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».": "Write the first and last name directly on the certificate, next to “Titolare”."
+    "Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».": "Write the first and last name directly on the certificate, next to “Titolare”.",
+    "Aggiunto al carrello": "Added to your cart",
+    "Vai al carrello ({count})": "View cart ({count})"
   },
   "uk": {
     "1957": "1957",
@@ -2346,7 +2350,9 @@
     "Retro": "Зворотний бік",
     "Mostra il retro del certificato": "Показати зворот сертифіката",
     "Mostra il fronte del certificato": "Показати лицьовий бік сертифіката",
-    "Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».": "Впишіть ім’я та прізвище прямо на сертифікаті, поруч із «Titolare»."
+    "Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».": "Впишіть ім’я та прізвище прямо на сертифікаті, поруч із «Titolare».",
+    "Aggiunto al carrello": "Додано до кошика",
+    "Vai al carrello ({count})": "Перейти до кошика ({count})"
   },
   "de": {
     "1957": "1957",
@@ -3129,7 +3135,9 @@
     "Retro": "Rückseite",
     "Mostra il retro del certificato": "Rückseite des Zertifikats zeigen",
     "Mostra il fronte del certificato": "Vorderseite des Zertifikats zeigen",
-    "Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».": "Tragen Sie Vor- und Nachnamen direkt auf dem Zertifikat neben „Titolare“ ein."
+    "Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».": "Tragen Sie Vor- und Nachnamen direkt auf dem Zertifikat neben „Titolare“ ein.",
+    "Aggiunto al carrello": "Zum Warenkorb hinzugefügt",
+    "Vai al carrello ({count})": "Zum Warenkorb ({count})"
   },
   "pl": {
     "1957": "1957",
@@ -3912,6 +3920,8 @@
     "Retro": "Tył",
     "Mostra il retro del certificato": "Pokaż tył certyfikatu",
     "Mostra il fronte del certificato": "Pokaż przód certyfikatu",
-    "Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».": "Wpisz imię i nazwisko bezpośrednio na certyfikacie, obok „Titolare”."
+    "Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».": "Wpisz imię i nazwisko bezpośrednio na certyfikacie, obok „Titolare”.",
+    "Aggiunto al carrello": "Dodano do koszyka",
+    "Vai al carrello ({count})": "Przejdź do koszyka ({count})"
   }
 }

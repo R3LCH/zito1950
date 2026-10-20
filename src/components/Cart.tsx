@@ -329,8 +329,70 @@ function Personalization({
     </div>
   )
 }
+/** Phones: a short confirmation under the header after "Acquista", so the buyer can keep browsing. */
+function AddedPopup() {
+  const { localizedCatalog: catalog, cart, added, setAdded, setCartOpen } = useShop()
+  const [top, setTop] = useState(0)
+  useEffect(() => {
+    if (!added) return
+    // Below the sticky header, wherever the preview banner has pushed it.
+    setTop(Math.max(0, document.querySelector('header')?.getBoundingClientRect().bottom ?? 0))
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setAdded(null)
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [added])
+  if (!added) return null
+  const perfume = added.kind === 'perfume' ? catalog.perfumes.find((p) => p.id === added.modelId) : null
+  const model = perfume ? null : catalog.models.find((m) => m.id === added.modelId)
+  const variant = added.variantId ? model?.variants?.find((v) => v.id === added.variantId) : null
+  const image = perfume?.images[0] ?? variant?.images[0] ?? model?.images[0] ?? null
+  const count = cart.reduce((sum, line) => sum + line.quantity, 0)
+  return (
+    <section
+      aria-label={t('Aggiunto al carrello')}
+      style={{ top }}
+      className="fixed inset-x-0 z-40 border-b border-line bg-bg px-[var(--gutter)] pt-5 pb-6 shadow-[0_12px_32px_rgb(20_20_20/10%)] lg:hidden"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <p role="status" className="flex items-center gap-3 text-small">
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+          </svg>
+          {t('Aggiunto al carrello')}
+        </p>
+        <button type="button" className="-mr-3 inline-flex h-11 w-11 items-center justify-center text-ink-2 hover:text-ink" aria-label={t('Chiudi')} onClick={() => setAdded(null)}>
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div className="mt-3 flex items-start gap-4">
+        <div className="aspect-[4/5] w-20 shrink-0 overflow-hidden">
+          {image && <Picture src={image.src} alt={image.alt} sizes="80px" pictureClassName="block h-full w-full" className="h-full w-full object-cover" />}
+        </div>
+        <div className="min-w-0">
+          <p className="font-serif text-xl leading-snug">{perfume?.name ?? model?.name}</p>
+          {variant && <p className="mt-1 text-small text-muted">{variant.label}</p>}
+        </div>
+      </div>
+      <button
+        type="button"
+        className="mt-6 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-ink-2 px-6 text-base font-semibold text-bg transition-colors duration-200 hover:bg-ink"
+        onClick={() => {
+          setAdded(null)
+          setCartOpen(true)
+        }}
+      >
+        {t('Vai al carrello ({count})', { count })}
+      </button>
+      <button type="button" className="mx-auto mt-2 flex min-h-11 items-center px-2 text-small underline underline-offset-4" onClick={() => setAdded(null)}>
+        {t('Continua gli acquisti')}
+      </button>
+    </section>
+  )
+}
 export default function Cart() {
-  const { localizedCatalog: catalog, cart, setCart, cartOpen, setCartOpen, error: shopError, reload } = useShop()
+  const { localizedCatalog: catalog, cart, setCart, cartOpen, setCartOpen, setAdded, error: shopError, reload } = useShop()
   const ref = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLElement | null>(null)
   const [busy, setBusy] = useState(false)
@@ -362,6 +424,7 @@ export default function Cart() {
   useEffect(() => {
     if (!cartOpen) return
     setPaid(false)
+    setAdded(null)
     trigger.current = document.activeElement as HTMLElement
     ref.current?.showModal()
     // Start on the title, not the close icon, so the focus ring doesn't frame the X on open.
@@ -464,8 +527,13 @@ export default function Cart() {
       }),
     )
   const iconButton = 'inline-flex h-11 w-11 shrink-0 items-center justify-center text-ink-2 transition-colors duration-200 hover:text-ink'
+  const continueClass = 'inline-flex min-h-14 w-full items-center justify-center rounded-full border border-line px-6 text-base font-semibold text-ink transition-colors duration-200 hover:border-ink'
+  // The PayPal block is on screen: phones put "continue shopping" inside it, under the pay button.
+  const checkoutShown = !!cart.length && !paid && !pendingToken
   const stepButton = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[3px] border border-line text-ink transition-colors duration-200 hover:border-ink'
   return (
+    <>
+    <AddedPopup />
     <dialog
         ref={ref}
         aria-labelledby="cart-title"
@@ -475,15 +543,21 @@ export default function Cart() {
         }}
         onClose={() => setCartOpen(false)}
       >
-        {/* As in the client's reference: logo centred on top. "Continua gli acquisti" and Esc close the cart. */}
-        <div className="flex items-center justify-center px-[var(--gutter)] pt-8 pb-6 sm:pt-10">
+        {/* As in the client's reference: logo centred on top. Phones also get the close icon at the edge. */}
+        <div className="relative flex items-center justify-center px-[var(--gutter)] pt-8 pb-6 sm:pt-10">
           <img src={asset('logo.svg')} alt="ZITO 1950®" width={355} height={100} className="h-8 w-auto sm:h-10" />
+          <button type="button" className={`${iconButton} absolute right-[calc(var(--gutter)-0.75rem)] top-1/2 -translate-y-1/2 lg:hidden`} disabled={busy} aria-label={t('Chiudi')} onClick={() => setCartOpen(false)}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
         </div>
-        <h2 id="cart-title" tabIndex={-1} className="mt-4 text-center text-body font-semibold outline-none sm:mt-8">
+        {/* Phones show only the logo; the title stays for screen readers and as the focus target. */}
+        <h2 id="cart-title" tabIndex={-1} className="mt-4 text-center text-body font-semibold outline-none max-lg:sr-only sm:mt-8">
           {/* The brand name is set in the logo's typeface. */}
           <span className="font-brand">{BRAND}</span> <span className="font-normal text-muted">·</span> {t('Carrello')}
         </h2>
-        <div className="mx-auto grid max-w-[1180px] gap-10 px-[var(--gutter)] pt-8 pb-16 sm:pt-12 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-16">
+        <div className="mx-auto grid max-w-[1180px] gap-10 px-[var(--gutter)] pt-2 pb-16 sm:pt-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-16 lg:pt-12">
         <div className="min-w-0">
         {!paid && rows.length === 0 && <p className="border-t border-line py-10">{t("Il carrello è vuoto. Scopri la nostra collezione.")}</p>}
         {!paid && !!rows.length && (
@@ -653,6 +727,10 @@ export default function Cart() {
               >
                 {busy ? t('Connessione a PayPal…') : t('Paga con PayPal')}
               </button>
+              {/* Phones: "continue shopping" sits right under PayPal, without the separator. */}
+              <button type="button" className={`${continueClass} mt-3 lg:hidden`} disabled={busy} onClick={() => setCartOpen(false)}>
+                {t('Continua gli acquisti')}
+              </button>
               {invalid && (
                 <p id="cart-invalid" className="mt-3 text-small">
                   {t('Completa o rimuovi la personalizzazione indicata per procedere.')}
@@ -669,11 +747,11 @@ export default function Cart() {
         {payments && !payments.enabled && !!cart.length && (
           <p className="mt-4 text-small">{t("Pagamenti online non ancora attivi. Contattaci per acquistare.")}</p>
         )}
-        {/* The reference separates checkout from "continue shopping" with a hairline. */}
-        {!!cart.length && !paid && <hr className="mt-8 border-line" />}
+        {/* On desktop a hairline separates checkout from "continue shopping", as in the reference. */}
+        {checkoutShown && <hr className="mt-8 hidden border-line lg:block" />}
         <button
           type="button"
-          className="mt-8 inline-flex min-h-14 w-full items-center justify-center rounded-full border border-line px-6 text-base font-semibold text-ink transition-colors duration-200 hover:border-ink"
+          className={`${continueClass} mt-8 ${checkoutShown ? 'max-lg:hidden' : ''}`}
           disabled={busy}
           onClick={() => setCartOpen(false)}
         >
@@ -682,5 +760,6 @@ export default function Cart() {
         </aside>
         </div>
       </dialog>
+    </>
   )
 }

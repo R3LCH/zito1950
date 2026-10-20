@@ -104,6 +104,9 @@ interface ShopState {
   addPerfume: (perfume: Profumo) => void
   cartOpen: boolean
   setCartOpen: (open: boolean) => void
+  /** The product just added on a phone, shown in the "Aggiunto al carrello" popup; null when it is closed. */
+  added: Omit<CartLine, 'id'> | null
+  setAdded: (line: Omit<CartLine, 'id'> | null) => void
   error: string
   reload: () => Promise<void>
 }
@@ -147,6 +150,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [catalog, setCatalog] = useState(initial)
   const [cart, setCart] = useState<CartLine[]>(storedCart)
   const [cartOpen, setCartOpen] = useState(new URLSearchParams(location.search).has('checkout'))
+  const [added, setAdded] = useState<Omit<CartLine, 'id'> | null>(null)
   const [error, setError] = useState('')
   const localizedCatalog = useMemo<Catalog>(() => ({
     ...catalog,
@@ -197,7 +201,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         ? current.map((item) => (item === old ? { ...item, quantity: Math.min(10, item.quantity + 1) } : item))
         : [...current, { ...line, id: crypto.randomUUID(), certificate: null, engraving: null, engravingAccepted: false }]
     })
-    setCartOpen(true)
+    // Below lg the cart is a single column: confirm in a small popup and let the buyer keep browsing.
+    if (window.matchMedia('(max-width: 1023.98px)').matches) setAdded(line)
+    else setCartOpen(true)
   }
   const add = (model: Model, variant: number) => {
     if (availabilityOf(model) !== 'buy' || error) return
@@ -208,7 +214,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     addLine({ kind: 'perfume', modelId: perfume.id, variantId: null, quantity: 1 })
   }
   return (
-    <Context.Provider value={{ catalog, localizedCatalog, setCatalog, cart, setCart, add, addPerfume, cartOpen, setCartOpen, error, reload }}>
+    <Context.Provider value={{ catalog, localizedCatalog, setCatalog, cart, setCart, add, addPerfume, cartOpen, setCartOpen, added, setAdded, error, reload }}>
       {children}
     </Context.Provider>
   )
