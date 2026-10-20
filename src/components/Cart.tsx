@@ -475,14 +475,9 @@ export default function Cart() {
         }}
         onClose={() => setCartOpen(false)}
       >
-        {/* As in the client's reference: logo centred on top, the close icon at the edge. */}
-        <div className="relative flex items-center justify-center px-[var(--gutter)] pt-8 pb-6 sm:pt-10">
+        {/* As in the client's reference: logo centred on top. "Continua gli acquisti" and Esc close the cart. */}
+        <div className="flex items-center justify-center px-[var(--gutter)] pt-8 pb-6 sm:pt-10">
           <img src={asset('logo.svg')} alt="ZITO 1950®" width={355} height={100} className="h-8 w-auto sm:h-10" />
-          <button type="button" className={`${iconButton} absolute right-[calc(var(--gutter)-0.75rem)] top-1/2 -translate-y-1/2`} disabled={busy} aria-label={t('Chiudi')} onClick={() => setCartOpen(false)}>
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
         </div>
         <h2 id="cart-title" tabIndex={-1} className="mt-4 text-center text-body font-semibold outline-none sm:mt-8">
           {/* The brand name is set in the logo's typeface. */}
