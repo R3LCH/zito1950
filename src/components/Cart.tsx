@@ -4,10 +4,11 @@ import { t } from '../lib/i18n'
 import { ENGRAVING_MAX_CHARS, ENGRAVING_MAX_WORDS, engravingWords, type CertificateHolder } from '../data/types'
 import { availabilityOf } from '../lib/catalogFilters'
 import Picture from './Picture'
+import { asset } from '../lib/asset'
 
 const CERTIFICATE_IMAGES = [
-  { src: 'img/certificato/fronte.jpg', alt: 'Certificato di proprietà ZITO 1950®, fronte' },
-  { src: 'img/certificato/retro.jpg', alt: 'Certificato di proprietà ZITO 1950®, retro' },
+  { src: 'img/certificato/carta-fronte.jpg', alt: 'Certificato di proprietà ZITO 1950®, fronte' },
+  { src: 'img/certificato/carta-retro.jpg', alt: 'Certificato di proprietà ZITO 1950®, retro' },
 ]
 const BRAND = 'ZITO 1950®'
 // Mirrors the server's email check closely enough to keep the button honest; the server stays authoritative.
@@ -112,6 +113,50 @@ function Personalization({
   const perfume = line.kind === 'perfume'
   const id = `cart-line-${index}`
   const summaryClass = 'flex min-h-11 w-full items-center justify-between gap-4 text-left text-small font-medium'
+  const [back, setBack] = useState(false)
+  const holderFields = [
+    { name: 'firstName', label: 'Nome', autoComplete: 'given-name', type: 'text', maxLength: 80 },
+    { name: 'lastName', label: 'Cognome', autoComplete: 'family-name', type: 'text', maxLength: 80 },
+    { name: 'email', label: 'Email', autoComplete: 'email', type: 'email', maxLength: 254 },
+  ] as const
+  const field = ({ name, label, autoComplete, type, maxLength }: (typeof holderFields)[number], className: string) => {
+    const error = touched[name] ? errors[name] : null
+    const onCard = name !== 'email'
+    return (
+      <input
+        key={name}
+        className={className}
+        type={type}
+        autoComplete={autoComplete}
+        required={!!line.certificate}
+        maxLength={maxLength}
+        // On the card the label is the placeholder; the email keeps its visible label.
+        placeholder={onCard ? t(label) : undefined}
+        aria-label={onCard ? `${t('Titolare')}: ${t(label)}` : undefined}
+        value={holder[name]}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-${name}-error` : undefined}
+        onBlur={() => onTouch([name])}
+        onChange={(e) => {
+          const next = { ...holder, [name]: e.target.value }
+          // Emptying every field withdraws the certificate, so the section is optional again.
+          onChange({ certificate: next.firstName || next.lastName || next.email ? next : null })
+        }}
+      />
+    )
+  }
+  const flipButton = (side: 'prev' | 'next') => (
+    <button
+      type="button"
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors duration-200 hover:bg-well hover:text-ink"
+      aria-label={back ? t('Mostra il fronte del certificato') : t('Mostra il retro del certificato')}
+      onClick={() => setBack(!back)}
+    >
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d={side === 'prev' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
+      </svg>
+    </button>
+  )
   return (
     <div className="mt-4 border-t border-line">
       <div className="border-b border-line">
@@ -128,58 +173,51 @@ function Personalization({
           <span aria-hidden="true">{certificateShown ? '−' : '+'}</span>
         </button>
         <div id={`${id}-certificate`} hidden={!certificateShown} className="pb-5">
-          <div className="mt-1 flex items-start gap-4">
-            <ul className="flex shrink-0 gap-2" aria-label={t('Certificato della proprietà e garanzia')}>
-              {CERTIFICATE_IMAGES.map((image) => (
-                <li key={image.src} className="w-16 overflow-hidden rounded-md border border-line sm:w-20">
-                  <Picture src={image.src} alt={t(image.alt)} sizes="80px" className="h-auto w-full" />
-                </li>
-              ))}
-            </ul>
-            <p id={`${id}-certificate-help`} className="text-small text-muted">
-              {perfume
-                ? t('Il certificato è intestato a questo nome e viene consegnato insieme al profumo.')
-                : t('Il certificato è intestato a questo nome e viene consegnato insieme all’orologio.')}
-            </p>
-          </div>
-          <fieldset disabled={disabled} className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2" aria-describedby={`${id}-certificate-help`}>
+          <p id={`${id}-certificate-help`} className="mt-1 text-small text-muted">
+            {perfume
+              ? t('Il certificato è intestato a questo nome e viene consegnato insieme al profumo.')
+              : t('Il certificato è intestato a questo nome e viene consegnato insieme all’orologio.')}{' '}
+            {t('Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».')}
+          </p>
+          <fieldset disabled={disabled} className="mt-5" aria-describedby={`${id}-certificate-help`}>
             <legend className="sr-only">{t('Intestatario del certificato')}</legend>
-            {(
-              [
-                { field: 'firstName', label: 'Nome', autoComplete: 'given-name', type: 'text', maxLength: 80, wide: false },
-                { field: 'lastName', label: 'Cognome', autoComplete: 'family-name', type: 'text', maxLength: 80, wide: false },
-                { field: 'email', label: 'Email', autoComplete: 'email', type: 'email', maxLength: 254, wide: true },
-              ] as const
-            ).map(({ field, label, autoComplete, type, maxLength, wide }) => {
-              const error = touched[field] ? errors[field] : null
-              const errorId = `${id}-${field}-error`
-              return (
-                <label key={field} className={`shop-label${wide ? ' sm:col-span-2' : ''}`}>
-                  {t(label)}
-                  <input
-                    className="shop-input"
-                    type={type}
-                    autoComplete={autoComplete}
-                    required={!!line.certificate}
-                    maxLength={maxLength}
-                    value={holder[field]}
-                    aria-invalid={error ? true : undefined}
-                    aria-describedby={error ? errorId : undefined}
-                    onBlur={() => onTouch([field])}
-                    onChange={(e) => {
-                      const next = { ...holder, [field]: e.target.value }
-                      // Emptying every field withdraws the certificate, so the section is optional again.
-                      onChange({ certificate: next.firstName || next.lastName || next.email ? next : null })
-                    }}
-                  />
-                  {error && (
-                    <span id={errorId} className="text-small text-ink">
-                      {t(error)}
-                    </span>
-                  )}
-                </label>
-              )
-            })}
+            <div className="flex items-center gap-1 sm:gap-3">
+              {flipButton('prev')}
+              <div className="certificate-scene min-w-0 flex-1">
+                <div className={`certificate-card${back ? ' is-flipped' : ''}`}>
+                  <div className="certificate-face" inert={back} aria-hidden={back || undefined}>
+                    <Picture src={CERTIFICATE_IMAGES[0].src} alt={t(CERTIFICATE_IMAGES[0].alt)} sizes="(min-width: 640px) 560px, 80vw" pictureClassName="block" className="block h-auto w-full" />
+                    {/* Sits on the card's own Titolare panel, measured on the cropped photo. */}
+                    <div className="certificate-holder">
+                      {holderFields.slice(0, 2).map((f) => field(f, 'certificate-field'))}
+                    </div>
+                  </div>
+                  <div className="certificate-face certificate-back" inert={!back} aria-hidden={!back || undefined}>
+                    <Picture src={CERTIFICATE_IMAGES[1].src} alt={t(CERTIFICATE_IMAGES[1].alt)} sizes="(min-width: 640px) 560px, 80vw" pictureClassName="block" className="block h-auto w-full" />
+                  </div>
+                </div>
+              </div>
+              {flipButton('next')}
+            </div>
+            <p className="mt-2 text-center text-eyebrow uppercase tracking-[0.18em] text-muted" aria-live="polite">
+              {back ? t('Retro') : t('Fronte')}
+            </p>
+            {(['firstName', 'lastName'] as const).map((f) =>
+              touched[f] && errors[f] ? (
+                <p key={f} id={`${id}-${f}-error`} className="mt-2 text-small text-ink">
+                  {t(errors[f]!)}
+                </p>
+              ) : null,
+            )}
+            <label className="shop-label mt-5">
+              {t('Email')}
+              {field(holderFields[2], 'shop-input')}
+              {touched.email && errors.email && (
+                <span id={`${id}-email-error`} className="text-small text-ink">
+                  {t(errors.email)}
+                </span>
+              )}
+            </label>
           </fieldset>
           {line.certificate && (
             <button
@@ -189,6 +227,7 @@ function Personalization({
               onClick={() => {
                 onChange({ certificate: null })
                 setCertificateOpen(false)
+                setBack(false)
               }}
             >
               {t('Rimuovi certificato')}
@@ -436,33 +475,30 @@ export default function Cart() {
         }}
         onClose={() => setCartOpen(false)}
       >
-        <div className="flex items-center justify-between gap-6 border-b border-line pb-5">
-          <div>
-            <p className="eyebrow">
-              {/* The brand name is set in the logo's typeface; the rest of the eyebrow stays in the UI face. */}
-              {t('ZITO 1950® · Boutique')
-                .split(BRAND)
-                .map((part, i) => (i ? [<span key={i} className="font-brand">{BRAND}</span>, part] : part))}
-            </p>
-            <h2 id="cart-title" tabIndex={-1} className="mt-2 text-h2 outline-none">
-              {t("Il tuo carrello")}
-            </h2>
-          </div>
-          <button type="button" className={iconButton} disabled={busy} aria-label={t('Chiudi')} onClick={() => setCartOpen(false)}>
+        {/* As in the client's reference: logo centred on top, the close icon at the edge. */}
+        <div className="relative flex items-center justify-center px-[var(--gutter)] pt-8 pb-6 sm:pt-10">
+          <img src={asset('logo.svg')} alt="ZITO 1950®" width={355} height={100} className="h-8 w-auto sm:h-10" />
+          <button type="button" className={`${iconButton} absolute right-[calc(var(--gutter)-0.75rem)] top-1/2 -translate-y-1/2`} disabled={busy} aria-label={t('Chiudi')} onClick={() => setCartOpen(false)}>
             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
         </div>
-        {!paid && rows.length === 0 && <p className="py-10">{t("Il carrello è vuoto. Scopri la nostra collezione.")}</p>}
-        {!paid && (
-          <ul>
+        <h2 id="cart-title" tabIndex={-1} className="mt-4 text-center text-body font-semibold outline-none sm:mt-8">
+          {/* The brand name is set in the logo's typeface. */}
+          <span className="font-brand">{BRAND}</span> <span className="font-normal text-muted">·</span> {t('Carrello')}
+        </h2>
+        <div className="mx-auto grid max-w-[1180px] gap-10 px-[var(--gutter)] pt-8 pb-16 sm:pt-12 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-16">
+        <div className="min-w-0">
+        {!paid && rows.length === 0 && <p className="border-t border-line py-10">{t("Il carrello è vuoto. Scopri la nostra collezione.")}</p>}
+        {!paid && !!rows.length && (
+          <ul className="border-t border-line">
             {rows.map(({ line, name, variant, image, available, price }, index) => {
               const key = lineKey(line)
               const personalized = isPersonalized(line)
               const locked = busy || !!pendingToken
               return (
-                <li key={key} className="border-b border-line pt-6">
+                <li key={key} className="border-b border-line py-6">
                   <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
                     <div className="flex items-start gap-4">
                       <div className="aspect-[4/5] w-16 shrink-0 overflow-hidden sm:w-20">
@@ -546,21 +582,42 @@ export default function Cart() {
             })}
           </ul>
         )}
-        {!!cart.length && !paid && (
-          <div className="mt-6 flex justify-between text-xl">
-            <span>{t("Totale")}</span>
-            <strong className="font-medium">{euro(total)}</strong>
+        {!paid && !!rows.length && (
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center gap-2 text-small text-ink-2 transition-colors duration-200 hover:text-ink"
+              disabled={busy || !!pendingToken}
+              onClick={() => setCart([])}
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8l1-12M9 7V4.5h6V7" />
+              </svg>
+              {t('Svuota carrello')}
+            </button>
           </div>
         )}
+        </div>
+        <aside aria-label={t('Riepilogo')} className="lg:pt-6">
         {!!cart.length && !paid && (
-          <p className="mt-3 text-small text-muted">
-            {t("Prezzi in EUR. Nessun costo di spedizione aggiunto. Indirizzo di consegna selezionato su PayPal.")}
-          </p>
+          <>
+            <div className="flex justify-between gap-4 text-small">
+              <span>{t('Subtotale')}</span>
+              <span className="tabular-nums">{euro(total)}</span>
+            </div>
+            <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-line pt-5">
+              <span className="text-xl">{t("Totale")}</span>
+              <strong className="text-xl font-semibold tabular-nums">{euro(total)}</strong>
+            </div>
+            <p className="mt-3 text-right text-small text-muted">
+              {t("Prezzi in EUR. Nessun costo di spedizione aggiunto. Indirizzo di consegna selezionato su PayPal.")}
+            </p>
+          </>
         )}
         {payments?.environment === 'sandbox' && payments.enabled && (
           <p className="mt-4 text-small">{t("Modalità test PayPal: nessun pagamento reale.")}</p>
         )}
-        <p role="status" aria-live="polite" className="mt-5 text-small">
+        <p role="status" aria-live="polite" className="mt-5 text-small empty:mt-0">
           {t(shopError || message)}
         </p>
         {paid && orderUrl && (
@@ -591,10 +648,10 @@ export default function Cart() {
         ) : (
           !!cart.length &&
           !paid && (
-            <div className="mt-8 border-t border-line pt-6">
+            <div className="mt-6">
               <button
                 type="button"
-                className="btn w-full"
+                className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-ink-2 px-6 text-base font-semibold text-bg transition-colors duration-200 hover:bg-ink"
                 aria-describedby={invalid ? 'cart-invalid' : STATIC_PREVIEW ? 'cart-preview' : undefined}
                 disabled={STATIC_PREVIEW || busy || unavailable || invalid || !!shopError || !payments?.enabled}
                 onClick={() => void checkout()}
@@ -617,6 +674,18 @@ export default function Cart() {
         {payments && !payments.enabled && !!cart.length && (
           <p className="mt-4 text-small">{t("Pagamenti online non ancora attivi. Contattaci per acquistare.")}</p>
         )}
+        {/* The reference separates checkout from "continue shopping" with a hairline. */}
+        {!!cart.length && !paid && <hr className="mt-8 border-line" />}
+        <button
+          type="button"
+          className="mt-8 inline-flex min-h-14 w-full items-center justify-center rounded-full border border-line px-6 text-base font-semibold text-ink transition-colors duration-200 hover:border-ink"
+          disabled={busy}
+          onClick={() => setCartOpen(false)}
+        >
+          {t('Continua gli acquisti')}
+        </button>
+        </aside>
+        </div>
       </dialog>
   )
 }
