@@ -11,6 +11,7 @@ import Storia from './components/Storia'
 import Territorio from './components/Territorio'
 import Admin from './components/Admin'
 import Cart from './components/Cart'
+import OrderPage, { orderToken } from './components/OrderPage'
 import { ShopProvider, STATIC_PREVIEW } from './lib/shop'
 import { t, useLocale } from './lib/i18n'
 
@@ -18,6 +19,7 @@ export default function App() {
   useLocale()
   const isAdmin = location.pathname.replace(/\/$/, '') === '/admin' ||
     (STATIC_PREVIEW && new URLSearchParams(location.search).has('admin-preview'))
+  const order = isAdmin ? null : orderToken()
   return (
     <ShopProvider>
       {isAdmin ? <Admin /> : <>
@@ -27,6 +29,7 @@ export default function App() {
       </aside>}
       <Header />
       <main id="contenuto" tabIndex={-1} className="outline-none">
+        {order ? <OrderPage token={order} /> : <>
         <Hero />
         {/* Order follows the numbered sections of the client's layout; Perché Zito closes before the contacts. */}
         <div className="container-site mt-10 flex flex-col md:mt-14">
@@ -39,6 +42,7 @@ export default function App() {
           <PercheZito />
           <Contatti />
         </div>
+        </>}
       </main>
       <Footer />
       <Cart />

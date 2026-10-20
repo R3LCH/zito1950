@@ -80,6 +80,98 @@ export interface CertificateHolder {
   email: string
 }
 
+/** Engraving on the back of a watch (or on a perfume): optional, at most 10 words. An engraved item is personalized and cannot be returned. */
+export const ENGRAVING_MAX_WORDS = 10
+export const ENGRAVING_MAX_CHARS = 120
+export const engravingWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length
+
+/** Optional per cart line / order line: both fields null = not personalized. */
+export interface LinePersonalization {
+  /** "Certificato della proprietà e garanzia" holder; null = no personalized certificate. */
+  certificate: CertificateHolder | null
+  /** Trimmed engraving text, 1..10 words; null = no engraving. */
+  engraving: string | null
+}
+
+/** Order readiness set by the owner in Admin -> Ordini; every change can email the customer. */
+export const FULFILLMENT_STATUSES = ['ricevuto', 'in-lavorazione', 'pronto', 'spedito', 'consegnato'] as const
+export type FulfillmentStatus = (typeof FULFILLMENT_STATUSES)[number]
+export const FULFILLMENT_LABELS: Record<FulfillmentStatus, string> = {
+  ricevuto: 'Ordine ricevuto',
+  'in-lavorazione': 'In lavorazione',
+  pronto: 'Pronto',
+  spedito: 'Spedito',
+  consegnato: 'Consegnato',
+}
+
+/** One line of a paid order as shown on the order page, in emails and in admin. */
+export interface OrderItemView extends LinePersonalization {
+  kind: 'model' | 'perfume'
+  name: string
+  codes: string[]
+  quantity: number
+  priceCents: number
+  /** Product photo at order time (public path such as img/models/n2.jpg or uploads/...); null if none. */
+  image: Img | null
+}
+
+/** GET /api/orders/:token, the customer's order page. */
+export interface PublicOrder {
+  /** Order id (uuid) shown as the customer's reference. */
+  reference: string
+  created: number
+  total: number
+  status: FulfillmentStatus
+  history: { status: FulfillmentStatus; at: number }[]
+  items: OrderItemView[]
+}
+
+/**
+ * Customer email for one readiness status; edited in Admin -> Email.
+ * Placeholders in subject/heading/message: {nome} (customer first name), {ordine} (reference), {stato} (status label).
+ */
+export interface EmailTemplate {
+  enabled: boolean
+  subject: string
+  heading: string
+  /** Plain text; blank lines separate paragraphs. */
+  message: string
+}
+export type EmailTemplates = Record<FulfillmentStatus, EmailTemplate>
+export const DEFAULT_EMAIL_TEMPLATES: EmailTemplates = {
+  ricevuto: {
+    enabled: true,
+    subject: 'Grazie per il tuo ordine {ordine}',
+    heading: 'Grazie, {nome}',
+    message:
+      'Abbiamo ricevuto il tuo ordine e il pagamento è andato a buon fine.\n\nTi scriveremo di nuovo quando sarà pronto. Qui sotto trovi il riepilogo, con i dati del certificato e l’incisione che hai scelto.',
+  },
+  'in-lavorazione': {
+    enabled: true,
+    subject: 'Il tuo ordine {ordine} è in lavorazione',
+    heading: 'Ci stiamo lavorando',
+    message: 'Il tuo ordine è in lavorazione nel nostro laboratorio. Ti avviseremo appena sarà pronto.',
+  },
+  pronto: {
+    enabled: true,
+    subject: 'Il tuo ordine {ordine} è pronto',
+    heading: 'Il tuo ordine è pronto',
+    message: 'Abbiamo completato il tuo ordine con cura. A breve partirà la spedizione.',
+  },
+  spedito: {
+    enabled: true,
+    subject: 'Il tuo ordine {ordine} è stato spedito',
+    heading: 'In viaggio verso di te',
+    message: 'Il tuo ordine è stato spedito. Puoi seguirne lo stato dalla pagina dell’ordine.',
+  },
+  consegnato: {
+    enabled: true,
+    subject: 'Il tuo ordine {ordine} è stato consegnato',
+    heading: 'Buon tempo, {nome}',
+    message: 'Il tuo ordine risulta consegnato. Grazie per aver scelto ZITO 1950®.',
+  },
+}
+
 export interface Site {
   name: string
   tagline: string

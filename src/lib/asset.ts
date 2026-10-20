@@ -1,6 +1,10 @@
 /** Resolve a public-folder path against Vite's base URL (works under sub-path deploys). */
 export const asset = (p: string) => import.meta.env.BASE_URL + p.replace(/^\//, '')
 
+/** Homepage section link: a bare hash on the homepage, base + hash elsewhere (order page), so it navigates back home. */
+export const sectionHref = (hash: string) =>
+  location.pathname === import.meta.env.BASE_URL && !new URLSearchParams(location.search).has('ordine') ? hash : asset(hash)
+
 export interface ImgSources {
   src: string
   webp: string

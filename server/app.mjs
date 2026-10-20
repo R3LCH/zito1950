@@ -9,9 +9,19 @@ import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { z } from 'zod'
 import { models, site, storia, profumo, tesoroDiAlarico, officina, territorio } from '../src/data/content.ts'
-import { GENDERS, PERFUME_AVAILABILITIES } from '../src/data/types.ts'
+import {
+  GENDERS,
+  PERFUME_AVAILABILITIES,
+  ENGRAVING_MAX_WORDS,
+  ENGRAVING_MAX_CHARS,
+  engravingWords,
+  FULFILLMENT_STATUSES,
+  DEFAULT_EMAIL_TEMPLATES,
+} from '../src/data/types.ts'
 import { LOCALES, TRANSLATION_LOCALES, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../src/data/localization.ts'
+import { renderCustomerEmail, renderOwnerEmail } from '../src/lib/orderEmail.ts'
 import { createTranslator } from './translate.mjs'
+import { createMailer } from './mail.mjs'
 
 const digest = (value) => createHash('sha256').update(value).digest('hex')
 const money = (cents) => (cents / 100).toFixed(2)
@@ -90,6 +100,11 @@ const perfumeSchema = z.object({
   images: z.array(image).max(30),
   translations,
 })
+// Optional per-line "Certificato della proprietà e garanzia" holder; no PayPal-name fallback.
+const certificateSchema = z
+  .object({ firstName: text.min(1).max(80), lastName: text.min(1).max(80), email: z.string().trim().email().max(254) })
+  .strict()
+  .nullable()
 const cartSchema = z
   .array(
     z.object({
@@ -97,15 +112,56 @@ const cartSchema = z
       modelId: id,
       variantId: id.nullable(),
       quantity: z.number().int().min(1).max(10),
+      certificate: certificateSchema.default(null),
+      // Blank engraving means none; the word and length limits are checked with their own message.
+      engraving: z
+        .string()
+        .max(1000)
+        .nullable()
+        .default(null)
+        .transform((value) => value?.trim() || null),
+      engravingAccepted: z.boolean().default(false),
     }),
   )
   .min(1)
   .max(30)
-// The warranty certificate holder; required whenever the cart holds a watch, null for perfume-only orders. No PayPal-name fallback.
-const certificateSchema = z
-  .object({ firstName: text.min(1).max(80), lastName: text.min(1).max(80), email: z.string().trim().email().max(254) })
+const templateSchema = z
+  .object({
+    enabled: z.boolean(),
+    subject: z.string().trim().min(1).max(200),
+    heading: z.string().trim().max(200),
+    message: z.string().trim().max(4000),
+  })
   .strict()
-  .nullable()
+const templatesSchema = z.object(Object.fromEntries(FULFILLMENT_STATUSES.map((s) => [s, templateSchema]))).strict()
+const statusRequest = z.object({ status: z.enum(FULFILLMENT_STATUSES), notify: z.boolean() }).strict()
+const publicTokenPattern = /^[A-Za-z0-9_-]{43}$/
+// Stored lines from before personalization have no kind, image, certificate or engraving.
+const storedItem = (i) => ({
+  ...i,
+  kind: i.kind ?? 'model',
+  image: i.image ?? null,
+  certificate: i.certificate ?? null,
+  engraving: i.engraving ?? null,
+})
+const itemView = (i) => {
+  const { kind, name, codes, quantity, priceCents, image, certificate, engraving } = storedItem(i)
+  return { kind, name, codes, quantity, priceCents, image, certificate, engraving }
+}
+// The image is captured for the order record but kept out of the fingerprint, so a photo change never blocks payment.
+const fingerprintOf = (items) => digest(JSON.stringify(items.map(({ image, ...row }) => row)))
+const shippingText = (shipping) => {
+  if (!shipping) return null
+  const a = shipping.address ?? {}
+  const lines = [
+    shipping.name?.full_name,
+    a.address_line_1,
+    a.address_line_2,
+    [a.postal_code, a.admin_area_2, a.admin_area_1].filter(Boolean).join(' '),
+    a.country_code,
+  ].filter(Boolean)
+  return lines.length ? lines.join('\n') : null
+}
 const limitedEditions = new Set(['tutus-ab-uno', 'takimo', 'bauletto'])
 // Site photos shown outside the catalog that v5 ensures: the Storia main photo, the workshop portrait and the territory view.
 const pageImages = [storia.image, officina.image, territorio.image].map(({ src, alt }) => ({ src, alt }))
@@ -131,8 +187,11 @@ export function createApp(options = {}) {
     'PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; CREATE TABLE IF NOT EXISTS catalog (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, csrf TEXT NOT NULL, admin INTEGER NOT NULL, expires INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, session TEXT NOT NULL, fingerprint TEXT NOT NULL, paypal_id TEXT UNIQUE, status TEXT NOT NULL, total INTEGER NOT NULL, items TEXT NOT NULL, receipt TEXT, created INTEGER NOT NULL, certificate TEXT, certificate_code TEXT);',
   )
   const orderColumns = new Set(db.prepare('PRAGMA table_info(orders)').all().map((c) => c.name))
-  for (const column of ['certificate', 'certificate_code'])
+  for (const column of ['certificate', 'certificate_code', 'public_token', 'fulfillment', 'history', 'customer_email'])
     if (!orderColumns.has(column)) db.exec(`ALTER TABLE orders ADD COLUMN ${column} TEXT`)
+  db.exec(
+    'CREATE UNIQUE INDEX IF NOT EXISTS orders_public_token ON orders(public_token); CREATE TABLE IF NOT EXISTS emails (id INTEGER PRIMARY KEY, order_id TEXT, kind TEXT, status TEXT, recipient TEXT, state TEXT, error TEXT, at INTEGER); CREATE INDEX IF NOT EXISTS emails_order ON emails(order_id); CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, body TEXT);',
+  )
   if (!db.prepare('SELECT id FROM catalog').get()) {
     const seed = {
       hero: site.hero.image,
@@ -547,14 +606,84 @@ export function createApp(options = {}) {
     res.json(save(body, revision(req)))
     // Keep the immutable file for in-flight customers and order history; prune offline after backup.
   })
-  const orderFields = 'id, paypal_id, status, total, items, receipt, created, certificate, certificate_code'
-  const orderRow = ({ certificate, certificate_code, ...o }) => ({
+  const orderFields =
+    'id, paypal_id, status, total, items, receipt, created, certificate, certificate_code, public_token, fulfillment, history, customer_email'
+  const emailsFor = (orderId) =>
+    db
+      .prepare('SELECT kind, status, recipient, state, error, at FROM emails WHERE order_id=? ORDER BY id')
+      .all(orderId)
+      .map(({ recipient, ...e }) => ({ ...e, to: recipient }))
+  const orderRow = ({ certificate, certificate_code, public_token, fulfillment, history, customer_email, ...o }) => ({
     ...o,
-    items: JSON.parse(o.items),
+    items: JSON.parse(o.items).map(storedItem),
     receipt: o.receipt ? JSON.parse(o.receipt) : null,
     certificate: certificate ? JSON.parse(certificate) : null,
     certificateCode: certificate_code,
+    fulfillment: fulfillment ?? null,
+    history: history ? JSON.parse(history) : [],
+    publicToken: public_token ?? null,
+    customerEmail: customer_email ?? null,
+    emails: emailsFor(o.id),
   })
+  const getOrder = (orderId) => db.prepare(`SELECT ${orderFields} FROM orders WHERE id=?`).get(orderId)
+  const publicOrder = (row) => ({
+    reference: row.id,
+    created: row.created,
+    total: row.total,
+    status: row.fulfillment,
+    history: JSON.parse(row.history ?? '[]'),
+    items: JSON.parse(row.items).map(itemView),
+  })
+  // Stored templates override the defaults per status, so a status added later still has its default text.
+  const emailTemplates = () => {
+    const stored = db.prepare("SELECT body FROM settings WHERE key='email-templates'").get()
+    const saved = stored ? JSON.parse(stored.body) : {}
+    return Object.fromEntries(FULFILLMENT_STATUSES.map((s) => [s, { ...DEFAULT_EMAIL_TEMPLATES[s], ...saved[s] }]))
+  }
+  const mailer = options.mailer ?? createMailer(env)
+  const logEmail = (orderId, kind, status, recipient, state, error) =>
+    db
+      .prepare('INSERT INTO emails (order_id, kind, status, recipient, state, error, at) VALUES (?,?,?,?,?,?,?)')
+      .run(orderId, kind, status, recipient, state, error, Date.now())
+  /** Renders and sends one order email; never throws, every attempt lands in the emails table. */
+  async function deliver(orderId, kind, status) {
+    let recipient = null
+    try {
+      const row = getOrder(orderId)
+      const order = publicOrder(row)
+      const receipt = row.receipt ? JSON.parse(row.receipt) : null
+      const orderUrl = `${origin}/ordine/${row.public_token}`
+      let message
+      if (kind === 'owner') {
+        recipient = mailer.owner
+        const payer = receipt?.payer
+        message = renderOwnerEmail(order, {
+          origin,
+          orderUrl,
+          customerEmail: row.customer_email ?? null,
+          payer: payer ? { name: `${payer.firstName} ${payer.lastName}`.trim() || undefined, email: payer.email } : null,
+          shipping: shippingText(receipt?.shipping),
+        })
+      } else {
+        recipient = row.customer_email
+        const customerName = order.items.find((i) => i.certificate)?.certificate.firstName ?? receipt?.payer?.firstName ?? ''
+        message = renderCustomerEmail(emailTemplates()[status], order, { origin, customerName, orderUrl })
+      }
+      const result = await mailer.send({ to: recipient, ...message })
+      logEmail(orderId, kind, status, recipient, result?.skipped ? 'skipped' : 'sent', null)
+    } catch (error) {
+      console.error('Order email failed:', kind, status, error.message)
+      try {
+        logEmail(orderId, kind, status, recipient, 'failed', String(error.message ?? error).slice(0, 500))
+      } catch (logError) {
+        console.error('Order email log failed:', logError.message)
+      }
+    }
+  }
+  /** Fire-and-forget customer email for a status, only when its template is on and the order has an address. */
+  const notifyCustomer = (row, status) => {
+    if (row.customer_email && emailTemplates()[status].enabled) void deliver(row.id, 'customer', status)
+  }
   app.get('/api/admin/orders', admin, (req, res) =>
     res.json(
       db.prepare(`SELECT ${orderFields} FROM orders ORDER BY created DESC LIMIT 200`).all().map(orderRow),
@@ -564,7 +693,38 @@ export function createApp(options = {}) {
     const code = z.string().trim().max(80).parse(req.body.code)
     const result = db.prepare('UPDATE orders SET certificate_code=? WHERE id=?').run(code || null, req.params.id)
     if (!result.changes) fail(404, 'Ordine non trovato.')
-    res.json(orderRow(db.prepare(`SELECT ${orderFields} FROM orders WHERE id=?`).get(req.params.id)))
+    res.json(orderRow(getOrder(req.params.id)))
+  })
+  app.put('/api/admin/orders/:id/status', admin, csrf, (req, res) => {
+    const { status, notify } = statusRequest.parse(req.body)
+    const row = getOrder(req.params.id)
+    if (!row) fail(404, 'Ordine non trovato.')
+    if (row.status !== 'COMPLETED') fail(409, 'Ordine non ancora pagato.')
+    const history = [...JSON.parse(row.history ?? '[]'), { status, at: Date.now() }]
+    db.prepare('UPDATE orders SET fulfillment=?, history=? WHERE id=?').run(status, JSON.stringify(history), row.id)
+    const updated = getOrder(row.id)
+    if (notify) notifyCustomer(updated, status)
+    res.json(orderRow(updated))
+  })
+  app.get('/api/admin/email-templates', admin, (req, res) => res.json(emailTemplates()))
+  app.put('/api/admin/email-templates', admin, csrf, (req, res) => {
+    const templates = templatesSchema.parse(req.body)
+    db.prepare("INSERT INTO settings (key, body) VALUES ('email-templates', ?) ON CONFLICT(key) DO UPDATE SET body=excluded.body").run(
+      JSON.stringify(templates),
+    )
+    res.json(emailTemplates())
+  })
+  app.get('/api/admin/mail', admin, (req, res) =>
+    res.json({ configured: !!mailer.configured, from: mailer.from, owner: mailer.owner }),
+  )
+  // Tokens are 256-bit, so guessing is hopeless; the limit only keeps scanners from hammering SQLite.
+  const orderPageLimit = rateLimit({ windowMs: 60000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false })
+  app.get('/api/orders/:token', orderPageLimit, (req, res) => {
+    const row = publicTokenPattern.test(req.params.token)
+      ? db.prepare(`SELECT ${orderFields} FROM orders WHERE public_token=? AND status='COMPLETED'`).get(req.params.token)
+      : null
+    if (!row) fail(404, 'Ordine non trovato.')
+    res.json(publicOrder(row))
   })
 
   const paypalReady = !!env.PAYPAL_CLIENT_ID && !!env.PAYPAL_CLIENT_SECRET
@@ -643,14 +803,24 @@ export function createApp(options = {}) {
     const current = catalog()
     const keys = new Set()
     const items = rows.map((row) => {
-      const key = `${row.kind}:${row.modelId}:${row.variantId ?? ''}`
+      if (row.engraving && (engravingWords(row.engraving) > ENGRAVING_MAX_WORDS || row.engraving.length > ENGRAVING_MAX_CHARS))
+        fail(400, `L’incisione può contenere al massimo ${ENGRAVING_MAX_WORDS} parole e ${ENGRAVING_MAX_CHARS} caratteri.`)
+      if (row.engraving && !row.engravingAccepted)
+        fail(400, 'Conferma di aver letto che un articolo inciso non può essere restituito.')
+      const personalized = !!(row.certificate || row.engraving)
+      if (personalized && row.quantity !== 1) fail(400, 'Un articolo personalizzato va acquistato in quantità 1.')
+      // Lines of one product may repeat when their certificate or engraving differs.
+      const personalization = personalized ? digest(JSON.stringify([row.certificate, row.engraving])) : ''
+      const key = `${row.kind}:${row.modelId}:${row.variantId ?? ''}:${personalization}`
       if (keys.has(key)) fail(400, 'Articolo duplicato nel carrello.')
       keys.add(key)
+      const line = { ...row, engravingAccepted: !!row.engraving && row.engravingAccepted }
+      const photo = (im) => (im ? { src: im.src, alt: im.alt } : null)
       if (row.kind === 'perfume') {
         const p = current.perfumes.find((p) => p.id === row.modelId)
         if (p?.availability !== 'buy' || row.variantId !== null)
           fail(409, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
-        return { ...row, name: p.name, priceCents: p.priceCents, codes: p.code ? [p.code] : [] }
+        return { ...line, name: p.name, priceCents: p.priceCents, codes: p.code ? [p.code] : [], image: photo(p.images[0]) }
       }
       const m = current.models.find((m) => m.id === row.modelId)
       if (m?.availability !== 'buy' || (m.limitedEdition === true && m.piecesRemaining === 0))
@@ -658,10 +828,11 @@ export function createApp(options = {}) {
       const v = row.variantId === null ? null : m.variants?.find((v) => v.id === row.variantId)
       if ((m.variants?.length && !v) || (row.variantId && !v)) fail(409, 'Variante non disponibile.')
       return {
-        ...row,
+        ...line,
         name: `${m.name}${v ? ` · ${v.label}` : ''}`,
         priceCents: v?.priceCents ?? m.priceCents,
         codes: v?.codes ?? m.codes,
+        image: photo(v?.images[0] ?? m.images[0]),
       }
     })
     // Pieces are per model, so variants of one limited edition share the count.
@@ -691,20 +862,21 @@ export function createApp(options = {}) {
       const total = items.reduce((sum, row) => sum + row.priceCents * row.quantity, 0)
       if (total > 100000000) fail(400, 'Importo ordine troppo alto.')
       const requestId = z.string().uuid().parse(req.body.requestId)
-      // The warranty certificate belongs to watches: required when the cart holds one, null for perfume-only orders.
-      const holderSchema = items.some((row) => row.kind === 'model') ? certificateSchema.unwrap() : certificateSchema
-      const holder = holderSchema.parse(req.body.certificate)
-      const certificateJson = holder ? JSON.stringify(holder) : null
-      const fingerprint = digest(JSON.stringify(items))
+      const fingerprint = fingerprintOf(items)
       let order = db.prepare('SELECT * FROM orders WHERE id=?').get(requestId)
       if (order && (order.session !== req.session.id || order.fingerprint !== fingerprint))
         fail(409, 'Carrello cambiato. Avvia un nuovo ordine.')
       if (order?.status === 'COMPLETED') fail(409, 'Ordine già pagato.')
-      if (order) db.prepare('UPDATE orders SET certificate=? WHERE id=?').run(certificateJson, requestId)
-      else {
-        db.prepare(
-          'INSERT INTO orders (id,session,fingerprint,status,total,items,created,certificate) VALUES (?,?,?,?,?,?,?,?)',
-        ).run(requestId, req.session.id, fingerprint, 'CREATING', total, JSON.stringify(items), Date.now(), certificateJson)
+      if (!order) {
+        db.prepare('INSERT INTO orders (id,session,fingerprint,status,total,items,created) VALUES (?,?,?,?,?,?,?)').run(
+          requestId,
+          req.session.id,
+          fingerprint,
+          'CREATING',
+          total,
+          JSON.stringify(items),
+          Date.now(),
+        )
         order = db.prepare('SELECT * FROM orders WHERE id=?').get(requestId)
       }
       if (order.paypal_id) {
@@ -767,13 +939,15 @@ export function createApp(options = {}) {
         .prepare('SELECT * FROM orders WHERE paypal_id=? AND session=?')
         .get(req.params.id, req.session.id)
       if (!order) fail(404, 'Ordine non trovato in questa sessione.')
-      if (order.status === 'COMPLETED') return res.json({ status: 'COMPLETED', id: order.id })
+      const orderUrl = (token) => (token ? { orderUrl: `/ordine/${token}` } : {})
+      if (order.status === 'COMPLETED') return res.json({ status: 'COMPLETED', id: order.id, ...orderUrl(order.public_token) })
       let remote = await paypal(`/v2/checkout/orders/${order.paypal_id}`)
       let held = null
+      let transitioned = false
       try {
         if (remote.status !== 'COMPLETED') {
           const currentItems = resolveCart(JSON.parse(order.items))
-          if (digest(JSON.stringify(currentItems)) !== order.fingerprint)
+          if (fingerprintOf(currentItems) !== order.fingerprint)
             fail(409, 'Prezzi o disponibilità cambiati. Avvia un nuovo ordine.')
           // Synchronous with the stock check, so a concurrent capture sees these units as taken.
           held = hold(currentItems)
@@ -799,14 +973,26 @@ export function createApp(options = {}) {
             ? { firstName: remote.payer.name?.given_name ?? '', lastName: remote.payer.name?.surname ?? '', email }
             : null,
         }
-        // Completion and stock decrement commit together; the status guard keeps a recovered capture from counting twice.
+        const items = JSON.parse(order.items)
+        const customerEmail = items.find((i) => i.certificate)?.certificate.email ?? email ?? null
+        // Completion, stock decrement and the order page token commit together; the status guard keeps a recovered capture from counting or emailing twice.
         db.exec('BEGIN IMMEDIATE')
         try {
+          const at = Date.now()
           const done = db
-            .prepare("UPDATE orders SET status='COMPLETED', receipt=? WHERE id=? AND status!='COMPLETED'")
-            .run(JSON.stringify(receipt), order.id)
-          if (done.changes) consumePieces(JSON.parse(order.items))
+            .prepare(
+              "UPDATE orders SET status='COMPLETED', receipt=?, public_token=?, fulfillment='ricevuto', history=?, customer_email=? WHERE id=? AND status!='COMPLETED'",
+            )
+            .run(
+              JSON.stringify(receipt),
+              randomBytes(32).toString('base64url'),
+              JSON.stringify([{ status: 'ricevuto', at }]),
+              customerEmail,
+              order.id,
+            )
+          if (done.changes) consumePieces(items)
           db.exec('COMMIT')
+          transitioned = done.changes > 0
         } catch (error) {
           db.exec('ROLLBACK')
           throw error
@@ -814,13 +1000,18 @@ export function createApp(options = {}) {
       } finally {
         release(held)
       }
-      res.json({ status: 'COMPLETED', id: order.id })
+      const paid = getOrder(order.id)
+      if (transitioned) {
+        void deliver(paid.id, 'owner', 'ricevuto')
+        notifyCustomer(paid, 'ricevuto')
+      }
+      res.json({ status: 'COMPLETED', id: order.id, ...orderUrl(paid.public_token) })
     }),
   )
   app.use('/uploads', express.static(join(dataDir, 'uploads'), { immutable: true, maxAge: '1y', dotfiles: 'deny' }))
   const dist = join(root, 'dist')
   app.use(express.static(dist, { index: false }))
-  app.get(['/', '/admin'], (req, res) => res.sendFile(join(dist, 'index.html')))
+  app.get(['/', '/admin', '/ordine/:token'], (req, res) => res.sendFile(join(dist, 'index.html')))
   app.use((req, res) => res.status(404).json({ error: 'Risorsa non trovata.' }))
   app.use((error, req, res, next) => {
     const status =
@@ -833,7 +1024,9 @@ export function createApp(options = {}) {
       .json({
         error:
           status === 400
-            ? 'Dati non validi. Controlla i campi e le dimensioni della foto.'
+            ? error instanceof HttpError
+              ? error.message
+              : 'Dati non validi. Controlla i campi e le dimensioni della foto.'
             : status === 500
               ? 'Errore del server. Riprova.'
               : error.message,

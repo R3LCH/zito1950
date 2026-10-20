@@ -1,29 +1,62 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, euro, lineKey, useShop, type CartLine } from '../lib/shop'
+import { api, euro, isPersonalized, lineKey, STATIC_PREVIEW, useShop, type CartLine } from '../lib/shop'
 import { t } from '../lib/i18n'
-import type { CertificateHolder } from '../data/types'
+import { ENGRAVING_MAX_CHARS, ENGRAVING_MAX_WORDS, engravingWords, type CertificateHolder } from '../data/types'
 import { availabilityOf } from '../lib/catalogFilters'
 import Picture from './Picture'
 
-const CERTIFICATE_KEY = 'zito-certificate'
 const CERTIFICATE_IMAGES = [
   { src: 'img/certificato/fronte.jpg', alt: 'Certificato di proprietà ZITO 1950®, fronte' },
   { src: 'img/certificato/retro.jpg', alt: 'Certificato di proprietà ZITO 1950®, retro' },
 ]
+const BRAND = 'ZITO 1950®'
 // Mirrors the server's email check closely enough to keep the button honest; the server stays authoritative.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-type CertificateField = keyof CertificateHolder
-function storedCertificate(): CertificateHolder {
-  const empty = { firstName: '', lastName: '', email: '' }
-  try {
-    const value: unknown = JSON.parse(sessionStorage.getItem(CERTIFICATE_KEY) ?? 'null')
-    if (!value || typeof value !== 'object') return empty
-    const v = value as Record<string, unknown>
-    const text = (field: unknown, max: number) => (typeof field === 'string' ? field.slice(0, max) : '')
-    return { firstName: text(v.firstName, 80), lastName: text(v.lastName, 80), email: text(v.email, 254) }
-  } catch {
-    return empty
+const EMPTY_HOLDER: CertificateHolder = { firstName: '', lastName: '', email: '' }
+type LineField = keyof CertificateHolder | 'engraving' | 'engravingAccepted'
+type LineErrors = Record<LineField, string | null>
+
+/** Both personalization sections are optional; once the buyer starts one, it must be complete. */
+function lineErrors(line: CartLine): LineErrors {
+  const holder = line.certificate
+  const engraving = line.engraving?.trim() ?? ''
+  return {
+    firstName: holder && !holder.firstName.trim() ? 'Inserisci il nome.' : null,
+    lastName: holder && !holder.lastName.trim() ? 'Inserisci il cognome.' : null,
+    email: holder && !EMAIL.test(holder.email.trim()) ? 'Inserisci un indirizzo email valido.' : null,
+    // Typing stops at the limit; this catches text stored before the limit applied.
+    engraving:
+      engravingWords(engraving) > ENGRAVING_MAX_WORDS || engraving.length > ENGRAVING_MAX_CHARS
+        ? 'Massimo 10 parole: accorcia il testo.'
+        : null,
+    engravingAccepted: engraving && !line.engravingAccepted ? 'Conferma di aver letto la condizione.' : null,
   }
+}
+
+/** Order request lines per the payments API; plain lines of one product are combined. */
+function orderItems(cart: CartLine[]) {
+  const items: {
+    kind: 'model' | 'perfume'
+    modelId: string
+    variantId: string | null
+    quantity: number
+    certificate: CertificateHolder | null
+    engraving: string | null
+    engravingAccepted: boolean
+  }[] = []
+  for (const line of cart) {
+    const kind = line.kind ?? 'model'
+    const engraving = line.engraving?.trim() || null
+    const certificate = line.certificate
+      ? { firstName: line.certificate.firstName.trim(), lastName: line.certificate.lastName.trim(), email: line.certificate.email.trim() }
+      : null
+    const plain = items.find(
+      (item) => !item.certificate && !item.engraving && !certificate && !engraving && item.kind === kind && item.modelId === line.modelId && item.variantId === line.variantId,
+    )
+    if (plain) plain.quantity = Math.min(10, plain.quantity + line.quantity)
+    else items.push({ kind, modelId: line.modelId, variantId: line.variantId, quantity: line.quantity, certificate, engraving, engravingAccepted: !!engraving && !!line.engravingAccepted })
+  }
+  return items
 }
 
 export function BuyButton({
@@ -47,6 +80,212 @@ export function BuyButton({
     }}>{t('Acquista')}</button>
   )
 }
+type Touched = Partial<Record<LineField, boolean>>
+/** The two optional sections under one cart line: certificate holder and engraving. */
+function Personalization({
+  line,
+  index,
+  disabled,
+  touched,
+  onTouch,
+  onChange,
+}: {
+  line: CartLine
+  index: number
+  disabled: boolean
+  touched: Touched
+  onTouch: (fields: LineField[]) => void
+  onChange: (patch: Partial<CartLine>) => void
+}) {
+  const [certificateOpen, setCertificateOpen] = useState(!!line.certificate)
+  const [engravingOpen, setEngravingOpen] = useState(!!line.engraving?.trim())
+  const [wordLimit, setWordLimit] = useState(false)
+  const errors = lineErrors(line)
+  // An unfinished section never hides: collapsing it would leave the pay button disabled without a visible reason.
+  const certificateShown = certificateOpen || !!(errors.firstName || errors.lastName || errors.email)
+  const engravingShown = engravingOpen || !!(errors.engraving || errors.engravingAccepted)
+  const holder = line.certificate ?? EMPTY_HOLDER
+  const engraving = line.engraving ?? ''
+  const words = engravingWords(engraving)
+  const perfume = line.kind === 'perfume'
+  const id = `cart-line-${index}`
+  const summaryClass = 'flex min-h-11 w-full items-center justify-between gap-4 text-left text-small font-medium'
+  return (
+    <div className="mt-4 border-t border-line">
+      <div className="border-b border-line">
+        <button
+          type="button"
+          className={summaryClass}
+          aria-expanded={certificateShown}
+          aria-controls={`${id}-certificate`}
+          onClick={() => setCertificateOpen(!certificateShown)}
+        >
+          <span>
+            {t('Certificato della proprietà e garanzia')} <span className="font-normal text-muted">{t('(facoltativo)')}</span>
+          </span>
+          <span aria-hidden="true">{certificateShown ? '−' : '+'}</span>
+        </button>
+        <div id={`${id}-certificate`} hidden={!certificateShown} className="pb-5">
+          <div className="mt-1 flex items-start gap-4">
+            <ul className="flex shrink-0 gap-2" aria-label={t('Certificato della proprietà e garanzia')}>
+              {CERTIFICATE_IMAGES.map((image) => (
+                <li key={image.src} className="w-16 overflow-hidden rounded-md border border-line sm:w-20">
+                  <Picture src={image.src} alt={t(image.alt)} sizes="80px" className="h-auto w-full" />
+                </li>
+              ))}
+            </ul>
+            <p id={`${id}-certificate-help`} className="text-small text-muted">
+              {perfume
+                ? t('Il certificato è intestato a questo nome e viene consegnato insieme al profumo.')
+                : t('Il certificato è intestato a questo nome e viene consegnato insieme all’orologio.')}
+            </p>
+          </div>
+          <fieldset disabled={disabled} className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2" aria-describedby={`${id}-certificate-help`}>
+            <legend className="sr-only">{t('Intestatario del certificato')}</legend>
+            {(
+              [
+                { field: 'firstName', label: 'Nome', autoComplete: 'given-name', type: 'text', maxLength: 80, wide: false },
+                { field: 'lastName', label: 'Cognome', autoComplete: 'family-name', type: 'text', maxLength: 80, wide: false },
+                { field: 'email', label: 'Email', autoComplete: 'email', type: 'email', maxLength: 254, wide: true },
+              ] as const
+            ).map(({ field, label, autoComplete, type, maxLength, wide }) => {
+              const error = touched[field] ? errors[field] : null
+              const errorId = `${id}-${field}-error`
+              return (
+                <label key={field} className={`shop-label${wide ? ' sm:col-span-2' : ''}`}>
+                  {t(label)}
+                  <input
+                    className="shop-input"
+                    type={type}
+                    autoComplete={autoComplete}
+                    required={!!line.certificate}
+                    maxLength={maxLength}
+                    value={holder[field]}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? errorId : undefined}
+                    onBlur={() => onTouch([field])}
+                    onChange={(e) => {
+                      const next = { ...holder, [field]: e.target.value }
+                      // Emptying every field withdraws the certificate, so the section is optional again.
+                      onChange({ certificate: next.firstName || next.lastName || next.email ? next : null })
+                    }}
+                  />
+                  {error && (
+                    <span id={errorId} className="text-small text-ink">
+                      {t(error)}
+                    </span>
+                  )}
+                </label>
+              )
+            })}
+          </fieldset>
+          {line.certificate && (
+            <button
+              type="button"
+              className="mt-4 underline text-small"
+              disabled={disabled}
+              onClick={() => {
+                onChange({ certificate: null })
+                setCertificateOpen(false)
+              }}
+            >
+              {t('Rimuovi certificato')}
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="border-b border-line">
+        <button
+          type="button"
+          className={summaryClass}
+          aria-expanded={engravingShown}
+          aria-controls={`${id}-engraving`}
+          onClick={() => setEngravingOpen(!engravingShown)}
+        >
+          <span>
+            {t('Incisione')} <span className="font-normal text-muted">{t('(facoltativo)')}</span>
+          </span>
+          <span aria-hidden="true">{engravingShown ? '−' : '+'}</span>
+        </button>
+        <div id={`${id}-engraving`} hidden={!engravingShown} className="pb-5">
+          <label className="shop-label">
+            <span id={`${id}-engraving-hint`} className="text-muted">
+              {perfume
+                ? t('Sul flacone: un nome, una data o una breve frase.')
+                : t('Sul retro della cassa: un nome, una data o una breve frase.')}
+            </span>
+            <textarea
+              className="shop-input resize-y"
+              rows={2}
+              maxLength={ENGRAVING_MAX_CHARS}
+              disabled={disabled}
+              value={engraving}
+              aria-label={t('Testo dell’incisione')}
+              aria-invalid={touched.engraving && errors.engraving ? true : undefined}
+              aria-describedby={`${id}-engraving-hint ${id}-engraving-count`}
+              onBlur={() => onTouch(['engraving'])}
+              onChange={(e) => {
+                const text = e.target.value
+                // Hard stop: a word beyond the limit is not accepted.
+                if (engravingWords(text) > ENGRAVING_MAX_WORDS) {
+                  setWordLimit(true)
+                  return
+                }
+                setWordLimit(false)
+                onChange({ engraving: text.trim() ? text : null, ...(text.trim() ? {} : { engravingAccepted: false }) })
+              }}
+            />
+          </label>
+          <p id={`${id}-engraving-count`} className="mt-2 text-small text-muted" aria-live="polite">
+            {t('{n}/{max} parole', { n: words, max: ENGRAVING_MAX_WORDS })}
+            {wordLimit && <span className="ml-2 text-ink">{t('Hai raggiunto il limite di {max} parole.', { max: ENGRAVING_MAX_WORDS })}</span>}
+            {touched.engraving && errors.engraving && <span className="ml-2 text-ink">{t(errors.engraving)}</span>}
+          </p>
+          {engraving.trim() && (
+            <div className="mt-4 border border-ink p-4">
+              <p className="text-small font-medium">{t('Un articolo con incisione è personalizzato: non può essere restituito né cambiato.')}</p>
+              <label className="mt-3 flex items-start gap-3 text-small">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-5 w-5 shrink-0 accent-ink"
+                  required
+                  disabled={disabled}
+                  checked={!!line.engravingAccepted}
+                  aria-invalid={touched.engravingAccepted && errors.engravingAccepted ? true : undefined}
+                  aria-describedby={touched.engravingAccepted && errors.engravingAccepted ? `${id}-accepted-error` : undefined}
+                  onChange={(e) => {
+                    onTouch(['engravingAccepted'])
+                    onChange({ engravingAccepted: e.target.checked })
+                  }}
+                />
+                {t('Ho letto: l’articolo inciso non è restituibile.')}
+              </label>
+              {touched.engravingAccepted && errors.engravingAccepted && (
+                <p id={`${id}-accepted-error`} className="mt-2 text-small text-ink">
+                  {t(errors.engravingAccepted)}
+                </p>
+              )}
+            </div>
+          )}
+          {engraving && (
+            <button
+              type="button"
+              className="mt-4 underline text-small"
+              disabled={disabled}
+              onClick={() => {
+                onChange({ engraving: null, engravingAccepted: false })
+                setWordLimit(false)
+                setEngravingOpen(false)
+              }}
+            >
+              {t('Rimuovi incisione')}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 export default function Cart() {
   const { localizedCatalog: catalog, cart, setCart, cartOpen, setCartOpen, error: shopError, reload } = useShop()
   const ref = useRef<HTMLDialogElement>(null)
@@ -58,17 +297,11 @@ export default function Cart() {
     () => new URLSearchParams(location.search).get('token') ?? sessionStorage.getItem('zito-paypal-order'),
   )
   const [payments, setPayments] = useState<{ enabled: boolean; environment: string } | null>(null)
+  const [orderUrl, setOrderUrl] = useState<string | null>(null)
   const lock = useRef(false)
-  const certificateForm = useRef<HTMLFormElement>(null)
-  const [certificate, setCertificate] = useState(storedCertificate)
   // Errors appear once a field is left or checkout is attempted, not while the buyer is still typing.
-  const [touched, setTouched] = useState<Record<CertificateField, boolean>>({ firstName: false, lastName: false, email: false })
-  const errors: Record<CertificateField, string | null> = {
-    firstName: certificate.firstName.trim() ? null : 'Inserisci il nome.',
-    lastName: certificate.lastName.trim() ? null : 'Inserisci il cognome.',
-    email: EMAIL.test(certificate.email.trim()) ? null : 'Inserisci un indirizzo email valido.',
-  }
-  const certificateValid = !errors.firstName && !errors.lastName && !errors.email
+  const [touched, setTouched] = useState<Record<string, Touched>>({})
+  const invalid = cart.some((line) => Object.values(lineErrors(line)).some(Boolean))
   const rows = cart.map((line) => {
     if (line.kind === 'perfume') {
       const perfume = catalog.perfumes.find((p) => p.id === line.modelId)
@@ -81,15 +314,6 @@ export default function Cart() {
   })
   const total = rows.reduce((sum, row) => sum + row.price * row.line.quantity, 0)
   const unavailable = rows.some((row) => !row.available)
-  // The warranty certificate belongs to watches; a perfume-only order needs no holder.
-  const hasWatch = cart.some((line) => (line.kind ?? 'model') === 'model')
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(CERTIFICATE_KEY, JSON.stringify(certificate))
-    } catch {
-      /* Certificate details still work without browser storage. */
-    }
-  }, [certificate])
   useEffect(() => {
     if (!cartOpen) return
     setPaid(false)
@@ -97,9 +321,11 @@ export default function Cart() {
     ref.current?.showModal()
     const previous = document.documentElement.style.overflow
     document.documentElement.style.overflow = 'hidden'
-    void api<{ enabled: boolean; environment: string }>('/payments/config')
-      .then(setPayments)
-      .catch(() => setMessage('Pagamenti non disponibili. Il carrello è conservato.'))
+    // The GitHub Pages preview has no payment backend; the button stays visible but disabled.
+    if (!STATIC_PREVIEW)
+      void api<{ enabled: boolean; environment: string }>('/payments/config')
+        .then(setPayments)
+        .catch(() => setMessage('Pagamenti non disponibili. Il carrello è conservato.'))
     return () => {
       ref.current?.close()
       document.documentElement.style.overflow = previous
@@ -119,25 +345,15 @@ export default function Cart() {
     if (checkout === 'return') setMessage('PayPal ha autorizzato l’ordine. Conferma per completare il pagamento.')
   }, [])
   async function checkout() {
-    if (lock.current) return
-    if ((hasWatch && !certificateValid) || !certificateForm.current?.reportValidity()) {
-      setTouched({ firstName: true, lastName: true, email: true })
-      return
-    }
+    // The pay button is disabled while a section is incomplete; this guards programmatic calls.
+    if (lock.current || invalid) return
     lock.current = true
     setBusy(true)
     setMessage('Preparazione del pagamento…')
     try {
-      const holder: CertificateHolder | null = hasWatch
-        ? {
-            firstName: certificate.firstName.trim(),
-            lastName: certificate.lastName.trim(),
-            email: certificate.email.trim(),
-          }
-        : null
-      const items = cart.map((line) => ({ kind: line.kind ?? 'model', modelId: line.modelId, variantId: line.variantId, quantity: line.quantity }))
-      // A changed certificate holder is a different order request.
-      const serialized = JSON.stringify({ cart: items, certificate: holder })
+      const items = orderItems(cart)
+      // Changed personalization is a different order request.
+      const serialized = JSON.stringify(items)
       let request: { id: string; cart: string } | null = null
       try {
         request = JSON.parse(sessionStorage.getItem('zito-checkout-request') ?? 'null')
@@ -150,7 +366,6 @@ export default function Cart() {
       }
       const order = await api<{ id: string; approvalUrl: string }>('/payments/orders', 'POST', {
         items,
-        certificate: holder,
         requestId: request.id,
       })
       sessionStorage.setItem('zito-paypal-order', order.id)
@@ -167,12 +382,13 @@ export default function Cart() {
     setBusy(true)
     setMessage('Verifica e completamento del pagamento… Non chiudere la pagina.')
     try {
-      const result = await api<{ status: string; id: string }>(
+      const result = await api<{ status: string; id: string; orderUrl?: string }>(
         `/payments/orders/${encodeURIComponent(pendingToken)}/capture`,
         'POST',
         {},
       )
       if (result.status !== 'COMPLETED') throw new Error('Pagamento non confermato.')
+      setOrderUrl(result.orderUrl ? `${import.meta.env.BASE_URL}${result.orderUrl.replace(/^\//, '')}` : null)
       setPaid(true)
       setCart([])
       setPendingToken(null)
@@ -189,8 +405,14 @@ export default function Cart() {
       lock.current = false
     }
   }
-  const update = (line: CartLine, quantity: number) =>
-    setCart(cart.map((item) => (lineKey(item) === lineKey(line) ? { ...item, quantity } : item)))
+  const update = (line: CartLine, patch: Partial<CartLine>) =>
+    setCart(
+      cart.map((item) => {
+        if (lineKey(item) !== lineKey(line)) return item
+        const next = { ...item, ...patch }
+        return isPersonalized(next) ? { ...next, quantity: 1 } : next
+      }),
+    )
   return (
     <dialog
         ref={ref}
@@ -203,7 +425,12 @@ export default function Cart() {
       >
         <div className="flex items-center justify-between gap-6 border-b border-line pb-5">
           <div>
-            <p className="eyebrow">{t("ZITO 1950® · Boutique")}</p>
+            <p className="eyebrow">
+              {/* The brand name is set in the logo's typeface; the rest of the eyebrow stays in the UI face. */}
+              {t('ZITO 1950® · Boutique')
+                .split(BRAND)
+                .map((part, i) => (i ? [<span key={i} className="font-brand">{BRAND}</span>, part] : part))}
+            </p>
             <h2 id="cart-title" className="mt-2 text-h2">
               {t("Il tuo carrello")}
             </h2>
@@ -215,41 +442,64 @@ export default function Cart() {
         {!paid && rows.length === 0 && <p className="py-10">{t("Il carrello è vuoto. Scopri la nostra collezione.")}</p>}
         {!paid && (
           <ul>
-            {rows.map(({ line, name, variant, available, price }) => (
-              <li key={lineKey(line)} className="grid gap-4 border-b border-line py-6 sm:grid-cols-[1fr_auto]">
-                <div>
-                  <h3 className="text-h3">
-                    {name ?? t('Prodotto rimosso')}
-                    {variant ? ` · ${variant.label}` : ''}
-                  </h3>
-                  <p className="text-small">{euro(price)}{' ' + t("/ pezzo")}</p>
-                  {!available && <p className="text-small">{t("Non più acquistabile. Rimuovi l’articolo per procedere.")}</p>}
-                </div>
-                <div className="flex items-center gap-4">
-                  <label className="text-small">
-                    {t("Quantità")}
-                    <select
-                      className="shop-input ml-2"
-                      disabled={busy || !!pendingToken}
-                      value={line.quantity}
-                      onChange={(e) => update(line, Number(e.target.value))}
-                    >
-                      {Array.from({ length: 10 }, (_, i) => (
-                        <option key={i + 1}>{i + 1}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    className="underline text-small"
-                    disabled={busy || !!pendingToken}
-                    onClick={() => setCart(cart.filter((item) => lineKey(item) !== lineKey(line)))}
-                  >
-                    {t("Rimuovi")}
-                  </button>
-                </div>
-              </li>
-            ))}
+            {rows.map(({ line, name, variant, available, price }, index) => {
+              const key = lineKey(line)
+              const personalized = isPersonalized(line)
+              const locked = busy || !!pendingToken
+              return (
+                <li key={key} className="border-b border-line py-6">
+                  <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+                    <div>
+                      <h3 className="text-h3">
+                        {name ?? t('Prodotto rimosso')}
+                        {variant ? ` · ${variant.label}` : ''}
+                      </h3>
+                      <p className="text-small">{euro(price)}{' ' + t("/ pezzo")}</p>
+                      {!available && <p className="text-small">{t("Non più acquistabile. Rimuovi l’articolo per procedere.")}</p>}
+                    </div>
+                    <div className="flex flex-col items-start gap-2 sm:items-end">
+                      <div className="flex items-center gap-4">
+                        <label className="text-small">
+                          {t("Quantità")}
+                          <select
+                            className="shop-input ml-2"
+                            disabled={locked || personalized}
+                            value={line.quantity}
+                            aria-describedby={personalized ? `${key}-single` : undefined}
+                            onChange={(e) => update(line, { quantity: Number(e.target.value) })}
+                          >
+                            {Array.from({ length: 10 }, (_, i) => (
+                              <option key={i + 1}>{i + 1}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          className="underline text-small"
+                          disabled={locked}
+                          onClick={() => setCart(cart.filter((item) => lineKey(item) !== key))}
+                        >
+                          {t("Rimuovi")}
+                        </button>
+                      </div>
+                      {personalized && (
+                        <p id={`${key}-single`} className="text-small text-muted">
+                          {t('Articolo personalizzato: un pezzo per riga.')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Personalization
+                    line={line}
+                    index={index}
+                    disabled={locked}
+                    touched={touched[key] ?? {}}
+                    onTouch={(fields) => setTouched((state) => ({ ...state, [key]: { ...state[key], ...Object.fromEntries(fields.map((f) => [f, true])) } }))}
+                    onChange={(patch) => update(line, patch)}
+                  />
+                </li>
+              )
+            })}
           </ul>
         )}
         {!!cart.length && !paid && (
@@ -269,6 +519,11 @@ export default function Cart() {
         <p role="status" aria-live="polite" className="mt-5 text-small">
           {t(shopError || message)}
         </p>
+        {paid && orderUrl && (
+          <a className="btn mt-4" href={orderUrl}>
+            {t('Vai all’ordine')}
+          </a>
+        )}
         {pendingToken && !paid ? (
           <div className="mt-6 flex flex-wrap gap-4">
             <button type="button" className="btn" disabled={busy} onClick={() => void capture()}>
@@ -292,82 +547,27 @@ export default function Cart() {
         ) : (
           !!cart.length &&
           !paid && (
-            <form
-              ref={certificateForm}
-              className="mt-8 border-t border-line pt-6"
-              aria-labelledby={hasWatch ? 'certificate-title' : undefined}
-              onSubmit={(event) => {
-                event.preventDefault()
-                void checkout()
-              }}
-            >
-              {hasWatch && (
-              <>
-              <h3 id="certificate-title" className="text-small font-medium">{t('Certificato di proprietà')}</h3>
-              <div className="mt-3 flex items-start gap-4">
-                <ul className="flex shrink-0 gap-2" aria-label={t('Certificato di proprietà')}>
-                  {CERTIFICATE_IMAGES.map((image) => (
-                    <li key={image.src} className="w-20 overflow-hidden rounded-md border border-line sm:w-24">
-                      <Picture
-                        src={image.src}
-                        alt={t(image.alt)}
-                        sizes="96px"
-                        className="h-auto w-full"
-                      />
-                    </li>
-                  ))}
-                </ul>
-                <p id="certificate-help" className="text-small text-muted">
-                  {t('Compila i dati per il certificato di garanzia: lo riceverai intestato a questo nome insieme all’orologio.')}
-                </p>
-              </div>
-              <fieldset disabled={busy} className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2" aria-describedby="certificate-help">
-                <legend className="sr-only">{t('Intestatario del certificato')}</legend>
-                {(
-                  [
-                    { field: 'firstName', label: 'Nome di battesimo', autoComplete: 'given-name', type: 'text', maxLength: 80, wide: false },
-                    { field: 'lastName', label: 'Cognome', autoComplete: 'family-name', type: 'text', maxLength: 80, wide: false },
-                    { field: 'email', label: 'Email', autoComplete: 'email', type: 'email', maxLength: 254, wide: true },
-                  ] as const
-                ).map(({ field, label, autoComplete, type, maxLength, wide }) => {
-                  const error = touched[field] ? errors[field] : null
-                  const errorId = `certificate-${field}-error`
-                  return (
-                    <label key={field} className={`shop-label${wide ? ' sm:col-span-2' : ''}`}>
-                      {t(label)}
-                      <input
-                        className="shop-input"
-                        type={type}
-                        name={autoComplete}
-                        autoComplete={autoComplete}
-                        required
-                        pattern={type === 'text' ? '.*\\S.*' : undefined}
-                        maxLength={maxLength}
-                        value={certificate[field]}
-                        aria-invalid={error ? true : undefined}
-                        aria-describedby={error ? errorId : undefined}
-                        onBlur={() => setTouched((state) => ({ ...state, [field]: true }))}
-                        onChange={(e) => setCertificate({ ...certificate, [field]: e.target.value })}
-                      />
-                      {error && (
-                        <span id={errorId} className="text-small text-ink">
-                          {t(error)}
-                        </span>
-                      )}
-                    </label>
-                  )
-                })}
-              </fieldset>
-              </>
-              )}
+            <div className="mt-8 border-t border-line pt-6">
               <button
-                type="submit"
-                className="btn mt-6 w-full"
-                disabled={busy || unavailable || !!shopError || !payments?.enabled || (hasWatch && !certificateValid)}
+                type="button"
+                className="btn w-full"
+                aria-describedby={invalid ? 'cart-invalid' : STATIC_PREVIEW ? 'cart-preview' : undefined}
+                disabled={STATIC_PREVIEW || busy || unavailable || invalid || !!shopError || !payments?.enabled}
+                onClick={() => void checkout()}
               >
                 {busy ? t('Connessione a PayPal…') : t('Paga con PayPal')}
               </button>
-            </form>
+              {invalid && (
+                <p id="cart-invalid" className="mt-3 text-small">
+                  {t('Completa o rimuovi la personalizzazione indicata per procedere.')}
+                </p>
+              )}
+              {STATIC_PREVIEW && (
+                <p id="cart-preview" className="mt-3 text-small text-muted">
+                  {t('Anteprima: il pagamento PayPal è disattivato.')}
+                </p>
+              )}
+            </div>
           )
         )}
         {payments && !payments.enabled && !!cart.length && (

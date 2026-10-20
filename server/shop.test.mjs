@@ -8,8 +8,6 @@ import { DatabaseSync } from 'node:sqlite'
 import sharp from 'sharp'
 import { createApp } from './app.mjs'
 import { hashPassword } from './password.mjs'
-// Every checkout must name the warranty certificate holder.
-const certificate = { firstName: 'Giulia', lastName: 'Neri', email: 'giulia@example.com' }
 
 async function fixture(t, paypal = false, legacyBody = null) {
   const dir = mkdtempSync(join(tmpdir(), 'zito-test-'))
@@ -68,7 +66,19 @@ async function fixture(t, paypal = false, legacyBody = null) {
   }
   const translateFetch = async (url, init) =>
     Response.json([[[`[${new URL(url).searchParams.get('tl')}] ${new URLSearchParams(init.body).get('q')}`, 'x']]])
-  const application = createApp({ env, dataDir: dir, fetch: transport, translateFetch })
+  // Never real SMTP in tests: the fake records every message, or throws while mail.fail is set.
+  const mail = { sent: [], fail: false }
+  const mailer = {
+    configured: true,
+    from: 'ZITO 1950® <customer@zito1950.it>',
+    owner: 'owner@example.com',
+    async send(message) {
+      if (mail.fail) throw new Error('SMTP down')
+      mail.sent.push(message)
+      return { skipped: false }
+    },
+  }
+  const application = createApp({ env, dataDir: dir, fetch: transport, translateFetch, mailer })
   const server = application.app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const base = `http://127.0.0.1:${server.address().port}`
@@ -113,7 +123,7 @@ async function fixture(t, paypal = false, legacyBody = null) {
     assert.equal(response.status, 200, JSON.stringify(response.body))
     return response.body
   }
-  return { admin, buyer, client, enable, seen, application, dir, env }
+  return { admin, buyer, client, enable, seen, application, dir, env, mail }
 }
 
 test('admin authorization, CSRF, session rotation and revocation', async (t) => {
@@ -242,7 +252,7 @@ test('checkout uses server variant price, rejects disabled products and foreign 
   // Read variant IDs from the catalog rather than assuming incidental names.
   const catalog = await enable()
   items[0].variantId = catalog.models.find((m) => m.id === 'n7').variants[0].id
-  const order = await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })
+  const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
   assert.equal(order.status, 200, JSON.stringify(order.body))
   assert.deepEqual(seen.amounts, ['1260.00'])
   const stranger = client()
@@ -254,13 +264,13 @@ test('checkout uses server variant price, rejects disabled products and foreign 
   await admin.request('/admin/products/n7', 'PUT', { product, revision: current.revision })
   assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).status, 409)
   assert.equal(seen.captures, 0)
-  assert.equal((await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })).status, 409)
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })).status, 409)
 })
 
 test('capture recovers a lost response and never charges again after completion', async (t) => {
   const { buyer, admin, enable, seen } = await fixture(t, true)
   await enable('takimo')
-  const request = { items: [{ modelId: 'takimo', variantId: null, quantity: 1 }], certificate, requestId: randomUUID() }
+  const request = { items: [{ modelId: 'takimo', variantId: null, quantity: 1 }], requestId: randomUUID() }
   const order = await buyer.request('/payments/orders', 'POST', request)
   assert.equal((await buyer.request('/payments/orders', 'POST', request)).body.id, order.body.id)
   assert.equal(seen.amounts.length, 1)
@@ -282,7 +292,6 @@ test('mismatched PayPal capture amount is never recorded as paid', async (t) => 
   seen.mismatch = true
   const order = await buyer.request('/payments/orders', 'POST', {
     items: [{ modelId: 'takimo', variantId: null, quantity: 1 }],
-    certificate,
     requestId: randomUUID(),
   })
   assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).status, 409)
@@ -321,7 +330,6 @@ test('legacy catalog migrates buyEnabled, limited editions and default hero once
   assert.ok(columns.includes('certificate') && columns.includes('certificate_code'))
   const order = await buyer.request('/payments/orders', 'POST', {
     items: [{ modelId: 'n7', variantId: n7.variants[0].id, quantity: 1 }],
-    certificate,
     requestId: randomUUID(),
   })
   assert.equal(order.status, 200, JSON.stringify(order.body))
@@ -373,51 +381,86 @@ test('out-of-stock, showcase and hidden models are not purchasable; sold is no l
   const items = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
   for (const availability of ['out-of-stock', 'no-buy', 'hidden']) {
     await enable('takimo', availability)
-    const order = await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })
+    const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
     assert.equal(order.status, 409, availability)
   }
   const current = (await admin.request('/catalog')).body
   const product = { ...current.models.find((m) => m.id === 'takimo'), availability: 'sold' }
   assert.equal((await admin.request('/admin/products/takimo', 'PUT', { product, revision: current.revision })).status, 400)
   await enable('takimo', 'buy')
-  assert.equal((await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })).status, 200)
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })).status, 200)
 })
 
-test('certificate holder is required, stored, replaceable on retry and returned to admin', async (t) => {
+const holder = { firstName: 'Giulia', lastName: 'Neri', email: 'giulia@example.com' }
+const line = (changes = {}) => ({ modelId: 'takimo', variantId: null, quantity: 1, certificate: null, engraving: null, engravingAccepted: false, ...changes })
+
+test('per-line certificate and engraving are validated, stored per item and returned to admin', async (t) => {
   const { admin, buyer, enable } = await fixture(t, true)
   await enable('takimo')
-  const items = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
-  const requestId = randomUUID()
-  for (const rejected of [
-    undefined,
-    null,
+  const order = (items) => buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
+  for (const certificate of [
     { firstName: 'Anna', lastName: 'Bianchi', email: 'not-an-email' },
     { firstName: '   ', lastName: 'Bianchi', email: 'anna@example.com' },
     { firstName: 'Anna', lastName: '', email: 'anna@example.com' },
     { firstName: 'x'.repeat(81), lastName: 'Bianchi', email: 'anna@example.com' },
     { firstName: 'Anna', lastName: 'Bianchi', email: 'anna@example.com', extra: true },
   ])
-    assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId, certificate: rejected })).status, 400)
-  const first = { firstName: 'Anna', lastName: 'Bianchi', email: 'anna@example.com' }
-  const order = await buyer.request('/payments/orders', 'POST', { items, requestId, certificate: first })
-  assert.equal(order.status, 200, JSON.stringify(order.body))
-  const second = { firstName: ' Luca ', lastName: 'Verdi', email: 'luca@example.com' }
-  const retried = await buyer.request('/payments/orders', 'POST', { items, requestId, certificate: second })
-  assert.equal(retried.body.id, order.body.id)
-  assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).body.status, 'COMPLETED')
+    assert.equal((await order([line({ certificate })])).status, 400)
+  const eleven = await order([line({ engraving: 'uno due tre quattro cinque sei sette otto nove dieci undici', engravingAccepted: true })])
+  assert.equal(eleven.status, 400)
+  assert.match(eleven.body.error, /10 parole/)
+  assert.equal((await order([line({ engraving: 'x'.repeat(121), engravingAccepted: true })])).status, 400)
+  const unaccepted = await order([line({ engraving: 'Per sempre' })])
+  assert.equal(unaccepted.status, 400)
+  assert.match(unaccepted.body.error, /restituito/)
+  const many = await order([line({ quantity: 2, certificate: holder })])
+  assert.equal(many.status, 400)
+  assert.match(many.body.error, /quantità 1/)
+  assert.equal((await order([line({ quantity: 2, engraving: 'Per sempre', engravingAccepted: true })])).status, 400)
+  // Unpersonalized duplicates and identical personalized lines stay rejected.
+  assert.equal((await order([line(), line()])).status, 400)
+  assert.equal((await order([line({ certificate: holder }), line({ certificate: holder })])).status, 400)
+  // Rejected attempts never created a row.
+  assert.equal((await admin.request('/admin/orders')).body.length, 0)
+  // Blank engraving means none, so no acceptance is needed; the same watch may repeat with different personalization.
+  const ok = await order([
+    line({ quantity: 2, engraving: '   ' }),
+    line({ engraving: ' Per sempre ', engravingAccepted: true, certificate: { ...holder, firstName: ' Giulia ' } }),
+    line({ engraving: 'A Luca', engravingAccepted: true }),
+  ])
+  assert.equal(ok.status, 200, JSON.stringify(ok.body))
   const [row] = (await admin.request('/admin/orders')).body
-  assert.deepEqual(row.certificate, { firstName: 'Luca', lastName: 'Verdi', email: 'luca@example.com' })
-  assert.equal(row.certificateCode, null)
-  assert.deepEqual(row.receipt.payer, { firstName: 'Mario', lastName: 'Rossi', email: 'mario@example.com' })
-  // Rejected attempts never created a row: only the paid order exists.
-  assert.equal((await admin.request('/admin/orders')).body.length, 1)
+  assert.equal(row.total, 239000 * 4)
+  assert.equal(row.certificate, null)
+  assert.deepEqual(
+    row.items.map((i) => [i.quantity, i.certificate, i.engraving, i.engravingAccepted]),
+    [
+      [2, null, null, false],
+      [1, holder, 'Per sempre', true],
+      [1, null, 'A Luca', true],
+    ],
+  )
+  assert.match(row.items[0].image.src, /^img\//)
+  assert.equal(row.fulfillment, null)
+  assert.equal(row.publicToken, null)
+  assert.deepEqual(row.emails, [])
+})
+
+test('order fingerprint includes personalization', async (t) => {
+  const { buyer, enable } = await fixture(t, true)
+  await enable('takimo')
+  const requestId = randomUUID()
+  const first = await buyer.request('/payments/orders', 'POST', { items: [line({ engraving: 'Uno', engravingAccepted: true })], requestId })
+  assert.equal(first.status, 200, JSON.stringify(first.body))
+  const changed = await buyer.request('/payments/orders', 'POST', { items: [line({ engraving: 'Due', engravingAccepted: true })], requestId })
+  assert.equal(changed.status, 409)
 })
 
 test('certificate code route requires admin and CSRF, sets and clears the code', async (t) => {
   const { admin, buyer, enable } = await fixture(t, true)
   await enable('takimo')
   const requestId = randomUUID()
-  await buyer.request('/payments/orders', 'POST', { items: [{ modelId: 'takimo', variantId: null, quantity: 1 }], certificate, requestId })
+  await buyer.request('/payments/orders', 'POST', { items: [{ modelId: 'takimo', variantId: null, quantity: 1 }], requestId })
   const path = `/admin/orders/${requestId}/certificate`
   assert.equal((await buyer.request(path, 'PUT', { code: 'ZT-001' })).status, 401)
   assert.equal((await admin.request(path, 'PUT', { code: 'ZT-001' }, { 'X-CSRF-Token': 'bad' })).status, 403)
@@ -474,13 +517,13 @@ test('limited edition with zero pieces is sold out; unknown or positive pieces s
   const { admin, buyer } = await fixture(t, true)
   const items = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
   await savePieces(admin, 'takimo', 0)
-  const refused = await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })
+  const refused = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
   assert.equal(refused.status, 409)
   assert.equal(refused.body.error, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
   await savePieces(admin, 'takimo', 1)
-  assert.equal((await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })).status, 200)
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })).status, 200)
   await savePieces(admin, 'takimo', null)
-  const order = await buyer.request('/payments/orders', 'POST', { items, certificate, requestId: randomUUID() })
+  const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
   assert.equal(order.status, 200)
   // Capture re-resolves the cart, so pieces reaching zero after checkout also refuse payment.
   await savePieces(admin, 'takimo', 0)
@@ -492,13 +535,13 @@ test('paid captures consume limited pieces once, reserve the last piece, and lea
   const one = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
   const pieces = async () => (await admin.request('/catalog')).body.models.find((m) => m.id === 'takimo').piecesRemaining
   await savePieces(admin, 'takimo', 2)
-  const tooMany = await buyer.request('/payments/orders', 'POST', { items: [{ ...one[0], quantity: 3 }], certificate, requestId: randomUUID() })
+  const tooMany = await buyer.request('/payments/orders', 'POST', { items: [{ ...one[0], quantity: 3 }], requestId: randomUUID() })
   assert.equal(tooMany.status, 409)
   assert.equal(tooMany.body.error, 'Pezzi disponibili insufficienti. Aggiorna il carrello.')
 
   // A recovered capture response counts the sale exactly once.
   const stale = (await admin.request('/catalog')).body
-  const first = await buyer.request('/payments/orders', 'POST', { items: one, certificate, requestId: randomUUID() })
+  const first = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
   seen.lostCapture = true
   assert.equal((await buyer.request(`/payments/orders/${first.body.id}/capture`, 'POST', {})).status, 500)
   assert.equal(await pieces(), 2)
@@ -512,8 +555,8 @@ test('paid captures consume limited pieces once, reserve the last piece, and lea
   // Two shoppers race for the last piece: one is charged, the other is refused before capture.
   const other = client()
   await other.request('/session')
-  const a = await buyer.request('/payments/orders', 'POST', { items: one, certificate, requestId: randomUUID() })
-  const b = await other.request('/payments/orders', 'POST', { items: one, certificate, requestId: randomUUID() })
+  const a = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
+  const b = await other.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
   assert.equal(a.status, 200)
   assert.equal(b.status, 200)
   const capturesBefore = seen.captures
@@ -524,11 +567,11 @@ test('paid captures consume limited pieces once, reserve the last piece, and lea
   assert.deepEqual(results.map((r) => r.status).sort(), [200, 409])
   assert.equal(seen.captures - capturesBefore, 1)
   assert.equal(await pieces(), 0)
-  assert.equal((await buyer.request('/payments/orders', 'POST', { items: one, certificate, requestId: randomUUID() })).status, 409)
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })).status, 409)
 
   // Without a count, sales never invent one.
   await savePieces(admin, 'takimo', null)
-  const open = await buyer.request('/payments/orders', 'POST', { items: one, certificate, requestId: randomUUID() })
+  const open = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
   assert.equal((await buyer.request(`/payments/orders/${open.body.id}/capture`, 'POST', {})).body.status, 'COMPLETED')
   assert.equal(await pieces(), null)
 })
@@ -787,7 +830,7 @@ test('a perfume set to buy is sold at the server price and needs no certificate'
   assert.equal(saved.status, 200, JSON.stringify(saved.body))
   assert.equal(saved.body.perfumes.find((p) => p.id === 'tesoro-di-alarico').price, '135,00 EUR')
   const items = [{ ...perfumeLine('tesoro-di-alarico', 2), priceCents: 1 }]
-  const order = await buyer.request('/payments/orders', 'POST', { items, certificate: null, requestId: randomUUID() })
+  const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
   assert.equal(order.status, 200, JSON.stringify(order.body))
   assert.deepEqual(seen.amounts, ['270.00'])
   assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).body.status, 'COMPLETED')
@@ -802,19 +845,13 @@ test('a perfume set to buy is sold at the server price and needs no certificate'
   // A perfume never takes a variant.
   const variant = await buyer.request('/payments/orders', 'POST', {
     items: [{ ...perfumeLine('tesoro-di-alarico'), variantId: 'blu' }],
-    certificate: null,
     requestId: randomUUID(),
   })
   assert.equal(variant.status, 409)
-  // Any watch in the cart still requires the warranty holder.
+  // The certificate is optional per line, for watches too.
   await enable('takimo')
-  const watch = { modelId: 'takimo', variantId: null, quantity: 1 }
-  for (const cart of [[watch], [watch, perfumeLine('tesoro-di-alarico')]])
-    for (const missing of [null, undefined])
-      assert.equal((await buyer.request('/payments/orders', 'POST', { items: cart, certificate: missing, requestId: randomUUID() })).status, 400)
   const mixed = await buyer.request('/payments/orders', 'POST', {
-    items: [watch, perfumeLine('tesoro-di-alarico')],
-    certificate,
+    items: [{ modelId: 'takimo', variantId: null, quantity: 1 }, perfumeLine('tesoro-di-alarico')],
     requestId: randomUUID(),
   })
   assert.equal(mixed.status, 200, JSON.stringify(mixed.body))
@@ -1037,4 +1074,167 @@ test('watch line is validated on save and shared with the public catalog', async
   const defaulted = await admin.request('/admin/products/n9', 'PUT', { product, revision: current.revision })
   assert.equal(defaulted.status, 200, JSON.stringify(defaulted.body))
   assert.equal(defaulted.body.models.find((m) => m.id === 'n9').gender, 'unisex')
+})
+
+// Order emails are fire-and-forget; wait until the emails table holds the expected attempts.
+const emailLog = async (application, count) => {
+  for (let i = 0; i < 200; i++) {
+    const rows = application.db.prepare('SELECT * FROM emails ORDER BY id').all()
+    if (rows.length >= count) return rows
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  assert.fail(`expected ${count} email attempts`)
+}
+const paidOrder = async ({ buyer, enable }, items = [line({ certificate: holder, engraving: 'Per <sempre>', engravingAccepted: true })]) => {
+  await enable('takimo')
+  const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
+  assert.equal(order.status, 200, JSON.stringify(order.body))
+  const capture = await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})
+  assert.equal(capture.status, 200, JSON.stringify(capture.body))
+  return { order, capture }
+}
+
+test('capture creates the order page and sends one owner and one customer email', async (t) => {
+  const context = await fixture(t, true)
+  const { admin, buyer, mail, application } = context
+  const { order, capture } = await paidOrder(context)
+  assert.match(capture.body.orderUrl, /^\/ordine\/[A-Za-z0-9_-]{43}$/)
+  const log = await emailLog(application, 2)
+  assert.deepEqual(
+    log.map((e) => [e.kind, e.status, e.recipient, e.state]).sort(),
+    [
+      ['customer', 'ricevuto', 'giulia@example.com', 'sent'],
+      ['owner', 'ricevuto', 'owner@example.com', 'sent'],
+    ],
+  )
+  assert.equal(mail.sent.length, 2)
+  for (const message of mail.sent) {
+    // User text is escaped in the HTML.
+    assert.match(message.html, /Per &lt;sempre&gt;/)
+    assert.match(message.html, /Neri/)
+  }
+  const owner = mail.sent.find((m) => m.to === 'owner@example.com')
+  assert.match(owner.html, /ZPTAK15/)
+  assert.match(owner.html, /mario@example\.com/)
+  const [row] = (await admin.request('/admin/orders')).body
+  assert.equal(row.fulfillment, 'ricevuto')
+  assert.equal(row.history.length, 1)
+  assert.equal(row.history[0].status, 'ricevuto')
+  assert.equal(row.customerEmail, 'giulia@example.com')
+  assert.equal(`/ordine/${row.publicToken}`, capture.body.orderUrl)
+  assert.deepEqual(row.emails.map((e) => e.to).sort(), ['giulia@example.com', 'owner@example.com'])
+  // A repeated capture answers with the same page and sends nothing more.
+  const again = await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})
+  assert.equal(again.body.orderUrl, capture.body.orderUrl)
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  assert.equal(mail.sent.length, 2)
+})
+
+test('recovered capture sends once, falls back to the payer email, and mail failures never fail capture', async (t) => {
+  const context = await fixture(t, true)
+  const { buyer, enable, seen, mail, application } = context
+  await enable('takimo')
+  const order = await buyer.request('/payments/orders', 'POST', { items: [line()], requestId: randomUUID() })
+  seen.lostCapture = true
+  assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).status, 500)
+  assert.equal((await application.db.prepare('SELECT COUNT(*) AS n FROM emails').get()).n, 0)
+  mail.fail = true
+  const recovered = await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})
+  assert.equal(recovered.status, 200)
+  assert.ok(recovered.body.orderUrl)
+  const log = await emailLog(application, 2)
+  assert.deepEqual(log.map((e) => e.state), ['failed', 'failed'])
+  assert.ok(log.every((e) => e.error === 'SMTP down'))
+  assert.ok(log.some((e) => e.kind === 'customer' && e.recipient === 'mario@example.com'))
+  mail.fail = false
+  await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  assert.equal(application.db.prepare('SELECT COUNT(*) AS n FROM emails').get().n, 2)
+  assert.equal(mail.sent.length, 0)
+})
+
+test('public order page shows items and status only, and 404s for unknown tokens', async (t) => {
+  const context = await fixture(t, true)
+  const { client } = context
+  const { order, capture } = await paidOrder(context)
+  const guest = client()
+  const page = await guest.request(capture.body.orderUrl.replace('/ordine/', '/orders/'))
+  assert.equal(page.status, 200)
+  assert.deepEqual(Object.keys(page.body).sort(), ['created', 'history', 'items', 'reference', 'status', 'total'])
+  assert.equal(page.body.reference, order.body.requestId)
+  assert.equal(page.body.status, 'ricevuto')
+  assert.deepEqual(Object.keys(page.body.items[0]).sort(), ['certificate', 'codes', 'engraving', 'image', 'kind', 'name', 'priceCents', 'quantity'])
+  assert.deepEqual(page.body.items[0].certificate, holder)
+  assert.equal(page.body.items[0].engraving, 'Per <sempre>')
+  const raw = JSON.stringify(page.body)
+  for (const secret of ['mario@example.com', 'CAPTURE-1', 'PP-1', 'session', 'fingerprint']) assert.ok(!raw.includes(secret), secret)
+  for (const token of ['x'.repeat(43), 'short', `${'a'.repeat(42)}!`])
+    assert.equal((await guest.request(`/orders/${encodeURIComponent(token)}`)).status, 404)
+})
+
+test('status changes need admin and CSRF, append history and email the matching template', async (t) => {
+  const context = await fixture(t, true)
+  const { admin, buyer, mail, application } = context
+  const { order } = await paidOrder(context)
+  await emailLog(application, 2)
+  const id = order.body.requestId
+  const path = `/admin/orders/${id}/status`
+  assert.equal((await buyer.request(path, 'PUT', { status: 'pronto', notify: true })).status, 401)
+  assert.equal((await admin.request(path, 'PUT', { status: 'pronto', notify: true }, { 'X-CSRF-Token': 'bad' })).status, 403)
+  assert.equal((await admin.request(path, 'PUT', { status: 'perso', notify: true })).status, 400)
+  assert.equal((await admin.request(`/admin/orders/${randomUUID()}/status`, 'PUT', { status: 'pronto', notify: false })).status, 404)
+  const quiet = await admin.request(path, 'PUT', { status: 'in-lavorazione', notify: false })
+  assert.equal(quiet.status, 200)
+  assert.equal(quiet.body.fulfillment, 'in-lavorazione')
+  const ready = await admin.request(path, 'PUT', { status: 'pronto', notify: true })
+  assert.deepEqual(ready.body.history.map((h) => h.status), ['ricevuto', 'in-lavorazione', 'pronto'])
+  const log = await emailLog(application, 3)
+  assert.deepEqual([log[2].kind, log[2].status, log[2].recipient, log[2].state], ['customer', 'pronto', 'giulia@example.com', 'sent'])
+  assert.equal(mail.sent.length, 3)
+  assert.match(mail.sent[2].subject, /è pronto/)
+  // A disabled template skips the email even when notify is set.
+  const templates = (await admin.request('/admin/email-templates')).body
+  templates.spedito.enabled = false
+  assert.equal((await admin.request('/admin/email-templates', 'PUT', templates)).status, 200)
+  assert.equal((await admin.request(path, 'PUT', { status: 'spedito', notify: true })).status, 200)
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  assert.equal(mail.sent.length, 3)
+  // An unpaid order has no readiness yet.
+  const unpaid = await buyer.request('/payments/orders', 'POST', { items: [line({ engraving: 'Altro', engravingAccepted: true })], requestId: randomUUID() })
+  assert.equal((await admin.request(`/admin/orders/${unpaid.body.requestId}/status`, 'PUT', { status: 'pronto', notify: true })).status, 409)
+})
+
+test('email templates merge over defaults, round-trip and are validated', async (t) => {
+  const { admin, buyer } = await fixture(t)
+  const { DEFAULT_EMAIL_TEMPLATES } = await import('../src/data/types.ts')
+  assert.equal((await buyer.request('/admin/email-templates')).status, 401)
+  const defaults = await admin.request('/admin/email-templates')
+  assert.deepEqual(defaults.body, DEFAULT_EMAIL_TEMPLATES)
+  const next = structuredClone(defaults.body)
+  next.pronto = { enabled: false, subject: 'Pronto {ordine}', heading: 'Ciao {nome}', message: 'Riga uno.\n\nRiga due.' }
+  assert.equal((await admin.request('/admin/email-templates', 'PUT', next, { 'X-CSRF-Token': 'bad' })).status, 403)
+  const saved = await admin.request('/admin/email-templates', 'PUT', next)
+  assert.equal(saved.status, 200)
+  assert.deepEqual(saved.body, next)
+  assert.deepEqual((await admin.request('/admin/email-templates')).body, next)
+  const { consegnato, ...missing } = next
+  for (const invalid of [
+    missing,
+    { ...next, pronto: { ...next.pronto, subject: 'x'.repeat(201) } },
+    { ...next, pronto: { ...next.pronto, heading: 'x'.repeat(201) } },
+    { ...next, pronto: { ...next.pronto, message: 'x'.repeat(4001) } },
+    { ...next, perso: next.pronto },
+  ])
+    assert.equal((await admin.request('/admin/email-templates', 'PUT', invalid)).status, 400)
+  const mailInfo = await admin.request('/admin/mail')
+  assert.deepEqual(mailInfo.body, { configured: true, from: 'ZITO 1950® <customer@zito1950.it>', owner: 'owner@example.com' })
+})
+
+test('mailer without SMTP is not configured and skips sending', async () => {
+  const { createMailer } = await import('./mail.mjs')
+  const mailer = createMailer({})
+  assert.equal(mailer.configured, false)
+  assert.equal(mailer.from, 'ZITO 1950® <customer@zito1950.it>')
+  assert.equal(mailer.owner, 'customer@zito1950.it')
+  assert.deepEqual(await mailer.send({ to: 'a@example.com', subject: 's', html: '<p>h</p>', text: 'h' }), { skipped: true })
 })

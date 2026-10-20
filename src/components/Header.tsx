@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LanguageSelector, t, useContent } from '../lib/i18n'
-import { asset } from '../lib/asset'
+import { asset, sectionHref } from '../lib/asset'
 import { useShop } from '../lib/shop'
 
 const MENU_ID = 'menu-mobile'
@@ -102,7 +102,7 @@ export default function Header() {
         }`}
       >
         <div className="container-site flex h-[var(--header-h)] items-center justify-between gap-2 md:gap-6">
-          <a href="#home" className="-ml-1 flex min-h-11 items-center px-1" onClick={() => setOpen(false)}>
+          <a href={sectionHref('#home')} className="-ml-1 flex min-h-11 items-center px-1" onClick={() => setOpen(false)}>
             <img src={asset('logo.svg')} alt={site.labels.home} width={355} height={100} className="h-6 w-auto sm:h-7 md:h-8" />
           </a>
 
@@ -113,7 +113,7 @@ export default function Header() {
                 return (
                   <li key={item.href}>
                     <a
-                      href={item.href}
+                      href={sectionHref(item.href)}
                       aria-current={isActive ? 'location' : undefined}
                       className={`relative inline-flex min-h-11 items-center text-small font-medium tracking-[0.04em] transition-colors duration-200 after:absolute after:inset-x-0 after:bottom-2 after:h-px after:origin-left after:bg-ink after:transition-transform after:duration-500 after:ease-out-quint ${
                         isActive ? 'text-ink after:scale-x-100' : 'text-ink-2 hover:text-ink after:scale-x-0'
@@ -189,7 +189,7 @@ export default function Header() {
               {site.nav.map((item) => (
                 <li key={item.href} className="border-b border-line">
                   <a
-                    href={item.href}
+                    href={sectionHref(item.href)}
                     aria-current={active === item.href ? 'location' : undefined}
                     className="flex min-h-16 items-center justify-between py-4 font-serif text-[2.25rem] leading-tight"
                     onClick={() => setOpen(false)}

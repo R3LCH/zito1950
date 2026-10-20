@@ -19,8 +19,9 @@ No accent hue. Color comes from the photographs.
 ## Typography
 - Serif `EB Garamond` 400/500 (italic only when meaningful) for headings, model names, quotes.
 - Sans `Manrope Variable` 400/500/600 for body, nav, controls.
+- Brand inscriptions `ZITO 1950®`: `TeX Gyre Adventor` regular 400, +.02em tracking (`font-brand`), an Avant-Garde-style geometric sans. Regular and bold 700 are self-hosted as Latin WOFF2 subsets under `src/assets/fonts/`, licensed under the GUST Font License; use regular for the logo’s thin-stroke character. Prose mentioning the brand keeps its surrounding typeface.
 - Scale: display `clamp(2.5rem,5vw,4.5rem)`/1.08 · h2 `clamp(2rem,3.6vw,3rem)`/1.15 · h3 1.5rem/1.25 · body 1.0625rem/1.7 (≤60ch) · small .875rem/1.5 · eyebrow .75rem uppercase +.18em (max one per three sections).
-- Headings `text-wrap: balance`, paragraphs `pretty`. Never redraw the logo in a font: use `logo.svg`.
+- Headings `text-wrap: balance`, paragraphs `pretty`. The text inscriptions use the brand font; the logo artwork remains `logo.svg` (Header/Footer), never reconstructed as text.
 
 ## Layout
 - Container 1240px, gutter `clamp(1.25rem,4vw,4rem)`, section padding `clamp(3.5rem,8vw,8rem)`.
@@ -52,7 +53,9 @@ No accent hue. Color comes from the photographs.
 - Territorio: `#territorio`, eyebrow “Scopri il territorio”, title “Scalea. Dove la bellezza incontra il tempo.”, text and serif closing line on the left, `img/storia/scalea-mare.jpg` on the right, held sticky on desktop; not expandable.
 - Perché Zito: `#perche-zito`, “Perché scegliere ZITO 1950®”, italic serif lead beside the reasons and the serif brand line; not expandable.
 - Contatti: “Dove siamo” at `#contatti`; only the map, centred (max 56rem, 4:3 on mobile, 16:9 from `sm`), with the email customer@zito1950.it as a `mailto:` row centred under it. No postal address, company or P.IVA in the section, footer or metadata; the address stays in data only as the map query.
-- Cart: opened from Header; native `<dialog>` with watch and perfume lines (each with `kind`), quantities, total and PayPal checkout. When the cart holds a watch, the “Certificato di proprietà” form shows the certificate front/back and a warranty note, and requires Nome di battesimo, Cognome and Email; errors appear after leaving a field or attempting checkout, and “Paga con PayPal” stays disabled until all are valid. The server rejects a missing or invalid holder with 400 for any order with a watch; there is no PayPal-payer fallback. A perfume-only cart shows no form and sends `certificate: null`. The owner assigns the certificate code in Admin → Ordini, where perfume-only and older orders without a holder show “—”.
+- Cart: opened from Header; native `<dialog>` with watch and perfume lines, quantities, total and PayPal checkout. Each line has two collapsible optional sections: “Certificato della proprietà e garanzia” (certificate front/back thumbnails, Nome, Cognome, Email, all required once one is filled) and “Incisione” (textarea, n/10 parole counter, 120 chars; when filled a bordered notice states the item is personalized and not returnable, with a required acknowledgement checkbox). Personalized lines lock quantity to 1. “Paga con PayPal” stays disabled while a section is incomplete, and always in the GitHub Pages preview (with a note).
+- Order page (`/ordine/<token>`): eyebrow “Il tuo ordine”, current status as serif title, five-step ordered status track (vertical on mobile, five columns from `md`, `aria-current="step"`), items with photo, codes, price, certificate and engraving, total, contact email.
+- Emails: 600px table layout on white, logo header, serif heading, message, ink pill button “Vai all’ordine”, items with photo, certificate and engraving, total, footer with logo, motto, Instagram/Facebook icons and email (`src/lib/orderEmail.ts`).
 - Footer: white, hairline top, per the mockup: `logo.svg` with the motto “Officine del tempo”; columns “Il marchio” (La nostra storia, Il laboratorio, La Calabria, I profumi), “Assistenza” (Catalogo completo, Contatti) and “Social” (Instagram and Facebook round line-icon links, new tab); bottom hairline row with the copyright and “Design italiano · Calabria · Dal 1950”. Instagram and Facebook appear only here.
 
 ## States

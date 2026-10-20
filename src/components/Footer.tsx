@@ -1,5 +1,5 @@
 import { t, useContent } from '../lib/i18n'
-import { asset } from '../lib/asset'
+import { asset, sectionHref } from '../lib/asset'
 
 /** Line icons (24px grid, 1.5 stroke), same drawing style as SectionButtons. */
 const ICONS = {
@@ -47,7 +47,7 @@ export default function Footer() {
     <footer className="border-t border-line bg-bg">
       <div className="container-site grid gap-10 py-[clamp(3rem,6vw,5rem)] md:grid-cols-12 md:gap-x-10">
         <div className="md:col-span-5">
-          <a href="#home" className="inline-flex min-h-11 items-center">
+          <a href={sectionHref('#home')} className="inline-flex min-h-11 items-center">
             <img src={asset('logo.svg')} alt={site.labels.home} width={355} height={100} className="h-12 w-auto" />
           </a>
           <p className="mt-2 font-serif text-small uppercase tracking-[0.2em] text-ink-2">{site.hero.motto}</p>
@@ -60,7 +60,7 @@ export default function Footer() {
               <ul className="mt-2 flex flex-col">
                 {col.links.map((link) => (
                   <li key={link.href}>
-                    <a href={link.href} className={linkClass}>
+                    <a href={sectionHref(link.href)} className={linkClass}>
                       {link.label}
                     </a>
                   </li>

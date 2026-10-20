@@ -28,7 +28,7 @@ export default function Hero() {
           />
         </a>
         <div ref={textRef} className="reveal md:order-1 md:col-span-5">
-          <h1 id="hero-title" className="text-display text-ink">
+          <h1 id="hero-title" className="font-brand text-display font-normal tracking-[0.02em] text-ink">
             {/* At display size a full-height ® reads heavy; set it as a small superscript. */}
             {site.name.split('®').map((part, i) => (i ? [<sup key={i} className="ml-[0.04em] align-super text-[0.32em] font-normal">®</sup>, part] : part))}
           </h1>

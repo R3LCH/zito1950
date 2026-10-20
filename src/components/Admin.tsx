@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { AVAILABILITIES, GENDERS, PERFUME_AVAILABILITIES, type Availability, type CertificateHolder, type Gender, type Img, type Model, type PerfumeAvailability, type Profumo, type Variant, type TextTranslation } from '../data/types'
+import { AVAILABILITIES, DEFAULT_EMAIL_TEMPLATES, FULFILLMENT_LABELS, FULFILLMENT_STATUSES, GENDERS, PERFUME_AVAILABILITIES, type Availability, type CertificateHolder, type EmailTemplate, type EmailTemplates, type FulfillmentStatus, type Gender, type Img, type Model, type OrderItemView, type PerfumeAvailability, type Profumo, type PublicOrder, type Variant, type TextTranslation } from '../data/types'
+import { renderCustomerEmail } from '../lib/orderEmail'
 import { api, euro, getSession, STATIC_PREVIEW, useShop, type Catalog } from '../lib/shop'
 import { officina, profumo as originalPerfume, storia, territorio } from '../data/content'
 import { asset } from '../lib/asset'
@@ -902,14 +903,156 @@ interface Order {
   status: string
   total: number
   created: number
-  items: { name: string; quantity: number; priceCents: number }[]
+  items: (OrderItemView & { engravingAccepted?: boolean })[]
   receipt: {
     captureId: string
     email?: string
     shipping?: { name?: { full_name: string }; address?: Record<string, string> }
   } | null
+  /** Legacy order-level holder; new orders carry the certificate per item. */
   certificate: CertificateHolder | null
   certificateCode: string | null
+  /** Readiness set by the owner; null until the payment is COMPLETED. */
+  fulfillment: FulfillmentStatus | null
+  history: { status: FulfillmentStatus; at: number }[]
+  publicToken: string | null
+  customerEmail: string | null
+  emails: { kind: 'owner' | 'customer'; status: FulfillmentStatus; to: string; state: 'sent' | 'skipped' | 'failed'; error: string | null; at: number }[]
+}
+interface MailConfig {
+  configured: boolean
+  from: string
+  owner: string
+}
+const EMAIL_STATE_LABELS: Record<Order['emails'][number]['state'], string> = { sent: 'inviata', skipped: 'non inviata', failed: 'non riuscita' }
+/** Site origin used by the email preview for absolute asset URLs, without trailing slash. */
+const previewOrigin = () => `${location.origin}${import.meta.env.BASE_URL}`.replace(/\/+$/, '')
+/** Demo order for the email preview, built from the first catalog watch. */
+function sampleOrder(models: Model[], status: FulfillmentStatus): PublicOrder {
+  const model = models[0]
+  const priceCents = model?.priceCents ?? 0
+  const reached = FULFILLMENT_STATUSES.slice(0, FULFILLMENT_STATUSES.indexOf(status) + 1)
+  const now = Date.now()
+  return {
+    reference: 'ANTEPRIMA-0001',
+    created: now - reached.length * 86_400_000,
+    total: priceCents,
+    status,
+    history: reached.map((s, index) => ({ status: s, at: now - (reached.length - 1 - index) * 86_400_000 })),
+    items: [{
+      kind: 'model',
+      name: model?.name ?? 'ZITO 1950®',
+      codes: model?.codes ?? [],
+      quantity: 1,
+      priceCents,
+      image: model?.images[0] ?? null,
+      certificate: { firstName: 'Mario', lastName: 'Rossi', email: 'mario.rossi@example.com' },
+      engraving: 'Per sempre',
+    }],
+  }
+}
+/** Admin -> Email: customer email per readiness status, with a live sandboxed preview. */
+function EmailTemplatesEditor({
+  templates,
+  mail,
+  models,
+  busy,
+  onChange,
+  onSave,
+}: {
+  templates: EmailTemplates
+  mail: MailConfig | null
+  models: Model[]
+  busy: boolean
+  onChange: (templates: EmailTemplates) => void
+  onSave: () => void
+}) {
+  const [previewStatus, setPreviewStatus] = useState<FulfillmentStatus>('ricevuto')
+  const update = (status: FulfillmentStatus, patch: Partial<EmailTemplate>) => onChange({ ...templates, [status]: { ...templates[status], ...patch } })
+  const origin = previewOrigin()
+  const preview = renderCustomerEmail(templates[previewStatus], sampleOrder(models, previewStatus), {
+    origin,
+    customerName: 'Mario',
+    orderUrl: `${origin}/ordine/anteprima`,
+  })
+  return (
+    <section className="space-y-8">
+      <div>
+        <h2 className="text-h2">{t("Email ai clienti")}</h2>
+        <div className="mt-3 text-small">
+          {STATIC_PREVIEW ? (
+            <p className="text-muted">{t("Anteprima UI: vengono mostrati i testi predefiniti e il salvataggio è disattivato.")}</p>
+          ) : mail ? (
+            <>
+              <p>{mail.configured ? t('Invio email configurato') : t('SMTP non configurato: le email vengono registrate ma non inviate.')}</p>
+              <p className="mt-1 break-all text-muted">{t("Mittente:")} {mail.from} · {t("Email del titolare:")} {mail.owner}</p>
+            </>
+          ) : (
+            <p className="text-muted">—</p>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <form
+          className="min-w-0 space-y-8"
+          onSubmit={(e) => {
+            e.preventDefault()
+            onSave()
+          }}
+        >
+          <p className="text-small text-muted">
+            {t("Puoi usare i segnaposto {nome} (nome del cliente), {ordine} (riferimento dell’ordine) e {stato} (stato dell’ordine). Nel messaggio una riga vuota separa i paragrafi.")}
+          </p>
+          {FULFILLMENT_STATUSES.map((status) => {
+            const template = templates[status]
+            return (
+              <fieldset key={status} disabled={busy} className="min-w-0 space-y-4 border-t border-line pt-5" onFocus={() => setPreviewStatus(status)}>
+                <legend className="eyebrow pr-3">{t(FULFILLMENT_LABELS[status])}</legend>
+                <label className="flex items-center gap-3 text-small">
+                  <input type="checkbox" className="accent-ink" checked={template.enabled} onChange={(e) => update(status, { enabled: e.target.checked })} />
+                  {t("Attiva")}
+                </label>
+                <label className="shop-label">
+                  {t("Oggetto")}
+                  <input className="shop-input" maxLength={200} value={template.subject} onChange={(e) => update(status, { subject: e.target.value })} />
+                </label>
+                <label className="shop-label">
+                  {t("Titolo")}
+                  <input className="shop-input" maxLength={200} value={template.heading} onChange={(e) => update(status, { heading: e.target.value })} />
+                </label>
+                <label className="shop-label">
+                  {t("Messaggio")}
+                  <textarea className="shop-input min-h-32" maxLength={4000} value={template.message} onChange={(e) => update(status, { message: e.target.value })} />
+                </label>
+                <p className="text-xs text-muted">{t("Segnaposto:")} {'{nome} {ordine} {stato}'}</p>
+                <button type="button" className="underline text-small" onClick={() => update(status, DEFAULT_EMAIL_TEMPLATES[status])}>
+                  {t("Ripristina testo predefinito")}
+                </button>
+              </fieldset>
+            )
+          })}
+          <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW}>
+            {t("Salva modelli email")}
+          </button>
+        </form>
+        <div className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+          <label className="shop-label">
+            {t("Anteprima per")}
+            <select className="shop-input" value={previewStatus} onChange={(e) => setPreviewStatus(e.target.value as FulfillmentStatus)}>
+              {FULFILLMENT_STATUSES.map((status) => (
+                <option key={status} value={status}>{t(FULFILLMENT_LABELS[status])}</option>
+              ))}
+            </select>
+          </label>
+          <p className="mt-4 break-words text-small">
+            <span className="text-muted">{t("Oggetto:")}</span> {preview.subject}
+          </p>
+          {!templates[previewStatus].enabled && <p className="mt-2 text-small text-muted">{t("Questa email è disattivata e non viene inviata.")}</p>}
+          <iframe title={t("Anteprima dell’email")} srcDoc={preview.html} sandbox="" className="mt-4 h-[720px] w-full border border-line bg-white" />
+        </div>
+      </div>
+    </section>
+  )
 }
 export default function Admin() {
   const { locale } = useLocale()
@@ -923,8 +1066,11 @@ export default function Admin() {
   const [newProduct, setNewProduct] = useState<Model | null>(null)
   const [selectedPerfume, setSelectedPerfume] = useState<string | null>(null)
   const [newPerfume, setNewPerfume] = useState<Profumo | null>(null)
-  const [tab, setTab] = useState<'products' | 'perfume' | 'photos' | 'orders'>('products')
+  const [tab, setTab] = useState<'products' | 'perfume' | 'photos' | 'orders' | 'email'>('products')
   const [orders, setOrders] = useState<Order[]>([])
+  // Defaults until the server copy loads; the static preview keeps them, so its preview still renders.
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplates>(DEFAULT_EMAIL_TEMPLATES)
+  const [mailConfig, setMailConfig] = useState<MailConfig | null>(null)
   const [photos, setPhotos] = useState<File[]>([])
   const [photoAlt, setPhotoAlt] = useState('')
   const [heroSrc, setHeroSrc] = useState('')
@@ -1130,6 +1276,7 @@ export default function Admin() {
                 ['perfume', t('Profumi')],
                 ['photos', t('Fotografie')],
                 ['orders', t('Ordini')],
+                ['email', t('Email')],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -1142,6 +1289,15 @@ export default function Admin() {
                   setTab(key)
                   if (key === 'orders' && !STATIC_PREVIEW)
                     void perform(async () => setOrders(await api<Order[]>('/admin/orders')), 'Ordini aggiornati.')
+                  if (key === 'email' && !STATIC_PREVIEW)
+                    void perform(async () => {
+                      const [templates, mail] = await Promise.all([
+                        api<EmailTemplates>('/admin/email-templates'),
+                        api<MailConfig>('/admin/mail'),
+                      ])
+                      setEmailTemplates(templates)
+                      setMailConfig(mail)
+                    }, 'Modelli email caricati.')
                 }}
               >
                 {label}
@@ -1599,7 +1755,17 @@ export default function Admin() {
           )}
           {tab === 'orders' && (
             <section>
-              <h2 className="text-h2">{t("Ordini recenti")}</h2>
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <h2 className="text-h2">{t("Ordini recenti")}</h2>
+                <button
+                  type="button"
+                  className="underline text-small"
+                  disabled={busy || STATIC_PREVIEW}
+                  onClick={() => void perform(async () => setOrders(await api<Order[]>('/admin/orders')), 'Ordini aggiornati.')}
+                >
+                  {t("Ricarica ordini")}
+                </button>
+              </div>
               <p className="mt-3 text-small text-muted">
                 {t("Spedisci solo ordini COMPLETED. Gli ordini in attesa non confermano un pagamento.")}
               </p>
@@ -1616,13 +1782,37 @@ export default function Admin() {
                     <p className="mt-2 break-all text-small">
                       {t('Riferimento:')} {order.id} · PayPal: {order.paypal_id ?? t('in preparazione')}
                     </p>
-                    <ul className="mt-3 text-small">
+                    {order.publicToken && (
+                      <a href={`${import.meta.env.BASE_URL}ordine/${order.publicToken}`} target="_blank" rel="noopener" className="link-arrow mt-2 text-small">
+                        <span>{t("Apri pagina ordine")}</span>
+                      </a>
+                    )}
+                    <ul className="mt-4 space-y-4 text-small">
                       {order.items.map((item, index) => (
-                        <li key={index}>
-                          {item.quantity} × {item.name} · {euro(item.priceCents)}
+                        <li key={index} className="grid grid-cols-[56px_minmax(0,1fr)] gap-3">
+                          {item.image ? <img src={asset(item.image.src)} alt="" className="h-14 w-14 bg-well object-contain" /> : <span className="h-14 w-14 bg-well" />}
+                          <div className="min-w-0">
+                            <p>
+                              {item.quantity} × {item.name} · {euro(item.priceCents)}
+                            </p>
+                            {!!item.codes?.length && <p className="text-muted">{t("Codici:")} {item.codes.join(', ')}</p>}
+                            {item.certificate && (
+                              <p className="break-words">
+                                {t("Certificato:")} {item.certificate.firstName} {item.certificate.lastName} · <span className="break-all">{item.certificate.email}</span>
+                              </p>
+                            )}
+                            {item.engraving && (
+                              <p className="break-words">
+                                {t("Incisione:")} «{item.engraving}» · {t("non restituibile")}
+                              </p>
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>
+                    {order.customerEmail && (
+                      <p className="mt-4 break-all text-small">{t("Email del cliente:")} {order.customerEmail}</p>
+                    )}
                     {order.receipt && (
                       <div className="mt-4 text-small">
                         <p>{t("Pagamento:") + ' '}{order.receipt.captureId}</p>
@@ -1631,49 +1821,116 @@ export default function Admin() {
                         <p>{Object.values(order.receipt.shipping?.address ?? {}).join(', ')}</p>
                       </div>
                     )}
-                    {(() => {
-                      // Orders with a watch require the holder; perfume-only orders and older orders have none.
-                      const holder = order.certificate
-                      return (
-                        <section className="mt-5 border border-line p-5" aria-labelledby={`certificate-${order.id}`}>
-                          <h4 id={`certificate-${order.id}`} className="text-small font-medium">{t("Certificato")}</h4>
-                          <div className="mt-3 text-small">
-                            {holder ? (
-                              <>
-                                <p>{holder.firstName} {holder.lastName}</p>
-                                <p className="break-all">{holder.email}</p>
-                              </>
-                            ) : (
-                              <p>—</p>
-                            )}
-                          </div>
-                          <form
-                            key={`${order.id}-${order.certificateCode ?? ''}`}
-                            className="mt-4 flex flex-wrap items-end gap-4"
-                            onSubmit={(e) => {
-                              e.preventDefault()
-                              const code = String(new FormData(e.currentTarget).get('code') ?? '')
-                              void perform(async () => {
-                                const updated = await api<Order>(`/admin/orders/${order.id}/certificate`, 'PUT', { code })
-                                setOrders((list) => list.map((item) => (item.id === updated.id ? updated : item)))
-                              }, 'Codice certificato salvato.')
-                            }}
-                          >
-                            <label className="shop-label min-w-0 flex-1">
-                              {t("Codice certificato")}
-                              <input className="shop-input" name="code" maxLength={80} defaultValue={order.certificateCode ?? ''} />
-                            </label>
-                            <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW}>
-                              {t("Salva codice")}
-                            </button>
-                          </form>
-                        </section>
-                      )
-                    })()}
+                    <section className="mt-5 border border-line p-5" aria-labelledby={`fulfillment-${order.id}`}>
+                      <h4 id={`fulfillment-${order.id}`} className="text-small font-medium">{t("Stato dell’ordine")}</h4>
+                      <p className="mt-2 text-small">{order.fulfillment ? t(FULFILLMENT_LABELS[order.fulfillment]) : '—'}</p>
+                      <form
+                        key={`${order.id}-${order.fulfillment ?? ''}`}
+                        className="mt-4 flex flex-wrap items-end gap-4"
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          const form = new FormData(e.currentTarget)
+                          const next = String(form.get('status')) as FulfillmentStatus
+                          const notify = form.get('notify') === 'on'
+                          void perform(async () => {
+                            const updated = await api<Order>(`/admin/orders/${order.id}/status`, 'PUT', { status: next, notify })
+                            setOrders((list) => list.map((item) => (item.id === updated.id ? updated : item)))
+                          }, notify ? 'Stato aggiornato. L’email al cliente è in invio: ricarica gli ordini per vederne l’esito.' : 'Stato aggiornato.')
+                        }}
+                      >
+                        <fieldset disabled={busy || STATIC_PREVIEW || order.status !== 'COMPLETED'} className="contents">
+                          <label className="shop-label min-w-0 flex-1">
+                            {t("Stato")}
+                            <select className="shop-input" name="status" defaultValue={order.fulfillment ?? 'ricevuto'}>
+                              {FULFILLMENT_STATUSES.map((s) => (
+                                <option key={s} value={s}>{t(FULFILLMENT_LABELS[s])}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="flex items-center gap-3 pb-3 text-small">
+                            <input type="checkbox" className="accent-ink" name="notify" defaultChecked />
+                            {t("Invia email al cliente")}
+                          </label>
+                          <button type="submit" className="btn">
+                            {t("Aggiorna stato")}
+                          </button>
+                        </fieldset>
+                      </form>
+                      {order.status !== 'COMPLETED' && (
+                        <p className="mt-3 text-small text-muted">{t("Lo stato si può aggiornare solo per ordini pagati (COMPLETED).")}</p>
+                      )}
+                      {!!order.history?.length && (
+                        <>
+                          <h5 className="eyebrow mt-5">{t("Cronologia")}</h5>
+                          <ol className="mt-2 space-y-1 text-small">
+                            {order.history.map((entry, index) => (
+                              <li key={index}>
+                                {t(FULFILLMENT_LABELS[entry.status])} · {new Date(entry.at).toLocaleString(LANGUAGE_TAGS[locale])}
+                              </li>
+                            ))}
+                          </ol>
+                        </>
+                      )}
+                      {!!order.emails?.length && (
+                        <>
+                          <h5 className="eyebrow mt-5">{t("Email")}</h5>
+                          <ul className="mt-2 space-y-1 text-small">
+                            {order.emails.map((mail, index) => (
+                              <li key={index} className="break-words">
+                                {mail.kind === 'owner' ? t('titolare') : t('cliente')} · {t(FULFILLMENT_LABELS[mail.status])} · <span className="break-all">{mail.to}</span> · {t(EMAIL_STATE_LABELS[mail.state])}
+                                {mail.error && <span className="text-muted"> · {mail.error}</span>} · {new Date(mail.at).toLocaleString(LANGUAGE_TAGS[locale])}
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </section>
+                    {order.certificate && (
+                      // Legacy orders: one order-level holder, before the per-item certificate.
+                      <section className="mt-5 border border-line p-5" aria-labelledby={`certificate-${order.id}`}>
+                        <h4 id={`certificate-${order.id}`} className="text-small font-medium">{t("Certificato")}</h4>
+                        <div className="mt-3 text-small">
+                          <p>{order.certificate.firstName} {order.certificate.lastName}</p>
+                          <p className="break-all">{order.certificate.email}</p>
+                        </div>
+                      </section>
+                    )}
+                    <form
+                      key={`${order.id}-${order.certificateCode ?? ''}`}
+                      className="mt-4 flex flex-wrap items-end gap-4"
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        const code = String(new FormData(e.currentTarget).get('code') ?? '')
+                        void perform(async () => {
+                          const updated = await api<Order>(`/admin/orders/${order.id}/certificate`, 'PUT', { code })
+                          setOrders((list) => list.map((item) => (item.id === updated.id ? updated : item)))
+                        }, 'Codice certificato salvato.')
+                      }}
+                    >
+                      <label className="shop-label min-w-0 flex-1">
+                        {t("Codice certificato")}
+                        <input className="shop-input" name="code" maxLength={80} defaultValue={order.certificateCode ?? ''} />
+                      </label>
+                      <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW}>
+                        {t("Salva codice")}
+                      </button>
+                    </form>
                   </li>
                 ))}
               </ul>
             </section>
+          )}
+          {tab === 'email' && (
+            <EmailTemplatesEditor
+              templates={emailTemplates}
+              mail={mailConfig}
+              models={catalog.models}
+              busy={busy}
+              onChange={setEmailTemplates}
+              onSave={() =>
+                void perform(async () => setEmailTemplates(await api<EmailTemplates>('/admin/email-templates', 'PUT', emailTemplates)), 'Modelli email salvati.')
+              }
+            />
           )}
         </>
       )}

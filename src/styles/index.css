@@ -1,5 +1,21 @@
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'TeX Gyre Adventor';
+  src: url('../assets/fonts/texgyreadventor-regular.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'TeX Gyre Adventor';
+  src: url('../assets/fonts/texgyreadventor-bold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 @theme {
   --color-bg: #ffffff;
   --color-ink: #141414;
@@ -11,6 +27,7 @@
 
   --font-serif: 'EB Garamond', 'Garamond', 'Times New Roman', serif;
   --font-sans: 'Manrope Variable', 'Manrope', system-ui, sans-serif;
+  --font-brand: 'TeX Gyre Adventor', 'ITC Avant Garde Gothic', 'Century Gothic', sans-serif;
 
   --text-display: clamp(2.5rem, 5vw, 4.5rem);
   --text-display--line-height: 1.08;
