@@ -701,7 +701,6 @@
     "Apri pagina ordine": "Открыть страницу заказа",
     "Articoli": "Товары",
     "Articolo personalizzato: non può essere restituito né cambiato.": "Персонализированный товар: возврат и обмен невозможны.",
-    "Articolo personalizzato: un pezzo per riga.": "Персонализированный товар: одна штука на строку.",
     "Attiva": "Включено",
     "Caricamento dell’ordine…": "Загрузка заказа…",
     "Certificato della proprietà e garanzia": "Сертификат подлинности и гарантии",
@@ -767,7 +766,9 @@
     "non inviata": "не отправлено",
     "non riuscita": "ошибка",
     "inviata": "отправлено",
-    "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Гравировка может содержать не более 10 слов и 120 символов."
+    "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Гравировка может содержать не более 10 слов и 120 символов.",
+    "(da completare)": "(нужно заполнить)",
+    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Персонализация: одна штука на строку, остальные остаются без персонализации."
   },
   "en": {
     "1957": "1957",
@@ -1471,7 +1472,6 @@
     "Apri pagina ordine": "Open order page",
     "Articoli": "Items",
     "Articolo personalizzato: non può essere restituito né cambiato.": "Personalized item: it cannot be returned or exchanged.",
-    "Articolo personalizzato: un pezzo per riga.": "Personalized item: one piece per line.",
     "Attiva": "Enabled",
     "Caricamento dell’ordine…": "Loading your order…",
     "Certificato della proprietà e garanzia": "Certificate of ownership and warranty",
@@ -1537,7 +1537,9 @@
     "non inviata": "not sent",
     "non riuscita": "failed",
     "inviata": "sent",
-    "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "The engraving can have at most 10 words and 120 characters."
+    "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "The engraving can have at most 10 words and 120 characters.",
+    "(da completare)": "(to complete)",
+    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Personalized: one piece per line, the others stay without personalization."
   },
   "uk": {
     "1957": "1957",
@@ -2241,7 +2243,6 @@
     "Apri pagina ordine": "Відкрити сторінку замовлення",
     "Articoli": "Товари",
     "Articolo personalizzato: non può essere restituito né cambiato.": "Персоналізований товар: повернення й обмін неможливі.",
-    "Articolo personalizzato: un pezzo per riga.": "Персоналізований товар: одна штука на рядок.",
     "Attiva": "Увімкнено",
     "Caricamento dell’ordine…": "Завантаження замовлення…",
     "Certificato della proprietà e garanzia": "Сертифікат власності та гарантії",
@@ -2307,7 +2308,9 @@
     "non inviata": "не надіслано",
     "non riuscita": "помилка",
     "inviata": "надіслано",
-    "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Гравіювання може містити не більше 10 слів і 120 символів."
+    "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Гравіювання може містити не більше 10 слів і 120 символів.",
+    "(da completare)": "(потрібно заповнити)",
+    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Персоналізація: одна штука на рядок, решта залишаються без персоналізації."
   },
   "de": {
     "1957": "1957",
@@ -3011,7 +3014,6 @@
     "Apri pagina ordine": "Bestellseite öffnen",
     "Articoli": "Artikel",
     "Articolo personalizzato: non può essere restituito né cambiato.": "Personalisierter Artikel: kein Umtausch und keine Rückgabe.",
-    "Articolo personalizzato: un pezzo per riga.": "Personalisierter Artikel: ein Stück pro Zeile.",
     "Attiva": "Aktiv",
     "Caricamento dell’ordine…": "Bestellung wird geladen…",
     "Certificato della proprietà e garanzia": "Eigentums- und Garantiezertifikat",
@@ -3077,7 +3079,9 @@
     "non inviata": "nicht gesendet",
     "non riuscita": "fehlgeschlagen",
     "inviata": "gesendet",
-    "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Die Gravur darf höchstens 10 Wörter und 120 Zeichen enthalten."
+    "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Die Gravur darf höchstens 10 Wörter und 120 Zeichen enthalten.",
+    "(da completare)": "(zu vervollständigen)",
+    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Personalisiert: ein Stück pro Zeile, die übrigen bleiben ohne Personalisierung."
   },
   "pl": {
     "1957": "1957",
@@ -3781,7 +3785,6 @@
     "Apri pagina ordine": "Otwórz stronę zamówienia",
     "Articoli": "Artykuły",
     "Articolo personalizzato: non può essere restituito né cambiato.": "Produkt personalizowany: nie podlega zwrotowi ani wymianie.",
-    "Articolo personalizzato: un pezzo per riga.": "Produkt personalizowany: jedna sztuka na pozycję.",
     "Attiva": "Aktywny",
     "Caricamento dell’ordine…": "Wczytywanie zamówienia…",
     "Certificato della proprietà e garanzia": "Certyfikat własności i gwarancji",
@@ -3847,6 +3850,8 @@
     "non inviata": "nie wysłano",
     "non riuscita": "nieudane",
     "inviata": "wysłano",
-    "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Grawer może mieć maksymalnie 10 słów i 120 znaków."
+    "L’incisione può contenere al massimo 10 parole e 120 caratteri.": "Grawer może mieć maksymalnie 10 słów i 120 znaków.",
+    "(da completare)": "(do uzupełnienia)",
+    "Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.": "Personalizacja: jedna sztuka na pozycję, pozostałe bez personalizacji."
   }
 }

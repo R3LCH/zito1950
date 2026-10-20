@@ -101,9 +101,11 @@ function Personalization({
   const [engravingOpen, setEngravingOpen] = useState(!!line.engraving?.trim())
   const [wordLimit, setWordLimit] = useState(false)
   const errors = lineErrors(line)
-  // An unfinished section never hides: collapsing it would leave the pay button disabled without a visible reason.
-  const certificateShown = certificateOpen || !!(errors.firstName || errors.lastName || errors.email)
-  const engravingShown = engravingOpen || !!(errors.engraving || errors.engravingAccepted)
+  // Sections always open and close on demand; an unfinished one is flagged in its title instead of being held open.
+  const certificateShown = certificateOpen
+  const engravingShown = engravingOpen
+  const certificateIncomplete = !!(errors.firstName || errors.lastName || errors.email)
+  const engravingIncomplete = !!(errors.engraving || errors.engravingAccepted)
   const holder = line.certificate ?? EMPTY_HOLDER
   const engraving = line.engraving ?? ''
   const words = engravingWords(engraving)
@@ -121,7 +123,7 @@ function Personalization({
           onClick={() => setCertificateOpen(!certificateShown)}
         >
           <span>
-            {t('Certificato della proprietà e garanzia')} <span className="font-normal text-muted">{t('(facoltativo)')}</span>
+            {t('Certificato della proprietà e garanzia')} <span className="font-normal text-muted">{certificateIncomplete ? t('(da completare)') : t('(facoltativo)')}</span>
           </span>
           <span aria-hidden="true">{certificateShown ? '−' : '+'}</span>
         </button>
@@ -203,7 +205,7 @@ function Personalization({
           onClick={() => setEngravingOpen(!engravingShown)}
         >
           <span>
-            {t('Incisione')} <span className="font-normal text-muted">{t('(facoltativo)')}</span>
+            {t('Incisione')} <span className="font-normal text-muted">{engravingIncomplete ? t('(da completare)') : t('(facoltativo)')}</span>
           </span>
           <span aria-hidden="true">{engravingShown ? '−' : '+'}</span>
         </button>
@@ -241,15 +243,16 @@ function Personalization({
             {wordLimit && <span className="ml-2 text-ink">{t('Hai raggiunto il limite di {max} parole.', { max: ENGRAVING_MAX_WORDS })}</span>}
             {touched.engraving && errors.engraving && <span className="ml-2 text-ink">{t(errors.engraving)}</span>}
           </p>
-          {engraving.trim() && (
+          {/* The no-return condition is shown as soon as the section opens, before anything is typed. */}
+          {engravingShown && (
             <div className="mt-4 border border-ink p-4">
               <p className="text-small font-medium">{t('Un articolo con incisione è personalizzato: non può essere restituito né cambiato.')}</p>
               <label className="mt-3 flex items-start gap-3 text-small">
                 <input
                   type="checkbox"
                   className="mt-1 h-5 w-5 shrink-0 accent-ink"
-                  required
-                  disabled={disabled}
+                  required={!!engraving.trim()}
+                  disabled={disabled || !engraving.trim()}
                   checked={!!line.engravingAccepted}
                   aria-invalid={touched.engravingAccepted && errors.engravingAccepted ? true : undefined}
                   aria-describedby={touched.engravingAccepted && errors.engravingAccepted ? `${id}-accepted-error` : undefined}
@@ -319,6 +322,8 @@ export default function Cart() {
     setPaid(false)
     trigger.current = document.activeElement as HTMLElement
     ref.current?.showModal()
+    // Start on the title, not the close icon, so the focus ring doesn't frame the X on open.
+    document.getElementById('cart-title')?.focus()
     const previous = document.documentElement.style.overflow
     document.documentElement.style.overflow = 'hidden'
     // The GitHub Pages preview has no payment backend; the button stays visible but disabled.
@@ -407,12 +412,16 @@ export default function Cart() {
   }
   const update = (line: CartLine, patch: Partial<CartLine>) =>
     setCart(
-      cart.map((item) => {
-        if (lineKey(item) !== lineKey(line)) return item
+      cart.flatMap((item) => {
+        if (lineKey(item) !== lineKey(line)) return [item]
         const next = { ...item, ...patch }
-        return isPersonalized(next) ? { ...next, quantity: 1 } : next
+        if (!isPersonalized(next) || next.quantity === 1) return [next]
+        // A personalized piece is one per line: extra pieces move to a plain line of the same product.
+        const extra = { ...next, id: crypto.randomUUID(), quantity: next.quantity - 1, certificate: null, engraving: null, engravingAccepted: false }
+        return [{ ...next, quantity: 1 }, extra]
       }),
     )
+  const iconButton = 'inline-flex h-11 w-11 shrink-0 items-center justify-center text-ink-2 transition-colors duration-200 hover:text-ink'
   return (
     <dialog
         ref={ref}
@@ -431,12 +440,14 @@ export default function Cart() {
                 .split(BRAND)
                 .map((part, i) => (i ? [<span key={i} className="font-brand">{BRAND}</span>, part] : part))}
             </p>
-            <h2 id="cart-title" className="mt-2 text-h2">
+            <h2 id="cart-title" tabIndex={-1} className="mt-2 text-h2 outline-none">
               {t("Il tuo carrello")}
             </h2>
           </div>
-          <button type="button" className="btn" disabled={busy} onClick={() => setCartOpen(false)}>
-            {t("Chiudi")}
+          <button type="button" className={iconButton} disabled={busy} aria-label={t('Chiudi')} onClick={() => setCartOpen(false)}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
           </button>
         </div>
         {!paid && rows.length === 0 && <p className="py-10">{t("Il carrello è vuoto. Scopri la nostra collezione.")}</p>}
@@ -463,7 +474,7 @@ export default function Cart() {
                           {t("Quantità")}
                           <select
                             className="shop-input ml-2"
-                            disabled={locked || personalized}
+                            disabled={locked}
                             value={line.quantity}
                             aria-describedby={personalized ? `${key}-single` : undefined}
                             onChange={(e) => update(line, { quantity: Number(e.target.value) })}
@@ -475,16 +486,19 @@ export default function Cart() {
                         </label>
                         <button
                           type="button"
-                          className="underline text-small"
+                          className={iconButton}
                           disabled={locked}
+                          aria-label={`${t('Rimuovi')}: ${name ?? t('Prodotto rimosso')}`}
                           onClick={() => setCart(cart.filter((item) => lineKey(item) !== key))}
                         >
-                          {t("Rimuovi")}
+                          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8l1-12M9 7V4.5h6V7" />
+                          </svg>
                         </button>
                       </div>
                       {personalized && (
                         <p id={`${key}-single`} className="text-small text-muted">
-                          {t('Articolo personalizzato: un pezzo per riga.')}
+                          {t('Personalizzato: un pezzo per riga, gli altri restano senza personalizzazione.')}
                         </p>
                       )}
                     </div>
