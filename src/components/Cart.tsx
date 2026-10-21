@@ -119,32 +119,6 @@ function Personalization({
     { name: 'lastName', label: 'Cognome', autoComplete: 'family-name', type: 'text', maxLength: 80 },
     { name: 'email', label: 'Email', autoComplete: 'email', type: 'email', maxLength: 254 },
   ] as const
-  const field = ({ name, label, autoComplete, type, maxLength }: (typeof holderFields)[number], className: string) => {
-    const error = touched[name] ? errors[name] : null
-    const onCard = name !== 'email'
-    return (
-      <input
-        key={name}
-        className={className}
-        type={type}
-        autoComplete={autoComplete}
-        required={!!line.certificate}
-        maxLength={maxLength}
-        // On the card the label is the placeholder; the email keeps its visible label.
-        placeholder={onCard ? t(label) : undefined}
-        aria-label={onCard ? `${t('Titolare')}: ${t(label)}` : undefined}
-        value={holder[name]}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-${name}-error` : undefined}
-        onBlur={() => onTouch([name])}
-        onChange={(e) => {
-          const next = { ...holder, [name]: e.target.value }
-          // Emptying every field withdraws the certificate, so the section is optional again.
-          onChange({ certificate: next.firstName || next.lastName || next.email ? next : null })
-        }}
-      />
-    )
-  }
   const flipButton = (side: 'prev' | 'next') => (
     <button
       type="button"
@@ -176,8 +150,7 @@ function Personalization({
           <p id={`${id}-certificate-help`} className="mt-1 text-small text-muted">
             {perfume
               ? t('Il certificato è intestato a questo nome e viene consegnato insieme al profumo.')
-              : t('Il certificato è intestato a questo nome e viene consegnato insieme all’orologio.')}{' '}
-            {t('Scrivi nome e cognome direttamente sul certificato, accanto a «Titolare».')}
+              : t('Il certificato è intestato a questo nome e viene consegnato insieme all’orologio.')}
           </p>
           <fieldset disabled={disabled} className="mt-5" aria-describedby={`${id}-certificate-help`}>
             <legend className="sr-only">{t('Intestatario del certificato')}</legend>
@@ -187,10 +160,6 @@ function Personalization({
                 <div className={`certificate-card${back ? ' is-flipped' : ''}`}>
                   <div className="certificate-face" inert={back} aria-hidden={back || undefined}>
                     <Picture src={CERTIFICATE_IMAGES[0].src} alt={t(CERTIFICATE_IMAGES[0].alt)} sizes="(min-width: 640px) 560px, 80vw" pictureClassName="block" className="block h-auto w-full" />
-                    {/* Sits on the card's own Titolare panel, measured on the cropped photo. */}
-                    <div className="certificate-holder">
-                      {holderFields.slice(0, 2).map((f) => field(f, 'certificate-field'))}
-                    </div>
                   </div>
                   <div className="certificate-face certificate-back" inert={!back} aria-hidden={!back || undefined}>
                     <Picture src={CERTIFICATE_IMAGES[1].src} alt={t(CERTIFICATE_IMAGES[1].alt)} sizes="(min-width: 640px) 560px, 80vw" pictureClassName="block" className="block h-auto w-full" />
@@ -202,22 +171,39 @@ function Personalization({
             <p className="mt-2 text-center text-eyebrow uppercase tracking-[0.18em] text-muted" aria-live="polite">
               {back ? t('Retro') : t('Fronte')}
             </p>
-            {(['firstName', 'lastName'] as const).map((f) =>
-              touched[f] && errors[f] ? (
-                <p key={f} id={`${id}-${f}-error`} className="mt-2 text-small text-ink">
-                  {t(errors[f]!)}
-                </p>
-              ) : null,
-            )}
-            <label className="shop-label mt-5">
-              {t('Email')}
-              {field(holderFields[2], 'shop-input')}
-              {touched.email && errors.email && (
-                <span id={`${id}-email-error`} className="text-small text-ink">
-                  {t(errors.email)}
-                </span>
-              )}
-            </label>
+            {/* Name and surname, then email, as plain fields under the card. */}
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {holderFields.map(({ name, label, autoComplete, type, maxLength }) => {
+                const error = touched[name] ? errors[name] : null
+                const errorId = `${id}-${name}-error`
+                return (
+                  <label key={name} className={`shop-label${name === 'email' ? ' sm:col-span-2' : ''}`}>
+                    {t(label)}
+                    <input
+                      className="shop-input"
+                      type={type}
+                      autoComplete={autoComplete}
+                      required={!!line.certificate}
+                      maxLength={maxLength}
+                      value={holder[name]}
+                      aria-invalid={error ? true : undefined}
+                      aria-describedby={error ? errorId : undefined}
+                      onBlur={() => onTouch([name])}
+                      onChange={(e) => {
+                        const next = { ...holder, [name]: e.target.value }
+                        // Emptying every field withdraws the certificate, so the section is optional again.
+                        onChange({ certificate: next.firstName || next.lastName || next.email ? next : null })
+                      }}
+                    />
+                    {error && (
+                      <span id={errorId} className="text-small text-ink">
+                        {t(error)}
+                      </span>
+                    )}
+                  </label>
+                )
+              })}
+            </div>
           </fieldset>
           {line.certificate && (
             <button

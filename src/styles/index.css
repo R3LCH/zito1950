@@ -176,13 +176,6 @@
   .certificate-card.is-flipped { transform: rotateY(180deg); }
   .certificate-face { position: relative; overflow: hidden; border-radius: 3.2cqw; backface-visibility: hidden; box-shadow: 0 1px 2px rgb(20 20 20 / 8%), 0 8px 24px rgb(20 20 20 / 8%); }
   .certificate-back { position: absolute; inset: 0; transform: rotateY(180deg); }
-  /* The card's blank "Titolare" panel, as a share of the cropped photo. */
-  /* Anchored to the panel's bottom edge; on phones it grows upward a little so the fields stay tappable. */
-  .certificate-holder { position: absolute; left: 14.6%; bottom: 8.2%; width: 74.6%; height: max(9.8%, 28px); display: flex; gap: 2%; }
-  .certificate-field { min-width: 0; flex: 1; height: 100%; padding: 0 2cqw; border: 0; border-bottom: 1px solid rgb(60 40 20 / 35%); background: rgb(255 248 230 / 35%); color: #2a1d10; font-family: var(--font-serif); font-size: max(16px, 3.6cqw); font-style: italic; outline: none; }
-  .certificate-field::placeholder { color: rgb(60 40 20 / 50%); }
-  .certificate-field:focus-visible { background: rgb(255 248 230 / 65%); border-bottom-color: #2a1d10; }
-  .certificate-field[aria-invalid] { border-bottom: 2px solid var(--color-ink); }
   button, select { cursor: pointer; }
   button:disabled, fieldset:disabled { opacity: 0.55; cursor: not-allowed; }
 }
