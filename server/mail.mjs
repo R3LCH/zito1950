@@ -5,7 +5,7 @@ import nodemailer from 'nodemailer'
  * so a shop without mail settings still sells and logs each attempt as skipped.
  */
 export function createMailer(env = process.env) {
-  const from = env.MAIL_FROM || 'ZITO 1950® <customer@zito1950.it>'
+  const from = env.MAIL_FROM || 'ZITO1950® <customer@zito1950.it>'
   const owner = env.OWNER_EMAIL || 'customer@zito1950.it'
   const configured = !!env.SMTP_HOST
   const transport = configured

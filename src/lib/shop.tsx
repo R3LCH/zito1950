@@ -107,6 +107,9 @@ interface ShopState {
   /** The product just added on a phone, shown in the "Aggiunto al carrello" popup; null when it is closed. */
   added: Omit<CartLine, 'id'> | null
   setAdded: (line: Omit<CartLine, 'id'> | null) => void
+  /** A product the buyer clicked in the cart: Orologi opens its dialog, Profumi scrolls to its card. */
+  viewing: Pick<CartLine, 'kind' | 'modelId' | 'variantId'> | null
+  setViewing: (product: Pick<CartLine, 'kind' | 'modelId' | 'variantId'> | null) => void
   error: string
   reload: () => Promise<void>
 }
@@ -151,6 +154,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartLine[]>(storedCart)
   const [cartOpen, setCartOpen] = useState(new URLSearchParams(location.search).has('checkout'))
   const [added, setAdded] = useState<Omit<CartLine, 'id'> | null>(null)
+  const [viewing, setViewing] = useState<Pick<CartLine, 'kind' | 'modelId' | 'variantId'> | null>(null)
   const [error, setError] = useState('')
   const localizedCatalog = useMemo<Catalog>(() => ({
     ...catalog,
@@ -214,7 +218,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     addLine({ kind: 'perfume', modelId: perfume.id, variantId: null, quantity: 1 })
   }
   return (
-    <Context.Provider value={{ catalog, localizedCatalog, setCatalog, cart, setCart, add, addPerfume, cartOpen, setCartOpen, added, setAdded, error, reload }}>
+    <Context.Provider value={{ catalog, localizedCatalog, setCatalog, cart, setCart, add, addPerfume, cartOpen, setCartOpen, added, setAdded, viewing, setViewing, error, reload }}>
       {children}
     </Context.Provider>
   )

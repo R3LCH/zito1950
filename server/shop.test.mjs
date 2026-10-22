@@ -70,7 +70,7 @@ async function fixture(t, paypal = false, legacyBody = null) {
   const mail = { sent: [], fail: false }
   const mailer = {
     configured: true,
-    from: 'ZITO 1950® <customer@zito1950.it>',
+    from: 'ZITO1950® <customer@zito1950.it>',
     owner: 'owner@example.com',
     async send(message) {
       if (mail.fail) throw new Error('SMTP down')
@@ -1227,14 +1227,14 @@ test('email templates merge over defaults, round-trip and are validated', async 
   ])
     assert.equal((await admin.request('/admin/email-templates', 'PUT', invalid)).status, 400)
   const mailInfo = await admin.request('/admin/mail')
-  assert.deepEqual(mailInfo.body, { configured: true, from: 'ZITO 1950® <customer@zito1950.it>', owner: 'owner@example.com' })
+  assert.deepEqual(mailInfo.body, { configured: true, from: 'ZITO1950® <customer@zito1950.it>', owner: 'owner@example.com' })
 })
 
 test('mailer without SMTP is not configured and skips sending', async () => {
   const { createMailer } = await import('./mail.mjs')
   const mailer = createMailer({})
   assert.equal(mailer.configured, false)
-  assert.equal(mailer.from, 'ZITO 1950® <customer@zito1950.it>')
+  assert.equal(mailer.from, 'ZITO1950® <customer@zito1950.it>')
   assert.equal(mailer.owner, 'customer@zito1950.it')
   assert.deepEqual(await mailer.send({ to: 'a@example.com', subject: 's', html: '<p>h</p>', text: 'h' }), { skipped: true })
 })

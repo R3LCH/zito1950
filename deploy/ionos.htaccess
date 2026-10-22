@@ -1,4 +1,4 @@
-# Static ZITO 1950 site on IONOS managed Apache webspace.
+# Static ZITO1950 site on IONOS managed Apache webspace.
 # Connect the future domain to /public/zito1950 (SFTP).
 # No domain or HTTPS redirect until the domain and certificate are configured.
 Options -Indexes

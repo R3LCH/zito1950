@@ -1,5 +1,5 @@
 {
-  "$description": "Component contracts for the ZITO 1950 site. Visual spec: design/DESIGN.md; tokens: design/zito.tokens.json. Source copy: src/data/content.ts; translations: src/data/translations.json; editable catalog: useShop (types in src/data/types.ts).",
+  "$description": "Component contracts for the ZITO1950 site. Visual spec: design/DESIGN.md; tokens: design/zito.tokens.json. Source copy: src/data/content.ts; translations: src/data/translations.json; editable catalog: useShop (types in src/data/types.ts).",
   "components": [
     {
       "name": "Header",

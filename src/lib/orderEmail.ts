@@ -84,7 +84,7 @@ ${image ? `<td width="120" valign="top" style="width:120px;padding-right:20px;">
 
 function headerHtml(origin: string) {
   return `<tr><td align="center" style="padding:40px 32px 32px;">
-<img src="${escapeHtml(absolute(origin, 'email/logo.png'))}" alt="ZITO 1950®" width="180" style="display:block;width:180px;max-width:180px;height:auto;border:0;" />
+<img src="${escapeHtml(absolute(origin, 'email/logo.png'))}" alt="ZITO1950®" width="180" style="display:block;width:180px;max-width:180px;height:auto;border:0;" />
 </td></tr>`
 }
 
@@ -92,7 +92,7 @@ function footerHtml(origin: string) {
   const icon = (href: string, file: string, label: string) =>
     `<a href="${escapeHtml(href)}" style="display:inline-block;margin:0 6px;text-decoration:none;"><img src="${escapeHtml(absolute(origin, `email/${file}`))}" alt="${escapeHtml(label)}" width="24" height="24" style="display:block;width:24px;height:24px;border:0;" /></a>`
   return `<tr><td align="center" style="padding:32px;border-top:1px solid ${HAIRLINE};">
-<img src="${escapeHtml(absolute(origin, 'email/logo.png'))}" alt="ZITO 1950®" width="110" style="display:block;width:110px;max-width:110px;height:auto;border:0;margin:0 auto;" />
+<img src="${escapeHtml(absolute(origin, 'email/logo.png'))}" alt="ZITO1950®" width="110" style="display:block;width:110px;max-width:110px;height:auto;border:0;margin:0 auto;" />
 <p style="margin:12px 0 16px;font-family:${SERIF};font-style:italic;font-size:15px;color:${MUTED};">${escapeHtml(MOTTO)}</p>
 <p style="margin:0 0 12px;">${icon(contatti.instagram, 'instagram.png', contatti.labels.instagram)}${icon(contatti.facebook, 'facebook.png', contatti.labels.facebook)}</p>
 <p style="margin:0;font-family:${SANS};font-size:13px;"><a href="mailto:${SHOP_EMAIL}" style="color:${MUTED};text-decoration:underline;">${SHOP_EMAIL}</a></p>
@@ -166,14 +166,14 @@ function layoutText({ heading, paragraphs: body, facts = [], order, orderUrl }: 
       .join('\n'),
   )
   return [
-    'ZITO 1950®',
+    'ZITO1950®',
     heading,
     ...body,
     `Vai all’ordine: ${orderUrl}`,
     [`Ordine ${order.reference} · ${formatDate(order.created)}`, ...facts.map(([label, value]) => `${label}: ${value}`)].join('\n'),
     items.join('\n\n'),
     `Totale: ${formatPrice(order.total)}`,
-    `--\nZITO 1950® · ${MOTTO}\nInstagram: ${contatti.instagram}\nFacebook: ${contatti.facebook}\n${SHOP_EMAIL}`,
+    `--\nZITO1950® · ${MOTTO}\nInstagram: ${contatti.instagram}\nFacebook: ${contatti.facebook}\n${SHOP_EMAIL}`,
   ].join('\n\n')
 }
 

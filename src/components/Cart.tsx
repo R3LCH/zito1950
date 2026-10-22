@@ -7,10 +7,10 @@ import Picture from './Picture'
 import { asset } from '../lib/asset'
 
 const CERTIFICATE_IMAGES = [
-  { src: 'img/certificato/carta-fronte.jpg', alt: 'Certificato di proprietà ZITO 1950®, fronte' },
-  { src: 'img/certificato/carta-retro.jpg', alt: 'Certificato di proprietà ZITO 1950®, retro' },
+  { src: 'img/certificato/carta-fronte.jpg', alt: 'Certificato di proprietà ZITO1950®, fronte' },
+  { src: 'img/certificato/carta-retro.jpg', alt: 'Certificato di proprietà ZITO1950®, retro' },
 ]
-const BRAND = 'ZITO 1950®'
+const BRAND = 'ZITO1950®'
 // Mirrors the server's email check closely enough to keep the button honest; the server stays authoritative.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const EMPTY_HOLDER: CertificateHolder = { firstName: '', lastName: '', email: '' }
@@ -378,7 +378,7 @@ function AddedPopup() {
   )
 }
 export default function Cart() {
-  const { localizedCatalog: catalog, cart, setCart, cartOpen, setCartOpen, setAdded, error: shopError, reload } = useShop()
+  const { localizedCatalog: catalog, cart, setCart, cartOpen, setCartOpen, setAdded, setViewing, error: shopError, reload } = useShop()
   const ref = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLElement | null>(null)
   const [busy, setBusy] = useState(false)
@@ -396,15 +396,22 @@ export default function Cart() {
   const rows = cart.map((line) => {
     if (line.kind === 'perfume') {
       const perfume = catalog.perfumes.find((p) => p.id === line.modelId)
-      return { line, name: perfume?.name, variant: null, image: perfume?.images[0] ?? null, available: perfume?.availability === 'buy', price: perfume?.priceCents ?? 0 }
+      const codes = perfume?.code ? [perfume.code] : []
+      return { line, name: perfume?.name, variant: null, codes, image: perfume?.images[0] ?? null, available: perfume?.availability === 'buy', price: perfume?.priceCents ?? 0 }
     }
     const model = catalog.models.find((m) => m.id === line.modelId)
     const variant = line.variantId ? model?.variants?.find((v) => v.id === line.variantId) : null
     const available = !!model && availabilityOf(model) === 'buy' && (!model.variants?.length || !!variant)
     // The chosen variant's photo first, so the cart shows the finish the buyer picked.
     const image = variant?.images[0] ?? model?.images[0] ?? null
-    return { line, name: model?.name, variant, image, available, price: variant?.priceCents ?? model?.priceCents ?? 0 }
+    const codes = variant?.codes ?? model?.codes ?? []
+    return { line, name: model?.name, variant, codes, image, available, price: variant?.priceCents ?? model?.priceCents ?? 0 }
   })
+  // Photo and name lead back to the product: the watch opens in its dialog, the perfume card scrolls into view.
+  const view = (line: CartLine) => {
+    setCartOpen(false)
+    setViewing({ kind: line.kind, modelId: line.modelId, variantId: line.variantId })
+  }
   const total = rows.reduce((sum, row) => sum + row.price * row.line.quantity, 0)
   const unavailable = rows.some((row) => !row.available)
   useEffect(() => {
@@ -531,7 +538,7 @@ export default function Cart() {
       >
         {/* As in the client's reference: logo centred on top. Phones also get the close icon at the edge. */}
         <div className="relative flex items-center justify-center px-[var(--gutter)] pt-8 pb-6 sm:pt-10">
-          <img src={asset('logo.svg')} alt="ZITO 1950®" width={355} height={100} className="h-8 w-auto sm:h-10" />
+          <img src={asset('logo.svg')} alt="ZITO1950®" width={355} height={100} className="h-8 w-auto sm:h-10" />
           <button type="button" className={`${iconButton} absolute right-[calc(var(--gutter)-0.75rem)] top-1/2 -translate-y-1/2 lg:hidden`} disabled={busy} aria-label={t('Chiudi')} onClick={() => setCartOpen(false)}>
             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <path d="M6 6l12 12M18 6L6 18" />
@@ -548,7 +555,7 @@ export default function Cart() {
         {!paid && rows.length === 0 && <p className="border-t border-line py-10">{t("Il carrello è vuoto. Scopri la nostra collezione.")}</p>}
         {!paid && !!rows.length && (
           <ul className="border-t border-line">
-            {rows.map(({ line, name, variant, image, available, price }, index) => {
+            {rows.map(({ line, name, variant, codes, image, available, price }, index) => {
               const key = lineKey(line)
               const personalized = isPersonalized(line)
               const locked = busy || !!pendingToken
@@ -556,17 +563,38 @@ export default function Cart() {
                 <li key={key} className="border-b border-line py-6">
                   <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
                     <div className="flex items-start gap-4">
-                      <div className="aspect-[4/5] w-16 shrink-0 overflow-hidden sm:w-20">
-                        {image && (
-                          <Picture src={image.src} alt={image.alt} sizes="80px" pictureClassName="block h-full w-full" className="h-full w-full object-cover" />
-                        )}
-                      </div>
+                      {name ? (
+                        <button type="button" tabIndex={-1} aria-hidden="true" disabled={busy} className="aspect-[4/5] w-16 shrink-0 cursor-pointer overflow-hidden sm:w-20" onClick={() => view(line)}>
+                          {image && (
+                            <Picture src={image.src} alt="" sizes="80px" pictureClassName="block h-full w-full" className="h-full w-full object-cover" />
+                          )}
+                        </button>
+                      ) : (
+                        <div className="aspect-[4/5] w-16 shrink-0 sm:w-20" />
+                      )}
                       <div className="min-w-0">
                         <h3 className="text-h3">
-                          {name ?? t('Prodotto rimosso')}
-                          {variant ? ` · ${variant.label}` : ''}
+                          {name ? (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              className="cursor-pointer text-left underline decoration-transparent underline-offset-4 transition-colors duration-200 hover:decoration-current"
+                              onClick={() => view(line)}
+                            >
+                              {name}
+                              {variant ? ` · ${variant.label}` : ''}
+                            </button>
+                          ) : (
+                            t('Prodotto rimosso')
+                          )}
                         </h3>
-                        <p className="text-small">{euro(price)}{' ' + t("/ pezzo")}</p>
+                        {codes.length > 0 && (
+                          <p className="mt-1 text-small tracking-wide text-muted">
+                            <span className="sr-only">{t(codes.length > 1 ? 'Codici' : 'Codice')}: </span>
+                            {codes.join(' · ')}
+                          </p>
+                        )}
+                        <p className="mt-1 text-small">{euro(price)}{' ' + t("/ pezzo")}</p>
                         {!available && <p className="text-small">{t("Non più acquistabile. Rimuovi l’articolo per procedere.")}</p>}
                       </div>
                     </div>

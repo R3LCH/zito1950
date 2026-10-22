@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import Picture from './Picture'
 import Panel from './Panel'
 import { statusTag } from './ModelCard'
@@ -23,7 +24,7 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
   const askInfo = availability === 'no-buy' || (availability === 'buy' && !!error)
 
   return (
-    <article aria-labelledby={titleId} className="flex h-full flex-col">
+    <article aria-labelledby={titleId} className="flex h-full flex-col scroll-mt-[calc(var(--header-h)+1.5rem)] outline-none">
       {image && (
         <Picture
           src={image.src}
@@ -117,9 +118,25 @@ function More({ profumo }: { profumo: Profumo }) {
 
 export default function Profumi() {
   const { profumiSection } = useContent()
-  const { localizedCatalog: catalog } = useShop()
+  const { localizedCatalog: catalog, viewing, setViewing } = useShop()
   // Hidden perfumes are already filtered out of the localized catalog.
   const perfumes = catalog.perfumes
+  // A perfume clicked in the cart has no dialog: bring its card into view and move focus to it.
+  useEffect(() => {
+    if (viewing?.kind !== 'perfume') return
+    setViewing(null)
+    const card = document.getElementById(`profumo-${viewing.modelId}`)?.closest('article')
+    if (!card) return
+    // Two frames: the cart's close (scroll unlock, focus back to its opener) settles first, then one instant jump
+    // (explicit, since the root's smooth scroll-behavior would otherwise animate across the whole page).
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        card.setAttribute('tabindex', '-1')
+        card.focus({ preventScroll: true })
+        card.scrollIntoView({ block: 'start', behavior: 'instant' })
+      }),
+    )
+  }, [viewing, setViewing])
   if (perfumes.length === 0) return null
   // Coming-soon perfumes show all their text on the card and never a quote, so they add nothing to More.
   const extra = perfumes.filter(

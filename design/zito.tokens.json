@@ -1,5 +1,5 @@
 {
-  "$description": "ZITO 1950 design tokens (DTCG). Mirrored in src/styles/index.css @theme.",
+  "$description": "ZITO1950 design tokens (DTCG). Mirrored in src/styles/index.css @theme.",
   "color": {
     "$type": "color",
     "bg": { "$value": "#FFFFFF", "$description": "All surfaces, footer included" },

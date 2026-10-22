@@ -911,7 +911,7 @@ export function createApp(options = {}) {
           payment_source: {
             paypal: {
               experience_context: {
-                brand_name: 'ZITO 1950®',
+                brand_name: 'ZITO1950®',
                 user_action: 'PAY_NOW',
                 shipping_preference: 'GET_FROM_FILE',
                 return_url: `${origin}/?checkout=return`,

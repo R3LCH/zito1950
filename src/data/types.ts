@@ -168,7 +168,7 @@ export const DEFAULT_EMAIL_TEMPLATES: EmailTemplates = {
     enabled: true,
     subject: 'Il tuo ordine {ordine} è stato consegnato',
     heading: 'Buon tempo, {nome}',
-    message: 'Il tuo ordine risulta consegnato. Grazie per aver scelto ZITO 1950®.',
+    message: 'Il tuo ordine risulta consegnato. Grazie per aver scelto ZITO1950®.',
   },
 }
 
@@ -258,6 +258,7 @@ export interface Perche {
   lead: string
   paragraphs: string[]
   closing: string
+  image: Img
 }
 
 /** «Scopri il territorio»: Scalea and the Calabrian coast. */

@@ -14,7 +14,7 @@ export default function Orologi() {
   const { orologi, site } = useContent()
   const [open, setOpen] = useState<{ model: Model; trigger: HTMLElement; variant: number; image: number } | null>(null)
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
-  const { catalog: source, localizedCatalog: catalog, error } = useShop()
+  const { catalog: source, localizedCatalog: catalog, error, viewing, setViewing } = useShop()
   // Facets read the Italian source text; localized specs would miss the keywords.
   const facetsFor = useMemo(() => facetIndex(source.models), [source.models])
 
@@ -56,6 +56,17 @@ export default function Orologi() {
   const handleClose = useCallback(() => setOpen(null), [])
   // Same trigger: focus returns to the card that opened the dialog in the first place.
   const handleSelect = useCallback((model: Model) => setOpen((o) => o && { ...o, model, variant: 0, image: 0 }), [])
+  // A watch clicked in the cart opens here, at the finish in the cart; focus then returns to its card if it is on the page.
+  useEffect(() => {
+    if (viewing?.kind === 'perfume' || !viewing) return
+    setViewing(null)
+    const model = models.find((m) => m.id === viewing.modelId)
+    if (!model) return
+    const variant = Math.max(0, model.variants?.findIndex((v) => v.id === viewing.variantId) ?? 0)
+    const card = document.querySelector<HTMLElement>(`[aria-labelledby="model-${CSS.escape(model.id)}-name"] [aria-haspopup="dialog"]`)
+    const trigger = card ?? (document.activeElement as HTMLElement | null) ?? document.body
+    setOpen({ model, trigger, variant, image: 0 })
+  }, [viewing, models, setViewing])
   // Opening the full catalogue: the second row lands under the sticky header, so the first row stays roughly where the preview was.
   // Runs after the body rendered synchronously and replaces any scroll-anchoring adjustment with one absolute position.
   const handleCatalogOpen = useCallback(() => {

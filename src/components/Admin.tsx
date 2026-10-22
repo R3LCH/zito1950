@@ -941,7 +941,7 @@ function sampleOrder(models: Model[], status: FulfillmentStatus): PublicOrder {
     history: reached.map((s, index) => ({ status: s, at: now - (reached.length - 1 - index) * 86_400_000 })),
     items: [{
       kind: 'model',
-      name: model?.name ?? 'ZITO 1950®',
+      name: model?.name ?? 'ZITO1950®',
       codes: model?.codes ?? [],
       quantity: 1,
       priceCents,
@@ -1216,7 +1216,7 @@ export default function Admin() {
       </aside>}
       <header className="flex flex-wrap items-end justify-between gap-6 border-b border-line pb-8">
         <div>
-          <p className="eyebrow">ZITO 1950® · {STATIC_PREVIEW ? t('Anteprima UI') : t('Area riservata')}</p>
+          <p className="eyebrow">ZITO1950® · {STATIC_PREVIEW ? t('Anteprima UI') : t('Area riservata')}</p>
           <h1 className="mt-3 text-display">{t("Amministrazione")}</h1>
         </div>
         <div className="flex gap-5">

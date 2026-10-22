@@ -95,7 +95,8 @@ export default function Recommended({ current, models, onSelect }: Props) {
         id={railId}
         ref={rail}
         onScroll={measure}
-        className="mt-6 flex gap-4 overflow-x-auto overscroll-x-contain pb-4 md:gap-6 [@media(pointer:coarse)]:snap-x [@media(pointer:coarse)]:snap-mandatory"
+        // `relative` keeps the absolutely positioned sr-only labels of off-screen cards inside the rail, so they can't widen the dialog.
+        className="relative mt-6 flex gap-4 overflow-x-auto overscroll-x-contain pb-4 md:gap-6 [@media(pointer:coarse)]:snap-x [@media(pointer:coarse)]:snap-mandatory"
       >
         {picks.map((m) => {
           const view = resolveView(m, 0)
