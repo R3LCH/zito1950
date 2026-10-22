@@ -12,17 +12,18 @@ export default function PercheZito() {
       title={perche.title}
       preview={
         <div className="grid gap-8 md:grid-cols-12 md:gap-x-10">
-          <div className="space-y-8 md:col-span-5">
+          {/* Photo column takes the width the empty spacer column used to; the reasons sit right beside it. */}
+          <div className="space-y-8 md:col-span-6 lg:col-span-7">
             <p className="font-serif text-[clamp(1.5rem,2.6vw,2.25rem)] italic leading-[1.3] text-ink">{perche.lead}</p>
             <Picture
               src={perche.image.src}
               alt={perche.image.alt}
-              sizes="(min-width: 768px) 40vw, 100vw"
+              sizes="(min-width: 1024px) 58vw, (min-width: 768px) 50vw, 100vw"
               pictureClassName="block overflow-hidden rounded-[1.25rem] bg-well"
               className="h-auto w-full"
             />
           </div>
-          <div className="max-w-[60ch] space-y-5 text-ink-2 md:col-span-6 md:col-start-7">
+          <div className="space-y-5 text-ink-2 md:col-span-6 lg:col-span-5">
             {perche.paragraphs.map((p) => (
               <p key={p}>{p}</p>
             ))}
