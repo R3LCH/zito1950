@@ -157,7 +157,7 @@ Build-time public settings remain `VITE_BASE` (use `/` for the server deployment
 The live site runs on an Ubuntu 24.04 VPS (`195.231.64.190`): Docker Compose runs the app on `127.0.0.1:8080`, and Caddy (`deploy/Caddyfile` → `/etc/caddy/Caddyfile`) terminates TLS with automatic Let's Encrypt certificates for `zito1950.it` and redirects `www.zito1950.it` to it. The checkout lives in `/srv/zito1950`, owned by `deploy`; `.env` there is mode 600 and never committed.
 
 - SSH: key-only, user `deploy` only (root login disabled); `deploy` has `sudo` with a password and is in the `docker` group.
-- Firewall (ufw): 22 rate-limited, 80, 443 tcp/udp; everything else incoming denied. fail2ban bans repeated SSH failures with increasing ban times.
+- Firewall (ufw): 22 rate-limited, 80, 443 tcp/udp; everything else incoming denied. fail2ban bans an IP after 4 failed SSH logins in 10 minutes (any user, including root attempts), for 1 hour at first and longer for repeat offenders, up to a week; a banned IP sees `Connection refused` on port 22. Wait for the ban to expire, or connect from another IP or the Aruba web console and run `sudo fail2ban-client set sshd unbanip <ip>`.
 - Unattended security upgrades, with an automatic reboot at 04:30 when one is required.
 
 Deploy the latest `main`:
