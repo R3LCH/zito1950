@@ -15,6 +15,8 @@ RUN npm ci --omit=dev && mkdir -p /app/data && chown node:node /app/data
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
 COPY --from=build /app/src/data ./src/data
+# The server renders order emails with the same module the storefront uses.
+COPY --from=build /app/src/lib/orderEmail.ts ./src/lib/orderEmail.ts
 COPY --from=build /app/server ./server
 USER node
 VOLUME /app/data
