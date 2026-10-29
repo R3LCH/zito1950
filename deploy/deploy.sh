@@ -5,6 +5,10 @@ set -eu
 cd "$(dirname "$0")/.."
 git fetch -q origin main
 git reset -q --hard origin/main
+# Docker copies host file modes into the image, where the app runs as `node`: tracked files must be world-readable
+# whatever the login umask is (.env stays 600 and is excluded from the build context).
+git ls-files -z | xargs -0 chmod go+r
+find . -path ./.git -prune -o -type d -exec chmod go+rx {} +
 SITE_URL=$(sed -n 's/^APP_ORIGIN=//p' .env)/
 docker compose build -q --build-arg VITE_SITE_URL="$SITE_URL"
 docker compose up -d --remove-orphans
