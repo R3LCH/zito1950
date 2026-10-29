@@ -12,7 +12,7 @@ import { hashPassword } from './password.mjs'
 async function fixture(t, paypal = false, legacyBody = null) {
   const dir = mkdtempSync(join(tmpdir(), 'zito-test-'))
   const remoteOrders = new Map()
-  const seen = { captures: 0, amounts: [], mismatch: false, lostCapture: false }
+  const seen = { captures: 0, amounts: [], mismatch: false, lostCapture: false, declineCapture: false }
   const transport = async (url, init) => {
     if (url.endsWith('/token')) return Response.json({ access_token: 'test-token', expires_in: 3600 })
     if (url.endsWith('/v2/checkout/orders')) {
@@ -31,6 +31,12 @@ async function fixture(t, paypal = false, legacyBody = null) {
     const key = url.split('/orders/')[1].split('/')[0]
     const remote = remoteOrders.get(key)
     if (url.endsWith('/capture')) {
+      // PayPal's real answer when the buyer's card or bank refuses the charge.
+      if (seen.declineCapture)
+        return Response.json(
+          { name: 'UNPROCESSABLE_ENTITY', details: [{ issue: 'INSTRUMENT_DECLINED' }], debug_id: 'TEST-DEBUG' },
+          { status: 422 },
+        )
       seen.captures++
       remote.status = 'COMPLETED'
       remote.purchase_units[0].payments = {
@@ -296,6 +302,24 @@ test('mismatched PayPal capture amount is never recorded as paid', async (t) => 
   })
   assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).status, 409)
   assert.notEqual((await admin.request('/admin/orders')).body[0].status, 'COMPLETED')
+})
+
+test('a declined PayPal capture tells the buyer to pick another method and can still be paid afterwards', async (t) => {
+  const { buyer, admin, enable, seen } = await fixture(t, true)
+  await enable('takimo')
+  const order = await buyer.request('/payments/orders', 'POST', {
+    items: [{ modelId: 'takimo', variantId: null, quantity: 1 }],
+    requestId: randomUUID(),
+  })
+  seen.declineCapture = true
+  const declined = await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})
+  assert.equal(declined.status, 409)
+  assert.match(declined.body.error, /rifiutato/)
+  assert.notEqual((await admin.request('/admin/orders')).body[0].status, 'COMPLETED')
+  // The held piece is released, so the same order completes once the buyer fixes the method.
+  seen.declineCapture = false
+  assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).body.status, 'COMPLETED')
+  assert.equal(seen.captures, 1)
 })
 
 test('legacy catalog migrates buyEnabled, limited editions and default hero once', async (t) => {

@@ -152,6 +152,22 @@ Back up the database and uploads together, using SQLite's backup API or stopping
 
 Build-time public settings remain `VITE_BASE` (use `/` for the server deployment) and `VITE_SITE_URL` (absolute canonical URL with a trailing slash). Production build emits robots, sitemap and design reference assets.
 
+### VPS (zito1950.it)
+
+The live site runs on an Ubuntu 24.04 VPS (`195.231.64.190`): Docker Compose runs the app on `127.0.0.1:8080`, and Caddy (`deploy/Caddyfile` → `/etc/caddy/Caddyfile`) terminates TLS with automatic Let's Encrypt certificates for `zito1950.it` and redirects `www.zito1950.it` to it. The checkout lives in `/srv/zito1950`, owned by `deploy`; `.env` there is mode 600 and never committed.
+
+- SSH: key-only, user `deploy` only (root login disabled); `deploy` has `sudo` with a password and is in the `docker` group.
+- Firewall (ufw): 22 rate-limited, 80, 443 tcp/udp; everything else incoming denied. fail2ban bans repeated SSH failures with increasing ban times.
+- Unattended security upgrades, with an automatic reboot at 04:30 when one is required.
+
+Deploy the latest `main`:
+
+```sh
+ssh deploy@195.231.64.190 /srv/zito1950/deploy/deploy.sh
+```
+
+The script pulls `main`, rebuilds the image, restarts the container and waits for `/api/payments/config`. App logs: `docker compose logs web` in `/srv/zito1950`. Failed PayPal calls log PayPal's issue code and `debug_id` (needed by PayPal support).
+
 ## Change record — 2026-10-07–2026-10-13
 
 - Initially replaced the panoramic watch hero with a square storefront photograph. The current default is the Tutus ab uno product photograph; automatic migration replaces only the former default, preserving owner-selected heroes.
@@ -174,3 +190,4 @@ Build-time public settings remain `VITE_BASE` (use `/` for the server deployment
 - Replaced the order-level mandatory certificate with optional per-item **Certificato della proprietà e garanzia** and **Incisione** (max 10 words, non-returnable once engraved, explicit acknowledgement) for watches and perfumes. Added owner and customer order emails (nodemailer SMTP, logged, never blocking capture), admin-editable customer templates per readiness status, status-change emails, an order readiness control in **Admin → Ordini**, a public order page `/ordine/<token>`, and the cart with disabled PayPal on GitHub Pages. Brand inscriptions use TeX Gyre Adventor, the Avant-Garde-style face of the logo.
 - Perfumes can now be sold, so the upcoming Tesoro di Alarico can be ordered at release: perfumes gained availability states (including **Prossimamente**), an **Acquista** button, `kind`-tagged cart lines and a price requirement for selling, and the warranty certificate is asked only when the cart holds a watch. Tesoro di Alarico is now a seeded Prossimamente perfume instead of a static coming-soon block; catalog version 6 migrates existing databases.
 - Brand now written `ZITO1950®` (no space) in copy, metadata, logos, emails and the PayPal brand; the handwritten «a Zito 1950» dedication keeps its wording. Cart lines show the product code under the name, and the photo or name now leads back to the product (watch dialog at the chosen finish, perfume card scrolled into view). Fixed the watch dialog scrolling sideways: off-screen sr-only labels in **Scopri anche** widened it. The Perché section gained the client's photo; the Officina button now reads **Assistenza**.
+- Production now runs on the zito1950.it VPS (Docker + Caddy, `deploy/Caddyfile`, `deploy/deploy.sh`). Failed PayPal calls are now logged with PayPal's issue code and `debug_id`, which the server previously discarded; a declined payment method (`INSTRUMENT_DECLINED`) or a not-yet-approved order now tells the buyer what to do instead of the generic retry message, and the same order can still be paid afterwards.

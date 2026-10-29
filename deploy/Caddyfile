@@ -1,0 +1,21 @@
+# VPS reverse proxy: automatic Let's Encrypt TLS, one Node backend (docker compose, 127.0.0.1:8080).
+# Install as /etc/caddy/Caddyfile, then `systemctl reload caddy`.
+{
+	email customer@zito1950.it
+}
+
+zito1950.it {
+	encode zstd gzip
+	header -Server
+	reverse_proxy 127.0.0.1:8080
+	log {
+		output file /var/log/caddy/zito1950.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}
+
+www.zito1950.it {
+	redir https://zito1950.it{uri} permanent
+}

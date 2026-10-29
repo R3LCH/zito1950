@@ -37,6 +37,12 @@ const HttpError = class extends Error {
 const fail = (status, message) => {
   throw new HttpError(status, message)
 }
+// PayPal issues the buyer can resolve on PayPal's side; anything else is ours and keeps the generic retry message.
+const PAYPAL_BUYER_ISSUES = {
+  INSTRUMENT_DECLINED: 'Il metodo di pagamento è stato rifiutato. Torna al carrello e scegline un altro su PayPal.',
+  PAYER_ACTION_REQUIRED: 'Il pagamento non è ancora stato approvato su PayPal. Torna al carrello e riprova.',
+  ORDER_NOT_APPROVED: 'Il pagamento non è ancora stato approvato su PayPal. Torna al carrello e riprova.',
+}
 const text = z.string().trim().max(12000)
 const id = z.string().regex(/^[a-z0-9-]{1,80}$/)
 const cents = z.number().int().min(1).max(100000000)
@@ -743,7 +749,11 @@ export function createApp(options = {}) {
         },
         body: 'grant_type=client_credentials',
       })
-      if (!response.ok) fail(502, 'PayPal non disponibile. Il carrello è conservato.')
+      if (!response.ok) {
+        // Wrong or revoked credentials would otherwise fail silently; the body is never logged (it may echo secrets).
+        console.error(`PayPal token -> ${response.status}`)
+        fail(502, 'PayPal non disponibile. Il carrello è conservato.')
+      }
       const token = await response.json()
       accessToken = { value: token.access_token, expires: Date.now() + token.expires_in * 1000 - 60000 }
     }
@@ -758,8 +768,14 @@ export function createApp(options = {}) {
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
     })
-    const result = await response.json()
-    if (!response.ok) fail(502, 'PayPal non ha completato la richiesta. Riprova con lo stesso ordine.')
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      // PayPal's issue code and debug_id are what PayPal support needs; buyers get the message for the issue.
+      const issue = result.details?.[0]?.issue ?? result.name ?? 'UNKNOWN'
+      console.error(`PayPal ${method} ${path} -> ${response.status} ${issue} debug_id=${result.debug_id ?? '-'}`)
+      const known = PAYPAL_BUYER_ISSUES[issue]
+      fail(known ? 409 : 502, known ?? 'PayPal non ha completato la richiesta. Riprova con lo stesso ordine.')
+    }
     return result
   }
   // Limited-edition units held by captures awaiting PayPal. One app instance owns the SQLite catalog, so memory suffices.
