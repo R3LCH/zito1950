@@ -349,7 +349,10 @@ export function createApp(options = {}) {
       strictTransportSecurity: production ? undefined : false,
     }),
   )
-  app.use('/api', rateLimit({ windowMs: 60000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false }))
+  // JSON body: the storefront and admin show `error` to the user; the default plain-text reply would not parse.
+  const limiter = (windowMs, limit) =>
+    rateLimit({ windowMs, limit, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Troppe richieste. Attendi qualche minuto e riprova.' } })
+  app.use('/api', limiter(60000, 120))
   app.use('/api', express.json({ limit: '512kb' }))
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store')
@@ -394,7 +397,7 @@ export function createApp(options = {}) {
     const session = req.session ?? issueSession(res, false)
     res.json({ csrf: session.csrf, admin: !!session.admin })
   })
-  const loginLimit = rateLimit({ windowMs: 900000, limit: 5, standardHeaders: 'draft-8', legacyHeaders: false })
+  const loginLimit = limiter(900000, 5)
   app.post('/api/admin/login', loginLimit, csrf, async (req, res) => {
     const password = z.string().min(1).max(256).parse(req.body.password)
     const hash = env.ADMIN_PASSWORD_HASH
@@ -724,7 +727,7 @@ export function createApp(options = {}) {
     res.json({ configured: !!mailer.configured, from: mailer.from, owner: mailer.owner }),
   )
   // Tokens are 256-bit, so guessing is hopeless; the limit only keeps scanners from hammering SQLite.
-  const orderPageLimit = rateLimit({ windowMs: 60000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false })
+  const orderPageLimit = limiter(60000, 30)
   app.get('/api/orders/:token', orderPageLimit, (req, res) => {
     const row = publicTokenPattern.test(req.params.token)
       ? db.prepare(`SELECT ${orderFields} FROM orders WHERE public_token=? AND status='COMPLETED'`).get(req.params.token)
@@ -872,7 +875,9 @@ export function createApp(options = {}) {
       locks.delete(key)
     }
   }
-  app.post('/api/payments/orders', csrf, async (req, res) =>
+  // Each new order is a PayPal API call and a database row; a shopper needs only a few per visit.
+  const orderLimit = limiter(900000, 20)
+  app.post('/api/payments/orders', orderLimit, csrf, async (req, res) =>
     single(req.session.id, async () => {
       const items = resolveCart(req.body.items)
       const total = items.reduce((sum, row) => sum + row.priceCents * row.quantity, 0)
@@ -1024,10 +1029,20 @@ export function createApp(options = {}) {
       res.json({ status: 'COMPLETED', id: order.id, ...orderUrl(paid.public_token) })
     }),
   )
+  // Order emails and the sandboxed admin email preview load these images from another origin;
+  // helmet's default same-origin resource policy would block them there.
+  app.use(['/email', '/img', '/uploads'], (req, res, next) => {
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin')
+    next()
+  })
   app.use('/uploads', express.static(join(dataDir, 'uploads'), { immutable: true, maxAge: '1y', dotfiles: 'deny' }))
   const dist = join(root, 'dist')
   app.use(express.static(dist, { index: false }))
-  app.get(['/', '/admin', '/ordine/:token'], (req, res) => res.sendFile(join(dist, 'index.html')))
+  app.get(['/', '/admin', '/ordine/:token'], (req, res) => {
+    // The admin panel and private order pages must stay out of search results.
+    if (req.path !== '/') res.set('X-Robots-Tag', 'noindex, nofollow')
+    res.sendFile(join(dist, 'index.html'))
+  })
   app.use((req, res) => res.status(404).json({ error: 'Risorsa non trovata.' }))
   app.use((error, req, res, next) => {
     const status =

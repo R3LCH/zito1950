@@ -14,7 +14,7 @@ function site(): Plugin {
     transformIndexHtml: (html) => html.replaceAll('%SITE_URL%', SITE_URL),
     generateBundle() {
       const emit = (fileName: string, source: string) => this.emitFile({ type: 'asset', fileName, source })
-      emit('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}sitemap.xml\n`)
+      emit('robots.txt', `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /ordine/\n\nSitemap: ${SITE_URL}sitemap.xml\n`)
       emit(
         'sitemap.xml',
         `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>${SITE_URL}</loc>\n    <lastmod>${new Date().toISOString().slice(0, 10)}</lastmod>\n  </url>\n</urlset>\n`,

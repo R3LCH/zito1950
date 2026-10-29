@@ -129,7 +129,7 @@ async function fixture(t, paypal = false, legacyBody = null) {
     assert.equal(response.status, 200, JSON.stringify(response.body))
     return response.body
   }
-  return { admin, buyer, client, enable, seen, application, dir, env, mail }
+  return { admin, buyer, client, enable, seen, application, dir, env, mail, base }
 }
 
 test('admin authorization, CSRF, session rotation and revocation', async (t) => {
@@ -1261,4 +1261,29 @@ test('mailer without SMTP is not configured and skips sending', async () => {
   assert.equal(mailer.from, 'ZITO1950® <customer@zito1950.it>')
   assert.equal(mailer.owner, 'customer@zito1950.it')
   assert.deepEqual(await mailer.send({ to: 'a@example.com', subject: 's', html: '<p>h</p>', text: 'h' }), { skipped: true })
+})
+
+test('email images load cross-origin and private pages are not indexed', async (t) => {
+  const { base } = await fixture(t)
+  const logo = await fetch(`${base}/email/logo.png`)
+  assert.equal(logo.status, 200)
+  assert.equal(logo.headers.get('cross-origin-resource-policy'), 'cross-origin')
+  assert.equal((await fetch(`${base}/`)).headers.get('cross-origin-resource-policy'), 'same-origin')
+  assert.equal((await fetch(`${base}/admin`)).headers.get('x-robots-tag'), 'noindex, nofollow')
+  assert.equal((await fetch(`${base}/`)).headers.get('x-robots-tag'), null)
+})
+
+test('repeated wrong admin passwords are throttled with a readable error', async (t) => {
+  const { client } = await fixture(t)
+  const attacker = client()
+  await attacker.request('/session')
+  const statuses = []
+  let last
+  for (let i = 0; i < 6; i++) {
+    last = await attacker.request('/admin/login', 'POST', { password: 'wrong-password' })
+    statuses.push(last.status)
+  }
+  // The fixture's own successful login used one of the five attempts in the window.
+  assert.deepEqual(statuses, [401, 401, 401, 401, 429, 429])
+  assert.match(last.body.error, /Troppe richieste/)
 })
