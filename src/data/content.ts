@@ -1,4 +1,4 @@
-import type { Contatti, Img, Model, Officina, Orologi, Perche, Profumo, ProfumiSection, Site, Storia, Territorio } from './types'
+import type { Contatti, Img, Model, Officina, Orologi, Perche, Profumo, ProfumiSection, Site, Storia, Territorio, Recensioni } from './types'
 
 export const site: Site = {
   name: 'ZITO1950®',
@@ -77,7 +77,7 @@ export const models: Model[] = [
   },
   {
     id: 'takimo',
-    engravable: false,
+    engravable: true,
     gender: 'unisex',
     codes: ['ZPTAK15'],
     name: 'Takimo 65°',
@@ -141,7 +141,7 @@ export const models: Model[] = [
   },
   ...(['n5', 'n6'] as const).map((id): Model => ({
     id,
-    engravable: false,
+    engravable: true,
     gender: 'uomo',
     codes: [id === 'n5' ? 'ZP0513' : 'ZP0613'],
     name: id === 'n5' ? 'N°5' : 'N°6',
@@ -235,7 +235,7 @@ export const models: Model[] = [
   },
   {
     id: 'n12-tourbillon',
-    engravable: false,
+    engravable: true,
     gender: 'unisex',
     codes: ['ZPTO13'],
     name: 'N°12 Tourbillon',
@@ -354,7 +354,7 @@ export const models: Model[] = [
   },
   {
     id: 'italy',
-    engravable: false,
+    engravable: true,
     gender: 'unisex',
     codes: ['ZPIT15'],
     name: 'Italy',
@@ -431,7 +431,7 @@ export const models: Model[] = [
   },
   {
     id: 'casuale',
-    engravable: false,
+    engravable: true,
     gender: 'uomo',
     codes: ['ZPCA13'],
     name: 'Casuale',
@@ -484,7 +484,7 @@ export const models: Model[] = [
   },
   {
     id: 'tasca',
-    engravable: false,
+    engravable: true,
     gender: 'unisex',
     codes: ['ZTOR0013', 'ZTAR0013'],
     name: 'Tasca N°0',
@@ -523,7 +523,7 @@ export const models: Model[] = [
   },
   {
     id: 'bauletto',
-    engravable: false,
+    engravable: true,
     gender: 'unisex',
     codes: ['ZVBA13'],
     name: 'Bauletto',
@@ -725,6 +725,16 @@ export const perche: Perche = {
 }
 
 /** Client copy: «Scopri il territorio»; photo supplied by the client. */
+/** Recensioni: short shop text beside the review stack. */
+export const recensioni: Recensioni = {
+  eyebrow: 'Recensioni',
+  title: 'La fiducia di chi ci ha scelto.',
+  paragraphs: [
+    'Nel nostro negozio di Scalea ogni orologio si sceglie con calma, con un consiglio sincero e la cortesia di sempre.',
+    'Lo raccontano i nostri clienti: 5,0 su Google, su 31 recensioni.',
+  ],
+}
+
 export const territorio: Territorio = {
   eyebrow: 'Scopri il territorio',
   title: 'Scalea. Dove la bellezza incontra il tempo.',

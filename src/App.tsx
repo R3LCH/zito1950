@@ -6,6 +6,7 @@ import Officina from './components/Officina'
 import Orologi from './components/Orologi'
 import PercheZito from './components/PercheZito'
 import Profumi from './components/Profumi'
+import Reviews from './components/Reviews'
 import SectionButtons from './components/SectionButtons'
 import Storia from './components/Storia'
 import Territorio from './components/Territorio'
@@ -40,6 +41,7 @@ export default function App() {
           <Officina />
           <Territorio />
           <PercheZito />
+          <Reviews />
           <Contatti />
         </div>
         </>}

@@ -1,5 +1,4 @@
 import Panel from './Panel'
-import Reviews from './Reviews'
 import { contatti as baseContacts } from '../data/content'
 import { useContent } from '../lib/i18n'
 
@@ -41,7 +40,7 @@ export function ContactLink({
   )
 }
 
-/** Dove siamo: centred map, email link and Google reviews. No postal address is shown. */
+/** Dove siamo: centred map, and email link. No postal address is shown. */
 export default function Contatti() {
   const { contatti } = useContent()
 
@@ -58,7 +57,6 @@ export default function Contatti() {
           <ul className="mx-auto mt-8 max-w-[32rem] border-t border-line">
             <ContactLink label={contatti.labels.email} value={contatti.email} href={`mailto:${contatti.email}`} />
           </ul>
-          <Reviews />
         </div>
       }
     />

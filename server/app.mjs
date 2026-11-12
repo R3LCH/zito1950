@@ -222,7 +222,7 @@ export function createApp(options = {}) {
       ],
       perfumes: [profumo, tesoroDiAlarico].map(seedPerfume),
       featured: [],
-      catalogVersion: 9,
+      catalogVersion: 10,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
@@ -320,6 +320,13 @@ export function createApp(options = {}) {
       Object.hasOwn(m, 'engravable') ? m : { ...m, engravable: seedEngravable.get(m.id) ?? false },
     )
     existing.catalogVersion = 9
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.catalogVersion < 10) {
+    // Steel case backs join the engravable set. v9 stored explicit false for these, so an owner "false" can't be told apart from the seed.
+    const widened = new Set(['takimo', 'n5', 'n6', 'n12-tourbillon', 'italy', 'casuale', 'tasca', 'bauletto'])
+    existing.models = existing.models.map((m) => (widened.has(m.id) ? { ...m, engravable: true } : m))
+    existing.catalogVersion = 10
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   const catalog = () => {

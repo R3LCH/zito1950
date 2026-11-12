@@ -264,6 +264,12 @@ export interface Perche {
 }
 
 /** «Scopri il territorio»: Scalea and the Calabrian coast. */
+export interface Recensioni {
+  eyebrow: string
+  title: string
+  paragraphs: string[]
+}
+
 export interface Territorio {
   eyebrow: string
   title: string

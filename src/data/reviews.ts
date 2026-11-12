@@ -1,3 +1,4 @@
+/** Verbatim Google reviews of the Scalea shop, 5 stars each. */
 export const reviews = [
   {
     author: 'Manu Vaccaro',

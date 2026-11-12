@@ -334,7 +334,7 @@ test('legacy catalog migrates buyEnabled, limited editions and default hero once
   const { admin, buyer, application, dir, env } = await fixture(t, true, legacyBody)
   const catalog = (await admin.request('/catalog')).body
   const n7 = catalog.models.find((m) => m.id === 'n7')
-  assert.equal(catalog.catalogVersion, 9)
+  assert.equal(catalog.catalogVersion, 10)
   assert.equal(Object.hasOwn(catalog, 'perfume'), false)
   assert.deepEqual(catalog.perfumes.map((p) => p.id), ['n7-oud', 'tesoro-di-alarico'])
   assert.deepEqual(catalog.featured, [])
@@ -482,20 +482,20 @@ test('order fingerprint includes personalization', async (t) => {
 
 test('engraving is allowed only on eligible watches, not display backs', async (t) => {
   const { buyer, enable, admin } = await fixture(t, true)
-  await enable('takimo')
+  await enable('n2')
   await enable('cafe-racer')
   const order = (item) => buyer.request('/payments/orders', 'POST', { items: [item], requestId: randomUUID() })
-  const rejected = await order(line({ modelId: 'takimo', engraving: 'Per sempre', engravingAccepted: true }))
+  const rejected = await order(line({ modelId: 'n2', engraving: 'Per sempre', engravingAccepted: true }))
   assert.equal(rejected.status, 400)
   assert.equal(rejected.body.error, 'Questo orologio non può essere inciso sul retro.')
-  assert.equal((await order(line({ modelId: 'takimo', certificate: holder }))).status, 200)
+  assert.equal((await order(line({ modelId: 'n2', certificate: holder }))).status, 200)
   assert.equal((await order(line({ engraving: 'Per sempre', engravingAccepted: true }))).status, 200)
   const catalog = (await admin.request('/catalog')).body
-  const product = { ...catalog.models.find((m) => m.id === 'takimo'), engravable: true }
-  const saved = await admin.request('/admin/products/takimo', 'PUT', { product, revision: catalog.revision })
+  const product = { ...catalog.models.find((m) => m.id === 'n2'), engravable: true }
+  const saved = await admin.request('/admin/products/n2', 'PUT', { product, revision: catalog.revision })
   assert.equal(saved.status, 200)
-  assert.equal((await buyer.request('/catalog')).body.models.find((m) => m.id === 'takimo').engravable, true)
-  assert.equal((await order(line({ modelId: 'takimo', engraving: 'Per sempre', engravingAccepted: true }))).status, 200)
+  assert.equal((await buyer.request('/catalog')).body.models.find((m) => m.id === 'n2').engravable, true)
+  assert.equal((await order(line({ modelId: 'n2', engraving: 'Per sempre', engravingAccepted: true }))).status, 200)
 })
 
 test('certificate code route requires admin and CSRF, sets and clears the code', async (t) => {
@@ -545,14 +545,14 @@ test('version-2 catalog migrates sold models to out-of-stock once', async (t) =>
   }
   const { admin, dir, env } = await fixture(t, false, legacyBody)
   const catalog = (await admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 9)
-  assert.equal(catalog.revision, 8)
+  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.revision, 9)
   assert.equal(catalog.models.find((m) => m.id === 'takimo').availability, 'out-of-stock')
   assert.equal(catalog.models.find((m) => m.id === 'n7').availability, 'buy')
   const reopened = createApp({ env, dataDir: dir })
   const reopenedRevision = reopened.db.prepare('SELECT revision FROM catalog').get().revision
   reopened.close()
-  assert.equal(reopenedRevision, 8)
+  assert.equal(reopenedRevision, 9)
 })
 
 test('limited edition with zero pieces is sold out; unknown or positive pieces stay purchasable', async (t) => {
@@ -830,8 +830,8 @@ test('version-3 catalog turns the single perfume into a list once, and a removed
   })
   const kept = await fixture(t, false, v3({ ...profumo, name: 'Oud del titolare', priceCents: 15000 }))
   const catalog = (await kept.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 9)
-  assert.equal(catalog.revision, 7)
+  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.revision, 8)
   assert.equal(Object.hasOwn(catalog, 'perfume'), false)
   assert.deepEqual(catalog.perfumes.map((p) => [p.id, p.name, p.priceCents]), [
     [profumo.id, 'Oud del titolare', 15000],
@@ -847,7 +847,7 @@ test('version-3 catalog turns the single perfume into a list once, and a removed
   const reopened = createApp({ env: kept.env, dataDir: kept.dir })
   const reopenedBody = reopened.db.prepare('SELECT revision, body FROM catalog').get()
   reopened.close()
-  assert.equal(reopenedBody.revision, 7)
+  assert.equal(reopenedBody.revision, 8)
   assert.equal(JSON.parse(reopenedBody.body).perfumes.length, 2)
   const removed = await fixture(t, false, v3(null))
   const empty = (await removed.admin.request('/catalog')).body
@@ -970,8 +970,8 @@ test('version-5 catalog adds Tesoro di Alarico once, defaults perfume availabili
   const legacyOud = { ...profumo, priceCents: 12000 }
   const migrated = await fixture(t, false, v5([legacyOud]))
   const catalog = (await migrated.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 9)
-  assert.equal(catalog.revision, 5)
+  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.revision, 6)
   assert.deepEqual(catalog.perfumes.map((p) => [p.id, p.availability, p.priceCents]), [
     [profumo.id, 'no-buy', 12000],
     [tesoroDiAlarico.id, 'coming-soon', 0],
@@ -985,7 +985,7 @@ test('version-5 catalog adds Tesoro di Alarico once, defaults perfume availabili
   const reopened = createApp({ env: migrated.env, dataDir: migrated.dir })
   const reopenedBody = reopened.db.prepare('SELECT revision, body FROM catalog').get()
   reopened.close()
-  assert.equal(reopenedBody.revision, 5)
+  assert.equal(reopenedBody.revision, 6)
   assert.equal(JSON.parse(reopenedBody.body).perfumes.length, 2)
   // An owner who already added Tesoro keeps their entry; no duplicate is appended.
   const owned = await fixture(t, false, v5([legacyOud, { ...tesoroDiAlarico, availability: 'buy', priceCents: 9000 }]))
@@ -1029,8 +1029,8 @@ test('version-6 catalog swaps the old N°7 Oud photo for the new one once, keepi
   })
   const migrated = await fixture(t, false, v6({}))
   const catalog = (await migrated.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 9)
-  assert.equal(catalog.revision, 4)
+  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.revision, 5)
   const oud = catalog.perfumes.find((p) => p.id === profumo.id)
   assert.deepEqual(oud.images.map((im) => im.src), [newSrc, journal.src])
   assert.equal(oud.images[0].alt, profumo.images[0].alt)
@@ -1042,8 +1042,8 @@ test('version-6 catalog swaps the old N°7 Oud photo for the new one once, keepi
   const reopened = createApp({ env: migrated.env, dataDir: migrated.dir })
   const reopenedBody = reopened.db.prepare('SELECT revision, body FROM catalog').get()
   reopened.close()
-  assert.equal(reopenedBody.revision, 4)
-  assert.equal(JSON.parse(reopenedBody.body).catalogVersion, 9)
+  assert.equal(reopenedBody.revision, 5)
+  assert.equal(JSON.parse(reopenedBody.body).catalogVersion, 10)
   // The owner's replacement of the old slot moves to the new slot.
   const replaced = await fixture(t, false, v6({ [oldSrc]: { src: upload, alt: 'Flacone caricato' } }))
   const owned = (await replaced.admin.request('/catalog')).body
@@ -1081,8 +1081,8 @@ test('version-7 catalog gives every watch a line once: seed watches by id, owner
   assert.ok(v7.models.every((m) => !Object.hasOwn(m, 'gender')))
   const migrated = await fixture(t, false, v7)
   const catalog = (await migrated.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 9)
-  assert.equal(catalog.revision, 3)
+  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.revision, 4)
   const gender = (id) => catalog.models.find((m) => m.id === id).gender
   assert.equal(gender('n9'), 'donna')
   assert.equal(gender('n2'), 'uomo')
@@ -1092,8 +1092,8 @@ test('version-7 catalog gives every watch a line once: seed watches by id, owner
   const reopened = createApp({ env: migrated.env, dataDir: migrated.dir })
   const reopenedBody = reopened.db.prepare('SELECT revision, body FROM catalog').get()
   reopened.close()
-  assert.equal(reopenedBody.revision, 3)
-  assert.equal(JSON.parse(reopenedBody.body).catalogVersion, 9)
+  assert.equal(reopenedBody.revision, 4)
+  assert.equal(JSON.parse(reopenedBody.body).catalogVersion, 10)
 })
 
 test('version-8 engraving migration seeds missing flags once without overwriting owner choices', async (t) => {
@@ -1114,8 +1114,8 @@ test('version-8 engraving migration seeds missing flags once without overwriting
   v8.models.find((m) => m.id === 'takimo').engravable = true
   const migrated = await fixture(t, false, v8)
   const catalog = (await migrated.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 9)
-  assert.equal(catalog.revision, 2)
+  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.revision, 3)
   for (const model of models.filter((m) => m.id !== 'n7' && m.id !== 'takimo'))
     assert.equal(catalog.models.find((m) => m.id === model.id).engravable, model.engravable)
   assert.equal(catalog.models.find((m) => m.id === 'n7').engravable, false)
@@ -1124,7 +1124,7 @@ test('version-8 engraving migration seeds missing flags once without overwriting
   const reopened = createApp({ env: migrated.env, dataDir: migrated.dir })
   const row = reopened.db.prepare('SELECT revision, body FROM catalog').get()
   reopened.close()
-  assert.equal(row.revision, 2)
+  assert.equal(row.revision, 3)
   assert.deepEqual(JSON.parse(row.body).models, catalog.models)
 })
 
