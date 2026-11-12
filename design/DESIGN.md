@@ -52,8 +52,8 @@ No accent hue. Color comes from the photographs.
 - Storia: `#storia`, archive photo `img/storia/storia-nuova.jpg` beside the 1951 railway intro, cropped (`object-cover`) to `min(26rem,55vh)` tall on desktop and 60vw on mobile so the closed section stays compact; “Scopri la storia” opens every chronological chapter and the closing quote; chapter images alternate sides on desktop.
 - Territorio: `#territorio`, eyebrow “Scopri il territorio”, title “Scalea. Dove la bellezza incontra il tempo.”, text and serif closing line on the left, `img/storia/scalea-mare.jpg` on the right, held sticky on desktop; not expandable.
 - Perché Zito: `#perche-zito`, “Perché scegliere ZITO1950®”, italic serif lead beside the reasons and the serif brand line; not expandable.
-- Contatti: “Dove siamo” at `#contatti`; map centred (max 56rem, 4:3 on mobile, 16:9 from `sm`), email customer@zito1950.it as a `mailto:` row centred under it, followed by Reviews. No postal address, company or P.IVA in the section, footer or metadata; the address stays in data only as the map query.
-  - Reviews: centred max 32rem stack of Google reviews, three white hairline cards with 1.25rem corners, the tallest fixing the height. Italian quotations remain verbatim; no relative dates. Header shows the listing rating and count; the external link opens Google in a new tab. Swipe left/right, arrow keys and previous/next controls navigate; desktop autoplay advances every six seconds, pausing on hover, focus, hidden tab, offscreen or via the visible pause control. Reduced motion disables autoplay and replaces sliding with a 200ms fade.
+- Contatti: “Dove siamo” at `#contatti`; map centred (max 56rem, 4:3 on mobile, 16:9 from `sm`), email customer@zito1950.it as a `mailto:` row centred under it. No postal address, company or P.IVA in the section, footer or metadata; the address stays in data only as the map query.
+- Recensioni: `#recensioni`, its own section right after Contatti. Text column (eyebrow, title, two short paragraphs, “Leggi tutte” Google link in a new tab) beside a max 32rem `CardStack` (`src/components/ui/card-stack.tsx`, framer-motion) of the verbatim Google reviews: white hairline cards with 1.25rem corners, one under another, the two behind peeking 14px above at 5% smaller scale. Click/tap, horizontal swipe or arrow keys send the front card out sideways (450ms ease) while the others rise in the same moment (spring, no overshoot); it rejoins the back unseen. No buttons and no autoplay; a muted hint under the stack reads “Clicca →” on fine pointers and “Scorri →” on touch. Reduced motion: 200ms opacity crossfade only.
 - Cart: opened from Header; native `<dialog>` with watch and perfume lines, quantities, total and PayPal checkout. Each line has two collapsible optional sections: “Certificato della proprietà e garanzia” (certificate front/back thumbnails, Nome, Cognome, Email, all required once one is filled) and “Incisione” (textarea, n/10 parole counter, 120 chars; when filled a bordered notice states the item is personalized and not returnable, with a required acknowledgement checkbox). Personalized lines lock quantity to 1. “Paga con PayPal” stays disabled while a section is incomplete, and always in the GitHub Pages preview (with a note).
   - Case-back engraving: watches carry an admin flag `engravable` (“Incisione sul retro possibile”; never for sapphire, display or enamelled backs). Only engravable watches show the “Incisione sul retro” cart section, the ModelDialog note and the “Incisione sul retro” filter; the server rejects engraving on other watches. Perfumes keep their engraving; the certificate stays on every line.
 - Order page (`/ordine/<token>`): eyebrow “Il tuo ordine”, current status as serif title, five-step ordered status track (vertical on mobile, five columns from `md`, `aria-current="step"`), items with photo, codes, price, certificate and engraving, total, contact email.
@@ -68,11 +68,11 @@ No accent hue. Color comes from the photographs.
 
 ## Motion
 - Ease `cubic-bezier(.16,1,.3,1)`, 500ms. Reveal: opacity 0→1 + 8px rise, `.reveal` + `.is-visible` toggled by IntersectionObserver, once.
-- `prefers-reduced-motion: reduce` disables reveals, smooth scroll and transitions, except the Reviews stack's 200ms opacity fade.
-- No parallax, loops (except the controlled Reviews stack), scroll-jacking, smooth-scroll libraries.
+- `prefers-reduced-motion: reduce` disables reveals, smooth scroll and transitions, except the review stack's 200ms opacity fade.
+- No parallax, loops, scroll-jacking, smooth-scroll libraries.
 
 ## Prohibitions
-Dark mode or dark sections; stock/generated imagery; invented facts, prices, dates, names, specs or testimonials; shadows; gradients; emoji; autoplay carousels except the Reviews stack with its pause control.
+Dark mode or dark sections; stock/generated imagery; invented facts, prices, dates, names, specs or testimonials; shadows; gradients; emoji; autoplay carousels.
 
 ## Content rules
 - Italian source facts come from the catalogue, price card and old site; interface microcopy is separate. Unreadable = `[illeggibile]`. Localized copy must preserve the facts.

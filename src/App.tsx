@@ -41,8 +41,8 @@ export default function App() {
           <Officina />
           <Territorio />
           <PercheZito />
-          <Reviews />
           <Contatti />
+          <Reviews />
         </div>
         </>}
       </main>

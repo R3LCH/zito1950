@@ -86,13 +86,19 @@
       "name": "Contatti",
       "path": "src/components/Contatti.tsx",
       "props": {},
-      "behaviour": "Dove siamo at #contatti: centred lazy map, email mailto: row (customer@zito1950.it), then Reviews. No postal address, company, P.IVA or phone."
+      "behaviour": "Dove siamo at #contatti: centred lazy map, email mailto: row (customer@zito1950.it). No postal address, company, P.IVA or phone."
     },
     {
       "name": "Reviews",
       "path": "src/components/Reviews.tsx",
       "props": {},
-      "behaviour": "Centred Google review stack beneath the contact email: five verbatim Italian reviews, listing rating and external Google link. Three hairline cards share the tallest height. Swipe, arrow keys and previous/next buttons navigate; desktop autoplay pauses on hover, focus, hidden tab, offscreen or with the pause button. Reduced motion disables autoplay and uses a 200ms opacity fade. Inactive cards are hidden and inert."
+      "behaviour": "Own section #recensioni after Contatti: text column with Google link beside CardStack of five verbatim Italian reviews. Click/tap, swipe or arrow keys send the front card out; no buttons, no autoplay; muted hint \"Clicca →\" (fine pointer) or \"Scorri →\" (touch). Reduced motion: 200ms crossfade."
+    },
+    {
+      "name": "CardStack",
+      "path": "src/components/ui/card-stack.tsx",
+      "props": "items: {id, name, designation?, content}[]; label; roleLabel; itemLabel; offset?=14; scaleFactor?=0.05",
+      "behaviour": "framer-motion stack of hairline cards, one under another; front card draggable on x, tappable, keyboard focusable. Exit 450ms ease sideways while the rest springs up (stiffness 210, damping 30)."
     },
     {
       "name": "Cart",

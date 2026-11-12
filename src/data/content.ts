@@ -730,8 +730,8 @@ export const recensioni: Recensioni = {
   eyebrow: 'Recensioni',
   title: 'La fiducia di chi ci ha scelto.',
   paragraphs: [
-    'Nel nostro negozio di Scalea ogni orologio si sceglie con calma, con un consiglio sincero e la cortesia di sempre.',
-    'Lo raccontano i nostri clienti: 5,0 su Google, su 31 recensioni.',
+    'Nel nostro negozio di Scalea non c’è mai fretta: ogni orologio si guarda da vicino, si prova al polso e si sceglie insieme, con un consiglio sincero e la gentilezza di una famiglia.',
+    'Ecco cosa raccontano di noi i nostri clienti.',
   ],
 }
 

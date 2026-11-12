@@ -158,33 +158,6 @@
   @keyframes panel-in { from { opacity: 0; transform: translateY(6px); } }
 }
 
-/* All cards occupy one grid cell, so the tallest review fixes the stack height. */
-.review-stack { display: grid; padding-bottom: 20px; touch-action: pan-y; cursor: grab; }
-.review-stack:active { cursor: grabbing; }
-.review-card {
-  grid-area: 1 / 1;
-  min-width: 0;
-  padding: 1.5rem;
-  border: 1px solid var(--color-line);
-  border-radius: 1.25rem;
-  background: var(--color-bg);
-  transform-origin: 50% 100%;
-  /* Slow, eased exit toward the top left; the opacity fade trails the movement. */
-  transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1), opacity 900ms cubic-bezier(0.4, 0, 0.2, 1) 150ms;
-}
-.review-control {
-  display: inline-flex;
-  min-width: 44px;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--color-line);
-  border-radius: 999px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .review-card { transform: none !important; transition: opacity 200ms ease !important; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
