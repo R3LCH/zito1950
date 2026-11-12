@@ -1,4 +1,4 @@
-import type { Contatti, Img, Model, Officina, Orologi, Perche, Profumo, ProfumiSection, Site, Storia, Territorio, Recensioni } from './types'
+import type { Contatti, Img, Model, Officina, Orologi, Perche, Profumo, ProfumiSection, Site, Storia, Territorio } from './types'
 
 export const site: Site = {
   name: 'ZITO1950®',
@@ -725,16 +725,6 @@ export const perche: Perche = {
 }
 
 /** Client copy: «Scopri il territorio»; photo supplied by the client. */
-/** Recensioni: short shop text beside the review stack. */
-export const recensioni: Recensioni = {
-  eyebrow: 'Recensioni',
-  title: 'La fiducia di chi ci ha scelto.',
-  paragraphs: [
-    'Che passiate dal nostro negozio di Scalea o scegliate da lontano, il nostro modo di lavorare non cambia: cura per ogni dettaglio, risposte sincere e la cortesia di una famiglia.',
-    'Ecco cosa raccontano di noi i nostri clienti.',
-  ],
-}
-
 export const territorio: Territorio = {
   eyebrow: 'Scopri il territorio',
   title: 'Scalea. Dove la bellezza incontra il tempo.',
@@ -831,6 +821,8 @@ export const contatti: Contatti = {
     instagram: 'Instagram',
     facebook: 'Facebook',
     newTab: '(si apre in una nuova scheda)',
+    googleRating: '5,0 su 5',
+    googleReviews: '31 recensioni su Google',
   },
 }
 
