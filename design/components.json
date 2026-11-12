@@ -97,8 +97,8 @@
     {
       "name": "CardStack",
       "path": "src/components/ui/card-stack.tsx",
-      "props": "items: {id, name, designation?, content}[]; label; roleLabel; itemLabel; offset?=14; scaleFactor?=0.05",
-      "behaviour": "framer-motion stack of hairline cards, one under another; front card draggable on x, tappable, keyboard focusable. Exit 450ms ease sideways while the rest springs up (stiffness 210, damping 30)."
+      "props": "items: {id, name, designation?, content}[]; label; roleLabel; itemLabel; offset?=12; scaleFactor?=0.035",
+      "behaviour": "framer-motion stack of hairline cards, one under another, all of them visible; front card draggable on x, tappable, keyboard focusable. Exit 450ms ease sideways while the rest springs up (stiffness 210, damping 30)."
     },
     {
       "name": "Cart",

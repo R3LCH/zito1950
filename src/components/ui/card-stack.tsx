@@ -14,12 +14,11 @@ interface CardStackProps {
   label: string
   roleLabel: string
   itemLabel: string
-  /** Vertical peek of each card behind the front one, in px. */
+  /** Vertical peek of each card behind the front one, in px; every card stays visible. */
   offset?: number
   scaleFactor?: number
 }
 
-const VISIBLE = 3
 const SETTLE: Transition = { type: 'spring', stiffness: 210, damping: 30, mass: 0.9 }
 const EXIT: Transition = { duration: 0.45, ease: [0.4, 0, 0.2, 1] }
 const REDUCED: Transition = { default: { duration: 0 }, opacity: { duration: 0.2, ease: 'linear' } }
@@ -28,7 +27,7 @@ const REDUCED: Transition = { default: { duration: 0 }, opacity: { duration: 0.2
  * Hairline cards stacked one behind the other. A click, tap, swipe or arrow key sends the front card
  * out while the others move up in the same motion; the sent card rejoins the back of the stack unseen.
  */
-export function CardStack({ items, label, roleLabel, itemLabel, offset = 14, scaleFactor = 0.05 }: CardStackProps) {
+export function CardStack({ items, label, roleLabel, itemLabel, offset = 12, scaleFactor = 0.035 }: CardStackProps) {
   const reduced = useReducedMotion()
   const [order, setOrder] = useState(() => items.map(item => item.id))
   const [leaving, setLeaving] = useState<{ id: string; direction: 1 | -1 } | null>(null)
@@ -60,7 +59,7 @@ export function CardStack({ items, label, roleLabel, itemLabel, offset = 14, sca
       tabIndex={0}
       onKeyDown={onKeyDown}
       className="grid rounded-[1.25rem] outline-offset-4"
-      style={{ paddingTop: offset * (VISIBLE - 1) }}
+      style={{ paddingTop: offset * (items.length - 1) }}
     >
       {order.map((id, position) => {
         const item = byId.get(id)
@@ -73,7 +72,7 @@ export function CardStack({ items, label, roleLabel, itemLabel, offset = 14, sca
           ? reduced
      ? { opacity: 0 }
      : { x: leaving.direction < 0 ? '-45%' : '45%', y: -offset * 2, scale: 1, opacity: 0 }
-   : { x: 0, y: -depth * offset, scale: 1 - depth * scaleFactor, opacity: depth < VISIBLE ? 1 : 0 }
+   : { x: 0, y: -depth * offset, scale: 1 - depth * scaleFactor, opacity: 1 }
         return (
    <motion.article
      key={id}
