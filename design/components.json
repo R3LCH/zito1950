@@ -29,7 +29,7 @@
         "onChange": "(filters: FilterState) => void",
         "resultCount": "number"
       },
-      "behaviour": "Outlined Filtri e ordinamento button with ink count badge, result count, Azzera filtri and removable chips. Search-by-name pill before the button (live, accent/punctuation-insensitive, Esc clears). Native <dialog> side sheet (420px right, full screen on mobile): Linea (Uomo/Donna, unisex matches both) first, then sort radios; Novità / Edizioni limitate, availability, movement, functions, case and price checkboxes with live counts; zero-count options disabled, never-matching options hidden. OR within a group, AND across groups. Esc/backdrop closes; body scroll locked; focus returns to the button."
+      "behaviour": "Outlined Filtri e ordinamento button with ink count badge, result count, Azzera filtri and removable chips. Search-by-name pill before the button (live, accent/punctuation-insensitive, Esc clears). Native <dialog> side sheet (420px right, full screen on mobile): Linea (Uomo/Donna, unisex matches both) first, then sort radios; Novità / Edizioni limitate, availability, movement, functions, case and price checkboxes with live counts; zero-count options disabled, never-matching options hidden. OR within a group, AND across groups. Esc/backdrop closes; body scroll locked; focus returns to the button. Flags: Novità, Edizioni limitate, Incisione sul retro (engravable watches)."
     },
     {
       "name": "ModelCard",
@@ -52,7 +52,7 @@
         "onClose": "() => void",
         "onSelect": "(model: Model) => void"
       },
-      "behaviour": "Native <dialog>: gallery, variants, name, codes, price, labels, Uomo/Donna/Unisex tag, remaining pieces, quote, description, specs and buy-only purchase control. Esc/backdrop closes; body scroll locked; focus returns to opener. Recommended selection switches models in place, resets variant/photo, scrolls to top and focuses the new title."
+      "behaviour": "Native <dialog>: gallery, variants, name, codes, price, labels, Uomo/Donna/Unisex tag, remaining pieces, quote, description, specs and buy-only purchase control. Esc/backdrop closes; body scroll locked; focus returns to opener. Recommended selection switches models in place, resets variant/photo, scrolls to top and focuses the new title. Engravable watches show “Incisione sul retro della cassa disponibile: la scegli nel carrello.”"
     },
     {
       "name": "Recommended",
@@ -86,13 +86,19 @@
       "name": "Contatti",
       "path": "src/components/Contatti.tsx",
       "props": {},
-      "behaviour": "Dove siamo at #contatti: centred lazy map only, with the email mailto: row (customer@zito1950.it) under it. No postal address, company, P.IVA or phone."
+      "behaviour": "Dove siamo at #contatti: centred lazy map, email mailto: row (customer@zito1950.it), then Reviews. No postal address, company, P.IVA or phone."
+    },
+    {
+      "name": "Reviews",
+      "path": "src/components/Reviews.tsx",
+      "props": {},
+      "behaviour": "Centred Google review stack beneath the contact email: five verbatim Italian reviews, listing rating and external Google link. Three hairline cards share the tallest height. Swipe, arrow keys and previous/next buttons navigate; desktop autoplay pauses on hover, focus, hidden tab, offscreen or with the pause button. Reduced motion disables autoplay and uses a 200ms opacity fade. Inactive cards are hidden and inert."
     },
     {
       "name": "Cart",
       "path": "src/components/Cart.tsx",
       "props": {},
-      "behaviour": "Native <dialog> opened from Header; per line optional Certificato della proprietà e garanzia (Nome, Cognome, Email) and Incisione (max 10 words, non-returnable notice + required acknowledgement); personalized lines quantity 1; PayPal approval and explicit capture, then link to the order page. PayPal disabled in the static preview."
+      "behaviour": "Native <dialog> opened from Header; per line optional Certificato della proprietà e garanzia (Nome, Cognome, Email) and Incisione (max 10 words, non-returnable notice + required acknowledgement); personalized lines quantity 1; PayPal approval and explicit capture, then link to the order page. PayPal disabled in the static preview. Watch lines show the engraving section only when the model is engravable, labelled “Incisione sul retro”; stored engraving on a non-engravable watch is cleared."
     },
     {
       "name": "Footer",

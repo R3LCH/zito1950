@@ -60,6 +60,7 @@ const img = (id: string, alt: string, count = 3): Img[] =>
 export const models: Model[] = [
   {
     id: 'tutus-ab-uno',
+    engravable: false,
     gender: 'unisex',
     codes: ['ZP18K16'],
     name: 'Tutus ab uno',
@@ -76,6 +77,7 @@ export const models: Model[] = [
   },
   {
     id: 'takimo',
+    engravable: false,
     gender: 'unisex',
     codes: ['ZPTAK15'],
     name: 'Takimo 65°',
@@ -95,6 +97,7 @@ export const models: Model[] = [
   },
   {
     id: 'n2',
+    engravable: false,
     gender: 'uomo',
     codes: ['ZP0213'],
     name: 'N°2',
@@ -116,6 +119,7 @@ export const models: Model[] = [
   },
   {
     id: 'n3',
+    engravable: false,
     gender: 'uomo',
     codes: ['ZP0313'],
     name: 'N°3',
@@ -137,6 +141,7 @@ export const models: Model[] = [
   },
   ...(['n5', 'n6'] as const).map((id): Model => ({
     id,
+    engravable: false,
     gender: 'uomo',
     codes: [id === 'n5' ? 'ZP0513' : 'ZP0613'],
     name: id === 'n5' ? 'N°5' : 'N°6',
@@ -160,6 +165,7 @@ export const models: Model[] = [
   })),
   {
     id: 'n7',
+    engravable: true,
     gender: 'uomo',
     codes: ['ZP0713'],
     name: 'N°7',
@@ -206,6 +212,7 @@ export const models: Model[] = [
   },
   {
     id: 'n9',
+    engravable: false,
     gender: 'donna',
     codes: ['ZP0913'],
     name: 'N°9',
@@ -228,6 +235,7 @@ export const models: Model[] = [
   },
   {
     id: 'n12-tourbillon',
+    engravable: false,
     gender: 'unisex',
     codes: ['ZPTO13'],
     name: 'N°12 Tourbillon',
@@ -246,6 +254,7 @@ export const models: Model[] = [
   },
   {
     id: '900-donna',
+    engravable: true,
     gender: 'donna',
     codes: ['ZP9016L'],
     name: "'900 Donna",
@@ -262,6 +271,7 @@ export const models: Model[] = [
   },
   {
     id: '900-uomo',
+    engravable: true,
     gender: 'uomo',
     codes: ['ZP9016'],
     name: "'900 Uomo",
@@ -280,6 +290,7 @@ export const models: Model[] = [
   },
   {
     id: 'n20',
+    engravable: true,
     gender: 'uomo',
     codes: ['ZP2013S'],
     name: 'N°20',
@@ -305,6 +316,7 @@ export const models: Model[] = [
   },
   {
     id: 'shockproof-1970',
+    engravable: true,
     gender: 'uomo',
     codes: ['ZPSP16', 'ZPSP16B', 'ZPSP16P'],
     name: 'Shockproof 1970',
@@ -342,6 +354,7 @@ export const models: Model[] = [
   },
   {
     id: 'italy',
+    engravable: false,
     gender: 'unisex',
     codes: ['ZPIT15'],
     name: 'Italy',
@@ -359,6 +372,7 @@ export const models: Model[] = [
   },
   {
     id: 'cafe-racer',
+    engravable: true,
     gender: 'unisex',
     codes: ['ZPCR14'],
     name: 'Cafè Racer',
@@ -376,6 +390,7 @@ export const models: Model[] = [
   },
   {
     id: 'gentleman',
+    engravable: true,
     gender: 'uomo',
     codes: ['ZPGM16'],
     name: 'Gentleman',
@@ -395,6 +410,7 @@ export const models: Model[] = [
   },
   {
     id: '40000um',
+    engravable: false,
     gender: 'uomo',
     codes: ['ZP4015'],
     name: '40.000 µm',
@@ -415,6 +431,7 @@ export const models: Model[] = [
   },
   {
     id: 'casuale',
+    engravable: false,
     gender: 'uomo',
     codes: ['ZPCA13'],
     name: 'Casuale',
@@ -425,6 +442,7 @@ export const models: Model[] = [
   },
   {
     id: 'high-flight',
+    engravable: true,
     gender: 'uomo',
     codes: ['ZPHF16', 'ZPHF16B'],
     name: 'High Flight',
@@ -466,6 +484,7 @@ export const models: Model[] = [
   },
   {
     id: 'tasca',
+    engravable: false,
     gender: 'unisex',
     codes: ['ZTOR0013', 'ZTAR0013'],
     name: 'Tasca N°0',
@@ -504,6 +523,7 @@ export const models: Model[] = [
   },
   {
     id: 'bauletto',
+    engravable: false,
     gender: 'unisex',
     codes: ['ZVBA13'],
     name: 'Bauletto',
@@ -524,6 +544,7 @@ export const models: Model[] = [
   },
   {
     id: 'vintage',
+    engravable: true,
     gender: 'unisex',
     codes: ['ZPV14U', 'ZPV15L'],
     name: 'Vintage',

@@ -62,6 +62,8 @@ export interface Model {
   piecesRemaining?: number | null
   /** Shown with a "Nuovo" tag and listed first; set in the admin panel. */
   isNew?: boolean
+  /** Whether the case back can be engraved. Sapphire/display or enamelled backs cannot be engraved; default false. */
+  engravable?: boolean
   /** Owner-chosen similar models (ids, in display order), shown first in "Scopri anche". */
   similar?: string[]
   quote?: Quote

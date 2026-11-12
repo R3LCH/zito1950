@@ -176,7 +176,7 @@ function OrderDetails({ order, preview, date }: { order: PublicOrder; preview: b
               {item.engraving && (
                 <div className="mt-3 text-small">
                   <p>
-                    <span className="text-muted">{t('Incisione')}:</span> <span className="[overflow-wrap:anywhere]">«{item.engraving}»</span>
+                    <span className="text-muted">{item.kind === 'perfume' ? t('Incisione') : t('Incisione sul retro')}:</span> <span className="[overflow-wrap:anywhere]">«{item.engraving}»</span>
                   </p>
                   <p className="mt-1 text-muted">{t('Articolo personalizzato: non può essere restituito né cambiato.')}</p>
                 </div>

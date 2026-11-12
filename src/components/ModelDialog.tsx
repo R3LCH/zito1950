@@ -164,6 +164,7 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
                   </span>
                 </div>
                 <PiecesNote model={model} className="mt-3" />
+                {model.engravable && <p className="mt-3 text-small text-muted">{t('Incisione sul retro della cassa disponibile: la scegli nel carrello.')}</p>}
                 {model.variants && model.variants.length > 1 && (
                   <div className="-ml-3 mt-3">
                     <Swatches

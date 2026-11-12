@@ -99,6 +99,7 @@ export interface FilterState {
   gender: FilterGender[]
   isNew: boolean
   limited: boolean
+  engravable: boolean
   availability: Availability[]
   movement: Movement[]
   features: Feature[]
@@ -112,6 +113,7 @@ export const EMPTY_FILTERS: FilterState = {
   gender: [],
   isNew: false,
   limited: false,
+  engravable: false,
   availability: [],
   movement: [],
   features: [],
@@ -124,6 +126,7 @@ export const activeCount = (f: FilterState) =>
   f.gender.length +
   Number(f.isNew) +
   Number(f.limited) +
+  Number(f.engravable) +
   f.availability.length +
   f.movement.length +
   f.features.length +
@@ -149,6 +152,7 @@ export function matches(model: Model, facets: Facets, f: FilterState): boolean {
     (f.gender.length === 0 || gender === 'unisex' || (f.gender as Gender[]).includes(gender)) &&
     (!f.isNew || !!model.isNew) &&
     (!f.limited || !!model.limitedEdition) &&
+    (!f.engravable || model.engravable === true) &&
     anyOf(f.availability, [availabilityOf(model)]) &&
     anyOf(f.movement, facets.movement) &&
     anyOf(f.features, facets.features) &&

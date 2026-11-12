@@ -19,7 +19,7 @@ import {
 } from '../lib/catalogFilters'
 
 type ListKey = 'gender' | 'availability' | 'movement' | 'features' | 'material' | 'price'
-type FlagKey = 'isNew' | 'limited'
+type FlagKey = 'isNew' | 'limited' | 'engravable'
 type Group = { key: ListKey; legend: string; options: readonly string[] }
 
 const SORT_LABELS: Record<SortKey, string> = {
@@ -44,7 +44,7 @@ const OPTION_LABELS: Record<string, string> = {
   gold: 'Oro 18 kt',
   'gold-plated': 'Laminato oro',
 }
-const FLAG_LABELS: Record<FlagKey, string> = { isNew: 'Novità', limited: 'Edizioni limitate' }
+const FLAG_LABELS: Record<FlagKey, string> = { isNew: 'Novità', limited: 'Edizioni limitate', engravable: 'Incisione sul retro' }
 /** Shown first in the sheet, above the sort. */
 const GENDER_GROUP: Group = { key: 'gender', legend: 'Linea', options: FILTER_GENDERS }
 const GROUPS: Group[] = [
@@ -113,7 +113,7 @@ export default function CatalogFilters({ models, facetsFor, filters, onChange, r
 
   const chips = [
     ...filters.gender.map((value) => ({ id: `gender-${value}`, label: labelOf('gender', value), remove: () => toggle('gender', value) })),
-    ...(['isNew', 'limited'] as const).filter((k) => filters[k]).map((k) => ({ id: k, label: t(FLAG_LABELS[k]), remove: () => onChange({ ...filters, [k]: false }) })),
+    ...(['isNew', 'limited', 'engravable'] as const).filter((k) => filters[k]).map((k) => ({ id: k, label: t(FLAG_LABELS[k]), remove: () => onChange({ ...filters, [k]: false }) })),
     ...GROUPS.flatMap(({ key }) =>
       (filters[key] as string[]).map((value) => ({ id: `${key}-${value}`, label: labelOf(key, value), remove: () => toggle(key, value) })),
     ),
@@ -137,7 +137,7 @@ export default function CatalogFilters({ models, facetsFor, filters, onChange, r
       </label>
     )
   }
-  const flags = (['isNew', 'limited'] as const).map(flagRow).filter(Boolean)
+  const flags = (['isNew', 'limited', 'engravable'] as const).map(flagRow).filter(Boolean)
 
   const groupFieldset = ({ key, legend, options }: Group) => {
     const selected = filters[key] as string[]

@@ -83,6 +83,7 @@ const modelSchema = z.object({
   limitedEdition: z.boolean().optional(),
   piecesRemaining: z.number().int().min(0).max(9999).nullable().optional(),
   isNew: z.boolean().optional(),
+  engravable: z.boolean().optional(),
   similar: z.array(id).max(50).optional(),
   description: text.optional(),
   quote: z.object({ text, author: text.optional() }).optional(),
@@ -221,7 +222,7 @@ export function createApp(options = {}) {
       ],
       perfumes: [profumo, tesoroDiAlarico].map(seedPerfume),
       featured: [],
-      catalogVersion: 8,
+      catalogVersion: 9,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
@@ -310,6 +311,15 @@ export function createApp(options = {}) {
       GENDERS.includes(m.gender) ? m : { ...m, gender: seedGender.get(m.id) ?? 'unisex' },
     )
     existing.catalogVersion = 8
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.catalogVersion < 9) {
+    // Preserve owner choices; missing flags use the seed for known models and false for owner-added models.
+    const seedEngravable = new Map(models.map((m) => [m.id, m.engravable === true]))
+    existing.models = existing.models.map((m) =>
+      Object.hasOwn(m, 'engravable') ? m : { ...m, engravable: seedEngravable.get(m.id) ?? false },
+    )
+    existing.catalogVersion = 9
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
   const catalog = () => {
@@ -466,6 +476,7 @@ export function createApp(options = {}) {
     const complete = {
       ...product,
       isNew: product.isNew ?? false,
+      engravable: product.engravable ?? false,
       similar,
       price: displayPrice(product.priceCents),
       variants: product.variants?.map((v) => ({ ...v, price: displayPrice(v.priceCents) })),
@@ -844,6 +855,8 @@ export function createApp(options = {}) {
       const m = current.models.find((m) => m.id === row.modelId)
       if (m?.availability !== 'buy' || (m.limitedEdition === true && m.piecesRemaining === 0))
         fail(409, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
+      if (row.engraving && m.engravable !== true)
+        fail(400, 'Questo orologio non può essere inciso sul retro.')
       const v = row.variantId === null ? null : m.variants?.find((v) => v.id === row.variantId)
       if ((m.variants?.length && !v) || (row.variantId && !v)) fail(409, 'Variante non disponibile.')
       return {

@@ -87,6 +87,7 @@ function Personalization({
   line,
   index,
   disabled,
+  canEngrave,
   touched,
   onTouch,
   onChange,
@@ -94,6 +95,7 @@ function Personalization({
   line: CartLine
   index: number
   disabled: boolean
+  canEngrave: boolean
   touched: Touched
   onTouch: (fields: LineField[]) => void
   onChange: (patch: Partial<CartLine>) => void
@@ -222,7 +224,7 @@ function Personalization({
         </div>
       </div>
       {/* No bottom border: the cart line's own hairline closes the section. */}
-      <div>
+      {canEngrave && <div>
         <button
           type="button"
           className={summaryClass}
@@ -231,7 +233,7 @@ function Personalization({
           onClick={() => setEngravingOpen(!engravingShown)}
         >
           <span>
-            {t('Incisione')} <span className="font-normal text-muted">{engravingIncomplete ? t('(da completare)') : t('(facoltativo)')}</span>
+            {perfume ? t('Incisione') : t('Incisione sul retro')} <span className="font-normal text-muted">{engravingIncomplete ? t('(da completare)') : t('(facoltativo)')}</span>
           </span>
           <span aria-hidden="true">{engravingShown ? '−' : '+'}</span>
         </button>
@@ -311,7 +313,7 @@ function Personalization({
             </button>
           )}
         </div>
-      </div>
+      </div>}
     </div>
   )
 }
@@ -392,6 +394,16 @@ export default function Cart() {
   const lock = useRef(false)
   // Errors appear once a field is left or checkout is attempted, not while the buyer is still typing.
   const [touched, setTouched] = useState<Record<string, Touched>>({})
+  useEffect(() => {
+    // Wait for the live catalog before clearing stored choices; the initial seed is only a preview.
+    if (!STATIC_PREVIEW && catalog.revision === 0) return
+    const next = cart.map((line) => {
+      if (line.kind === 'perfume' || !line.engraving) return line
+      const model = catalog.models.find((m) => m.id === line.modelId)
+      return model && model.engravable !== true ? { ...line, engraving: null, engravingAccepted: false } : line
+    })
+    if (next.some((line, index) => line !== cart[index])) setCart(next)
+  }, [catalog, cart, setCart])
   const invalid = cart.some((line) => Object.values(lineErrors(line)).some(Boolean))
   const rows = cart.map((line) => {
     if (line.kind === 'perfume') {
@@ -656,6 +668,7 @@ export default function Cart() {
                     line={line}
                     index={index}
                     disabled={locked}
+                    canEngrave={line.kind === 'perfume' || catalog.models.find((m) => m.id === line.modelId)?.engravable === true}
                     touched={touched[key] ?? {}}
                     onTouch={(fields) => setTouched((state) => ({ ...state, [key]: { ...state[key], ...Object.fromEntries(fields.map((f) => [f, true])) } }))}
                     onChange={(patch) => update(line, patch)}

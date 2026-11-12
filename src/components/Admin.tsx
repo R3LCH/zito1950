@@ -462,6 +462,16 @@ function ProductEditor({
               />
               {t("Edizione limitata")}
             </label>
+            <label className="flex items-center gap-3 text-small">
+              <input
+                type="checkbox"
+                className="accent-ink"
+                checked={!!draft.engravable}
+                onChange={(e) => setDraft(d => ({ ...d, engravable: e.target.checked }))}
+              />
+              {t("Incisione sul retro possibile")}
+            </label>
+            <p className="text-xs text-muted">{t("Non per fondelli in zaffiro o smaltati.")}</p>
             <label className="shop-label">
               {t("Pezzi rimanenti")}
               <input
@@ -1422,6 +1432,7 @@ export default function Admin() {
                       limitedEdition: false,
                       piecesRemaining: null,
                       isNew: false,
+                      engravable: false,
                       similar: [],
                       specs: [],
                       images: [],
@@ -1803,7 +1814,7 @@ export default function Admin() {
                             )}
                             {item.engraving && (
                               <p className="break-words">
-                                {t("Incisione:")} «{item.engraving}» · {t("non restituibile")}
+                                {item.kind === 'perfume' ? t("Incisione:") : t("Incisione sul retro:")} «{item.engraving}» · {t("non restituibile")}
                               </p>
                             )}
                           </div>
