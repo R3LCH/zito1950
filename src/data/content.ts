@@ -9,7 +9,6 @@ export const site: Site = {
     { href: '#storia', label: 'Storia' },
     { href: '#orologi-uomo', label: 'Orologi uomo' },
     { href: '#orologi-donna', label: 'Orologi donna' },
-    { href: '#contatti', label: 'Contatti' },
   ],
   // The three links under the hero, as in the client's layout.
   sections: [

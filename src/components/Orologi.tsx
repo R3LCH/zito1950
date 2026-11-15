@@ -104,6 +104,10 @@ export default function Orologi() {
           </ul>
         }
       >
+        {/* Links into the closed section (#orologi-uomo, #orologi-donna) land on one of these anchors,
+            so Panel opens the body first; the filters above then show the active line. */}
+        <span id="orologi-uomo" className="absolute" aria-hidden="true" />
+        <span id="orologi-donna" className="absolute" aria-hidden="true" />
         <h3 id="catalogo-title" className="text-h3">
           {orologi.catalog.title}
         </h3>
