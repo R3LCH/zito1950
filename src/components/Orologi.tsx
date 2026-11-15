@@ -6,9 +6,11 @@ import Panel from './Panel'
 import { t, useContent } from '../lib/i18n'
 import type { Model } from '../data/types'
 import { useShop } from '../lib/shop'
-import { EMPTY_FILTERS, availabilityOf, compareModels, facetIndex, matches, type FilterState } from '../lib/catalogFilters'
+import { EMPTY_FILTERS, availabilityOf, compareModels, facetIndex, matches, type FilterGender, type FilterState } from '../lib/catalogFilters'
 
 const LIMITED_HASH = '#edizioni-limitate'
+/** The navigation's "Orologi uomo" / "Orologi donna" links open the catalogue with one line picked. */
+const GENDER_HASHES: Record<string, FilterGender> = { '#orologi-uomo': 'uomo', '#orologi-donna': 'donna' }
 
 export default function Orologi() {
   const { orologi, site } = useContent()
@@ -32,10 +34,12 @@ export default function Orologi() {
     [models, facetsFor, filters],
   )
 
-  // The hero's "Edizioni limitate" link lands here with only that filter applied.
+  // Links into the catalogue: "Edizioni limitate" applies one filter, "Orologi uomo/donna" one line.
   useEffect(() => {
     const sync = () => {
-      if (location.hash === LIMITED_HASH) setFilters((f) => ({ ...EMPTY_FILTERS, sort: f.sort, limited: true }))
+      const gender = GENDER_HASHES[location.hash]
+      if (gender) setFilters((f) => ({ ...EMPTY_FILTERS, sort: f.sort, gender: [gender] }))
+      else if (location.hash === LIMITED_HASH) setFilters((f) => ({ ...EMPTY_FILTERS, sort: f.sort, limited: true }))
     }
     sync()
     window.addEventListener('hashchange', sync)

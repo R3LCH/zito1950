@@ -7,10 +7,8 @@ export const site: Site = {
     'Casa fondata nel 1950 dal Cav. Luigi Antonio Zito a Scalea, sulla Riviera dei Cedri.',
   nav: [
     { href: '#storia', label: 'Storia' },
-    { href: '#orologi', label: 'Orologi' },
-    { href: '#profumi', label: 'Profumi' },
-    { href: '#officina', label: 'Officina' },
-    { href: '#territorio', label: 'Territorio' },
+    { href: '#orologi-uomo', label: 'Orologi uomo' },
+    { href: '#orologi-donna', label: 'Orologi donna' },
     { href: '#contatti', label: 'Contatti' },
   ],
   // The three links under the hero, as in the client's layout.
@@ -814,12 +812,14 @@ export const contatti: Contatti = {
   email: 'customer@zito1950.it',
   instagram: 'https://www.instagram.com/zito1950/',
   facebook: 'http://www.facebook.com/zito1950',
+  whatsapp: 'https://wa.me/390985271330',
   labels: {
     email: 'Email',
     social: 'Social',
     mapTitle: 'Mappa: dove siamo',
     instagram: 'Instagram',
     facebook: 'Facebook',
+    whatsapp: 'WhatsApp',
     newTab: '(si apre in una nuova scheda)',
     googleRating: '5,0 su 5',
     googleReviews: '31 recensioni su Google',

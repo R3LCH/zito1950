@@ -329,12 +329,14 @@ export interface Contatti {
   email: string
   instagram: string
   facebook: string
+  whatsapp: string
   labels: {
     email: string
     social: string
     mapTitle: string
     instagram: string
     facebook: string
+    whatsapp: string
     newTab: string
     googleRating: string
     googleReviews: string
