@@ -380,7 +380,7 @@ function AddedPopup() {
   )
 }
 export default function Cart() {
-  const { localizedCatalog: catalog, cart, setCart, cartOpen, setCartOpen, setAdded, setViewing, error: shopError, reload } = useShop()
+  const { localizedCatalog: catalog, cart, setCart, cartOpen, setCartOpen, addPerfume, setAdded, setViewing, error: shopError, reload } = useShop()
   const ref = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLElement | null>(null)
   const [busy, setBusy] = useState(false)
@@ -426,6 +426,12 @@ export default function Cart() {
   }
   const total = rows.reduce((sum, row) => sum + row.price * row.line.quantity, 0)
   const unavailable = rows.some((row) => !row.available)
+  // Only offer purchasable perfumes alongside watches; any existing perfume line counts as already chosen.
+  const suggestedPerfumes = !paid && !shopError && cart.some(line => (line.kind ?? 'model') === 'model')
+    ? catalog.perfumes.filter(perfume =>
+      perfume.availability === 'buy' && (perfume.priceCents ?? 0) > 0 &&
+      !cart.some(line => line.kind === 'perfume' && line.modelId === perfume.id))
+    : []
   useEffect(() => {
     if (!cartOpen) return
     setPaid(false)
@@ -692,6 +698,39 @@ export default function Cart() {
               {t('Svuota carrello')}
             </button>
           </div>
+        )}
+        {suggestedPerfumes.length > 0 && (
+          <section aria-labelledby="cart-perfumes-title" className="mt-8 border-t border-line pt-6">
+            <h3 id="cart-perfumes-title" className="text-h3">{t('Un profumo da abbinare al tuo orologio')}</h3>
+            <ul className="mt-4 divide-y divide-line">
+              {suggestedPerfumes.map(perfume => {
+                const image = perfume.images[0]
+                return (
+                  <li key={perfume.id} className="flex items-center gap-4 py-4">
+                    {image && <Picture src={image.src} alt="" sizes="64px" pictureClassName="block w-16 shrink-0" className="aspect-square w-full object-contain" />}
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-serif text-xl">{perfume.name}</h4>
+                      {perfume.line && <p className="text-small text-muted">{perfume.line}</p>}
+                      <p className="mt-1 text-small">{euro(perfume.priceCents ?? 0)}</p>
+                      <button
+                        type="button"
+                        className="mt-2 inline-flex min-h-11 items-center text-small underline underline-offset-4 disabled:cursor-not-allowed disabled:text-muted"
+                        aria-label={t('Aggiungi al carrello: {name}', { name: perfume.name })}
+                        disabled={busy || !!pendingToken}
+                        onClick={() => {
+                          addPerfume(perfume)
+                          // On phones addPerfume also triggers the storefront popup; the open cart is the confirmation here.
+                          setAdded(null)
+                        }}
+                      >
+                        {t('Aggiungi al carrello')}
+                      </button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
         )}
         </div>
         <aside aria-label={t('Riepilogo')} className="lg:pt-6">

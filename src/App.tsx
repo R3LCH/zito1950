@@ -31,11 +31,11 @@ export default function App() {
       <main id="contenuto" tabIndex={-1} className="outline-none">
         {order ? <OrderPage token={order} /> : <>
         <Hero />
-        {/* Order follows the numbered sections of the client's layout; Perché Zito closes before the contacts. */}
+        {/* Collection precedes the family story, matching the three links below the hero. */}
         <div className="container-site mt-10 flex flex-col md:mt-14">
           <SectionButtons />
-          <Storia />
           <Orologi />
+          <Storia />
           <Profumi />
           <Officina />
           <Territorio />

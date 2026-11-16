@@ -11,8 +11,8 @@ export const site: Site = {
   ],
   // The three links under the hero, as in the client's layout.
   sections: [
-    { href: '#storia', label: 'La nostra storia', hint: 'Una storia autentica di orologiai italiani.', icon: 'storia' },
     { href: '#edizioni-limitate', label: 'Collezione limitata', hint: 'Produzioni selezionate per durare nel tempo.', icon: 'limited' },
+    { href: '#storia', label: 'La nostra storia', hint: 'Una storia autentica di orologiai italiani.', icon: 'storia' },
     { href: '#perche-zito', label: 'Perché ZITO1950®', hint: 'Stile, qualità e carattere senza compromessi.', icon: 'perche' },
   ],
   panel: { more: 'Mostra tutto', less: 'Mostra meno', fullCatalog: 'Catalogo completo' },

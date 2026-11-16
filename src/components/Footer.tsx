@@ -52,8 +52,17 @@ export default function Footer() {
   ]
 
   return (
-    <footer className="border-t border-line bg-bg">
-      <div className="container-site grid gap-10 py-[clamp(3rem,6vw,5rem)] md:grid-cols-12 md:gap-x-10">
+    <footer className="relative isolate overflow-hidden border-t border-line bg-bg">
+      <img
+        src={asset('img/footer-triquetra.webp')}
+        alt=""
+        aria-hidden="true"
+        width={1000}
+        height={588}
+        loading="lazy"
+        className="pointer-events-none absolute right-0 top-1/2 w-[min(90%,42rem)] max-w-none -translate-y-1/2 select-none opacity-[0.04]"
+      />
+      <div className="container-site relative grid gap-10 py-[clamp(3rem,6vw,5rem)] md:grid-cols-12 md:gap-x-10">
         <div className="md:col-span-5">
           <a href={sectionHref('#home')} className="inline-flex min-h-11 items-center">
             <img src={asset('logo.svg')} alt={site.labels.home} width={355} height={100} className="h-12 w-auto" />
@@ -104,7 +113,7 @@ export default function Footer() {
         </nav>
       </div>
 
-      <div className="container-site">
+      <div className="container-site relative">
         <div className="flex flex-col gap-2 border-t border-line py-6 text-small text-muted md:flex-row md:items-center md:justify-between md:gap-6">
           <p>{site.footer.copyright.replace('©', `© ${year}`)}</p>
           <p>{t('Design italiano · Calabria · Dal 1950')}</p>

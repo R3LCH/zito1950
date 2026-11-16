@@ -89,16 +89,28 @@
       "behaviour": "Dove siamo at #contatti: centred lazy map, Google rating pill (5,0, 31 recensioni, new tab), email mailto: row (customer@zito1950.it). No postal address, company, P.IVA or phone."
     },
     {
+      "name": "Territorio",
+      "path": "src/components/Territorio.tsx",
+      "props": {},
+      "behaviour": "#territorio: photo and first paragraph preview; remaining text and closing line hidden initially. Uses Panel's Mostra tutto/Mostra meno button and scroll-preserving collapse."
+    },
+    {
+      "name": "PercheZito",
+      "path": "src/components/PercheZito.tsx",
+      "props": {},
+      "behaviour": "#perche-zito: lead, photo and first paragraph preview; remaining paragraphs and closing line hidden initially. Uses Panel's Mostra tutto/Mostra meno button and scroll-preserving collapse."
+    },
+    {
       "name": "Cart",
       "path": "src/components/Cart.tsx",
       "props": {},
-      "behaviour": "Native <dialog> opened from Header; per line optional Certificato della proprietà e garanzia (Nome, Cognome, Email) and Incisione (max 10 words, non-returnable notice + required acknowledgement); personalized lines quantity 1; PayPal approval and explicit capture, then link to the order page. PayPal disabled in the static preview. Watch lines show the engraving section only when the model is engravable, labelled “Incisione sul retro”; stored engraving on a non-engravable watch is cleared."
+      "behaviour": "Native <dialog> opened from Header; optional per-line certificate and engraving; personalized lines quantity 1; PayPal approval and explicit capture. PayPal disabled in the static preview. Watch engraving requires engravable. With a watch present, suggest buy-available perfumes with positive prices not already in any cart line. Explicit Add to cart retains the open dialog and watch details; no storefront popup. No suggestions for empty/perfume-only carts, after payment or catalog errors; actions disabled while busy or approval pending."
     },
     {
       "name": "Footer",
       "path": "src/components/Footer.tsx",
       "props": {},
-      "behaviour": "White footer, hairline top, logo-mark, nav repeat, copyright line; no postal address."
+      "behaviour": "White footer with hairline top, brand-colored social links, copyright and existing navigation. Client logo_to_background.jpeg appears as a decorative 4%-opacity WebP watermark behind readable text, with no pointer events or accessible name."
     },
     {
       "name": "OrderPage",

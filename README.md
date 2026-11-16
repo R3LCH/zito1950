@@ -196,3 +196,6 @@ The script pulls `main`, rebuilds the image, restarts the container and waits fo
 ## Change record — 2026-11-16
 
 - Header navigation now contains only Orologi uomo and Orologi donna; Storia remains on the page and linked from the hero and footer. Footer Instagram and Facebook icons use their platform colors, matching the existing green WhatsApp icon; colors remain unchanged on hover.
+- Moved the collection link and Orologi section ahead of the history link and Storia section. Territorio and Perché Zito now open their full text on demand rather than showing all prose initially.
+- Added an opt-in perfume suggestion inside watch carts using actual purchasable catalog items and prices; existing perfume lines are not suggested again and watch personalization is preserved. Empty/perfume-only carts and payment-locked actions retain their existing behavior.
+- Added a faint footer watermark derived from the supplied `logo_to_background.jpeg`; text and social controls stay foregrounded and readable.

@@ -24,13 +24,19 @@ export default function PercheZito() {
             />
           </div>
           <div className="space-y-5 text-ink-2 md:col-span-6 lg:col-span-5">
-            {perche.paragraphs.map((p) => (
-              <p key={p}>{p}</p>
-            ))}
-            <p className="pt-3 font-serif text-h3 text-ink">{perche.closing}</p>
+            <p>{perche.paragraphs[0]}</p>
           </div>
         </div>
       }
-    />
+    >
+      <div className="grid md:grid-cols-12 md:gap-x-10">
+        <div className="max-w-[60ch] space-y-5 text-ink-2 md:col-span-6 md:col-start-7 lg:col-span-5 lg:col-start-8">
+          {perche.paragraphs.slice(1).map((p) => (
+            <p key={p}>{p}</p>
+          ))}
+          <p className="pt-3 font-serif text-h3 text-ink">{perche.closing}</p>
+        </div>
+      </div>
+    </Panel>
   )
 }

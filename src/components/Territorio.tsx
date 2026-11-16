@@ -18,13 +18,19 @@ export default function Territorio() {
             <Picture src={image.src} alt={image.alt} sizes="(min-width: 768px) 52vw, 100vw" pictureClassName="block overflow-hidden rounded-[1.25rem] bg-well" className="w-full" />
           </figure>
           <div className="max-w-[60ch] space-y-5 text-ink-2 md:col-span-5 md:col-start-1 md:row-start-1">
-            {territorio.paragraphs.map((p) => (
-              <p key={p}>{p}</p>
-            ))}
-            <p className="pt-3 font-serif text-h3 text-ink">{territorio.closing}</p>
+            <p>{territorio.paragraphs[0]}</p>
           </div>
         </div>
       }
-    />
+    >
+      <div className="grid md:grid-cols-12 md:gap-x-10">
+        <div className="max-w-[60ch] space-y-5 text-ink-2 md:col-span-5">
+          {territorio.paragraphs.slice(1).map((p) => (
+            <p key={p}>{p}</p>
+          ))}
+          <p className="pt-3 font-serif text-h3 text-ink">{territorio.closing}</p>
+        </div>
+      </div>
+    </Panel>
   )
 }
