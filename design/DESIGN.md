@@ -14,7 +14,7 @@ Quiet Italian family catalogue on paper-white. Editorial, product-led, sober. Lu
 | muted | #6B6B6B | Captions/meta only (5.33:1 on white, AA). |
 | line | #E7E7E5 | Hairline dividers (1px). |
 | well | #F5F5F3 | Image wells behind isolated products. |
-No accent hue. Color comes from the photographs.
+No accent hue in the page UI. Footer social logos are the exception: Instagram #E4405F, Facebook #1877F2, WhatsApp #25D366, retained on hover.
 
 ## Typography
 - Serif `EB Garamond` 400/500 (italic only when meaningful) for headings, model names, quotes.
@@ -36,7 +36,7 @@ No accent hue. Color comes from the photographs.
 - Orologi “Catalogo completo”: after opening, the page scrolls instantly so the catalogue's second row sits just under the sticky header.
 
 ## Components
-- Header: white sticky bar, `logo.svg` left, anchor nav (Storia, Orologi, Profumi, Officina, Territorio, Contatti) right; functional outline-SVG shopping-bag button opens Cart, square ink count badge when non-empty; no floating cart button; hairline after scroll; mobile menu as modal with focus trap.
+- Header: white sticky bar, `logo.svg` left, only two navigation links (Orologi uomo `#orologi-uomo`, Orologi donna `#orologi-donna`) right; each opens the full catalogue with its line filter, including unisex watches. History stays on the page and is reachable through the hero links and footer, not the header menu. Functional outline-SVG shopping-bag button opens Cart, square ink count badge when non-empty; no floating cart button; hairline after scroll; mobile menu as modal with focus trap.
 - Hero: the admin-configurable `catalog.hero` photo is itself a link to `#orologi` (image scales ≤1.02 on hover); beside it h1 “ZITO1950”, the motto “Officine del tempo” in small uppercase tracking, a short ink rule, the serif lead “Dal 1950, una storia italiana.”, short text and one rounded ink button “Scopri la collezione” (`#orologi`).
 - SectionButtons: the three links under the hero in a hairline-divided row (stacked on mobile); each has a round outlined line icon (shield, star, cut stone) that fills ink on hover, a serif uppercase label and a muted one-line hint.
 - Orologi: closed shows 3–4 watches from admin `catalog.featured` (fallback: first 4 of the featured sort); “Catalogo completo” opens filters and the full grid; exclude `hidden`; featured sort puts `isNew` first, then `buy`, `no-buy`, `out-of-stock`, price descending within each group.
@@ -57,7 +57,7 @@ No accent hue. Color comes from the photographs.
   - Case-back engraving: watches carry an admin flag `engravable` (“Incisione sul retro possibile”; never for sapphire, display or enamelled backs). Only engravable watches show the “Incisione sul retro” cart section, the ModelDialog note and the “Incisione sul retro” filter; the server rejects engraving on other watches. Perfumes keep their engraving; the certificate stays on every line.
 - Order page (`/ordine/<token>`): eyebrow “Il tuo ordine”, current status as serif title, five-step ordered status track (vertical on mobile, five columns from `md`, `aria-current="step"`), items with photo, codes, price, certificate and engraving, total, contact email.
 - Emails: 600px table layout on white, logo header, serif heading, message, ink pill button “Vai all’ordine”, items with photo, certificate and engraving, total, footer with logo, motto, Instagram/Facebook icons and email (`src/lib/orderEmail.ts`).
-- Footer: white, hairline top, per the mockup: `logo.svg` with the motto “Officine del tempo”; columns “Il marchio” (La nostra storia, Il laboratorio, La Calabria, I profumi), “Assistenza” (Catalogo completo, Contatti) and “Social” (Instagram and Facebook round line-icon links, new tab); bottom hairline row with the copyright and “Design italiano · Calabria · Dal 1950”. Instagram and Facebook appear only here.
+- Footer: white, hairline top, per the mockup: `logo.svg` with the motto “Officine del tempo”; columns “Il marchio” (La nostra storia, Il laboratorio, La Calabria, I profumi), “Assistenza” (Catalogo completo, Contatti) and “Social” (Instagram pink #E4405F, Facebook blue #1877F2, WhatsApp green #25D366; 44px links, new tab, colors unchanged on hover); bottom hairline row with the copyright and “Design italiano · Calabria · Dal 1950”.
 
 ## States
 - Focus-visible: 2px ink outline, 3px offset, on every interactive element.

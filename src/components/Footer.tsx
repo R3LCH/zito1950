@@ -1,7 +1,7 @@
 import { t, useContent } from '../lib/i18n'
 import { asset, sectionHref } from '../lib/asset'
 
-/** Line icons (24px grid, 1.5 stroke), same drawing style as SectionButtons. */
+/** Footer glyphs retain their platform colors, including on hover. */
 const ICONS = {
   instagram: (
     <>
@@ -46,9 +46,9 @@ export default function Footer() {
   ]
 
   const social = [
-    { key: 'instagram' as const, href: contatti.instagram, label: contatti.labels.instagram },
-    { key: 'facebook' as const, href: contatti.facebook, label: contatti.labels.facebook },
-    { key: 'whatsapp' as const, href: contatti.whatsapp, label: contatti.labels.whatsapp },
+    { key: 'instagram' as const, href: contatti.instagram, label: contatti.labels.instagram, color: 'text-[#E4405F]' },
+    { key: 'facebook' as const, href: contatti.facebook, label: contatti.labels.facebook, color: 'text-[#1877F2]' },
+    { key: 'whatsapp' as const, href: contatti.whatsapp, label: contatti.labels.whatsapp, color: 'text-[#25D366]' },
   ]
 
   return (
@@ -86,10 +86,10 @@ export default function Footer() {
                     href={s.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full text-ink-2 transition-colors duration-200 hover:text-ink"
+                    className={`inline-flex h-11 w-11 items-center justify-center rounded-full ${s.color}`}
                   >
-                    {s.key === 'whatsapp' ? <span className="text-[#25D366]">{WHATSAPP}</span> : (
-                      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    {s.key === 'whatsapp' ? WHATSAPP : (
+                      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill={s.key === 'facebook' ? 'currentColor' : 'none'} stroke={s.key === 'facebook' ? 'none' : 'currentColor'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         {ICONS[s.key]}
                       </svg>
                     )}

@@ -6,7 +6,6 @@ export const site: Site = {
   description:
     'Casa fondata nel 1950 dal Cav. Luigi Antonio Zito a Scalea, sulla Riviera dei Cedri.',
   nav: [
-    { href: '#storia', label: 'Storia' },
     { href: '#orologi-uomo', label: 'Orologi uomo' },
     { href: '#orologi-donna', label: 'Orologi donna' },
   ],
