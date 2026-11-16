@@ -60,7 +60,7 @@ export default function Footer() {
         width={1000}
         height={588}
         loading="lazy"
-        className="pointer-events-none absolute right-0 top-1/2 w-[min(90%,42rem)] max-w-none -translate-y-1/2 select-none opacity-[0.04]"
+        className="pointer-events-none absolute left-1/2 top-1/2 w-[min(90%,42rem)] max-w-none -translate-x-1/2 -translate-y-1/2 select-none opacity-[0.04]"
       />
       <div className="container-site relative grid gap-10 py-[clamp(3rem,6vw,5rem)] md:grid-cols-12 md:gap-x-10">
         <div className="md:col-span-5">
