@@ -12,16 +12,18 @@ export default function Territorio() {
       id="territorio"
       eyebrow={territorio.eyebrow}
       title={territorio.title}
-      preview={
-        <div className="grid gap-8 md:grid-cols-12 md:gap-x-10">
+      preview={({ header, toggle }) => (
+        <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-10">
           <figure className="md:sticky md:top-[calc(var(--header-h)+1.5rem)] md:col-span-7 md:col-start-6 md:row-start-1 md:self-start">
             <Picture src={image.src} alt={image.alt} sizes="(min-width: 768px) 52vw, 100vw" pictureClassName="block overflow-hidden rounded-[1.25rem] bg-well" className="w-full" />
           </figure>
-          <div className="max-w-[60ch] space-y-5 text-ink-2 md:col-span-5 md:col-start-1 md:row-start-1">
-            <p>{territorio.paragraphs[0]}</p>
+          <div className="md:col-span-5 md:col-start-1 md:row-start-1">
+            {header}
+            <p className="mt-6 max-w-[52ch] text-ink-2">{territorio.paragraphs[0]}</p>
+            {toggle && <div className="mt-8">{toggle}</div>}
           </div>
         </div>
-      }
+      )}
     >
       <div className="grid md:grid-cols-12 md:gap-x-10">
         <div className="max-w-[60ch] space-y-5 text-ink-2 md:col-span-5">

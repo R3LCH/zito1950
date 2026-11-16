@@ -10,11 +10,9 @@ export default function PercheZito() {
     <Panel
       id="perche-zito"
       title={perche.title}
-      preview={
-        <div className="grid gap-8 md:grid-cols-12 md:gap-x-10">
-          {/* Photo column takes the width the empty spacer column used to; the reasons sit right beside it. */}
-          <div className="space-y-8 md:col-span-6 lg:col-span-7">
-            <p className="font-serif text-[clamp(1.5rem,2.6vw,2.25rem)] italic leading-[1.3] text-ink">{perche.lead}</p>
+      preview={({ header, toggle }) => (
+        <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-10">
+          <div className="md:col-span-6 lg:col-span-7">
             <Picture
               src={perche.image.src}
               alt={perche.image.alt}
@@ -23,11 +21,16 @@ export default function PercheZito() {
               className="h-auto w-full"
             />
           </div>
-          <div className="space-y-5 text-ink-2 md:col-span-6 lg:col-span-5">
-            <p>{perche.paragraphs[0]}</p>
+          <div className="md:col-span-6 lg:col-span-5">
+            {header}
+            <div className="mt-6 max-w-[52ch] space-y-5 text-ink-2">
+              <p className="font-serif text-h3 italic leading-[1.3] text-ink">{perche.lead}</p>
+              <p>{perche.paragraphs[0]}</p>
+            </div>
+            {toggle && <div className="mt-8">{toggle}</div>}
           </div>
         </div>
-      }
+      )}
     >
       <div className="grid md:grid-cols-12 md:gap-x-10">
         <div className="max-w-[60ch] space-y-5 text-ink-2 md:col-span-6 md:col-start-7 lg:col-span-5 lg:col-start-8">

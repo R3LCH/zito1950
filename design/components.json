@@ -92,13 +92,13 @@
       "name": "Territorio",
       "path": "src/components/Territorio.tsx",
       "props": {},
-      "behaviour": "#territorio: photo and first paragraph preview; remaining text and closing line hidden initially. Uses Panel's Mostra tutto/Mostra meno button and scroll-preserving collapse."
+      "behaviour": "#territorio: split preview retaining the photo position, with header, first paragraph and red-outline arrow toggle grouped in the text column like Officina. Remaining text and closing line unchanged in Panel children; scroll-preserving collapse."
     },
     {
       "name": "PercheZito",
       "path": "src/components/PercheZito.tsx",
       "props": {},
-      "behaviour": "#perche-zito: lead, photo and first paragraph preview; remaining paragraphs and closing line hidden initially. Uses Panel's Mostra tutto/Mostra meno button and scroll-preserving collapse."
+      "behaviour": "#perche-zito: split preview retaining the photo position, with header, italic lead, first paragraph and red-outline arrow toggle grouped in the text column like Officina. Remaining paragraphs and closing line unchanged in Panel children; scroll-preserving collapse."
     },
     {
       "name": "Cart",
