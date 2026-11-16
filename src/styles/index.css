@@ -158,6 +158,53 @@
   @keyframes panel-in { from { opacity: 0; transform: translateY(6px); } }
 }
 
+/* Perfume cross-sell: a physical press, local check, then a short hand-off to the cart line. */
+@layer components {
+  .perfume-cart-action {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    border: 1px solid var(--color-ink);
+    border-radius: 50%;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    transition: transform 160ms var(--ease-out-quint), background-color 180ms ease, color 180ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .perfume-cart-action svg {
+    grid-area: 1 / 1;
+    width: 28px;
+    height: 28px;
+    transition: transform 220ms var(--ease-out-quint), opacity 160ms ease;
+  }
+  .perfume-cart-check { opacity: 0; transform: scale(0.7); }
+  .perfume-cart-check path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 260ms var(--ease-out-quint) 60ms; }
+  @media (hover: hover) and (pointer: fine) {
+    .perfume-cart-action:not(:disabled):not([aria-disabled="true"]):hover {
+      background: var(--color-ink);
+      color: var(--color-bg);
+      transform: translateY(-2px);
+    }
+    .perfume-cart-action:not(:disabled):not([aria-disabled="true"]):hover .perfume-cart-glyph { transform: rotate(-6deg); }
+  }
+  .perfume-cart-action:not(:disabled):not([aria-disabled="true"]):active { transform: scale(0.92); }
+  .perfume-offer[data-added="true"] .perfume-cart-action { background: var(--color-ink); color: var(--color-bg); cursor: default; }
+  .perfume-offer[data-added="true"] .perfume-cart-glyph { opacity: 0; transform: translateY(-5px) scale(0.8); }
+  .perfume-offer[data-added="true"] .perfume-cart-check { opacity: 1; transform: scale(1); }
+  .perfume-offer[data-added="true"] .perfume-cart-check path { stroke-dashoffset: 0; }
+  .perfume-offer[data-added="true"] { animation: perfume-offer-dismiss 180ms ease 540ms both; }
+  .cart-perfume-arrive { animation: perfume-cart-arrive 300ms var(--ease-out-quint) both; }
+  @keyframes perfume-offer-dismiss { to { opacity: 0; transform: translateX(12px) scale(0.98); } }
+  @keyframes perfume-cart-arrive { from { opacity: 0; transform: translateY(10px); } }
+  @media (prefers-reduced-motion: reduce) {
+    .perfume-cart-action, .perfume-cart-action svg { transform: none !important; }
+    .perfume-offer[data-added="true"] { animation-delay: 0ms; }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { api, euro, isPersonalized, lineKey, STATIC_PREVIEW, useShop, type CartLine } from '../lib/shop'
 import { t } from '../lib/i18n'
 import { ENGRAVING_MAX_CHARS, ENGRAVING_MAX_WORDS, engravingWords, type CertificateHolder } from '../data/types'
@@ -394,6 +395,8 @@ export default function Cart() {
   const lock = useRef(false)
   // Errors appear once a field is left or checkout is attempted, not while the buyer is still typing.
   const [touched, setTouched] = useState<Record<string, Touched>>({})
+  // Cart insertion is immediate; retain the suggestion briefly only to show its completed state.
+  const [perfumeFeedback, setPerfumeFeedback] = useState<string[]>([])
   useEffect(() => {
     // Wait for the live catalog before clearing stored choices; the initial seed is only a preview.
     if (!STATIC_PREVIEW && catalog.revision === 0) return
@@ -430,10 +433,13 @@ export default function Cart() {
   const suggestedPerfumes = !paid && !shopError && cart.some(line => (line.kind ?? 'model') === 'model')
     ? catalog.perfumes.filter(perfume =>
       perfume.availability === 'buy' && (perfume.priceCents ?? 0) > 0 &&
-      !cart.some(line => line.kind === 'perfume' && line.modelId === perfume.id))
+      (perfumeFeedback.includes(perfume.id) || !cart.some(line => line.kind === 'perfume' && line.modelId === perfume.id)))
     : []
   useEffect(() => {
-    if (!cartOpen) return
+    if (!cartOpen) {
+      setPerfumeFeedback([])
+      return
+    }
     setPaid(false)
     setAdded(null)
     trigger.current = document.activeElement as HTMLElement
@@ -573,12 +579,12 @@ export default function Cart() {
         {!paid && rows.length === 0 && <p className="border-t border-line py-10">{t("Il carrello è vuoto. Scopri la nostra collezione.")}</p>}
         {!paid && !!rows.length && (
           <ul className="border-t border-line">
-            {rows.map(({ line, name, variant, codes, image, available, price }, index) => {
+            {rows.filter(row => row.line.kind !== 'perfume' || !perfumeFeedback.includes(row.line.modelId) || !suggestedPerfumes.some(perfume => perfume.id === row.line.modelId)).map(({ line, name, variant, codes, image, available, price }, index) => {
               const key = lineKey(line)
               const personalized = isPersonalized(line)
               const locked = busy || !!pendingToken
               return (
-                <li key={key} className="border-b border-line py-6">
+                <li id={`cart-item-${key}`} key={key} className={`border-b border-line py-6${line.kind === 'perfume' ? ' cart-perfume-arrive' : ''}`}>
                   <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
                     <div className="flex items-start gap-4">
                       {name ? (
@@ -705,33 +711,61 @@ export default function Cart() {
             <ul className="mt-4 divide-y divide-line">
               {suggestedPerfumes.map(perfume => {
                 const image = perfume.images[0]
+                const added = perfumeFeedback.includes(perfume.id)
                 return (
-                  <li key={perfume.id} className="flex items-center gap-4 py-4">
+                  <li
+                    key={perfume.id}
+                    data-added={added}
+                    className="perfume-offer flex items-center gap-3 py-4 sm:gap-4"
+                    onAnimationEnd={event => {
+                      if (event.target !== event.currentTarget || event.animationName !== 'perfume-offer-dismiss') return
+                      const focused = document.activeElement
+                      const restoreFocus = focused instanceof HTMLElement && event.currentTarget.contains(focused) && focused.matches(':focus-visible')
+                      // Mount the real line before moving keyboard focus out of the departing suggestion.
+                      flushSync(() => setPerfumeFeedback(current => current.filter(id => id !== perfume.id)))
+                      if (restoreFocus) {
+                        const line = cart.find(line => line.kind === 'perfume' && line.modelId === perfume.id)
+                        if (line) document.getElementById(`cart-item-${lineKey(line)}`)?.querySelector<HTMLButtonElement>('h3 button')?.focus()
+                      }
+                    }}
+                  >
                     {image && <Picture src={image.src} alt="" sizes="64px" pictureClassName="block w-16 shrink-0" className="aspect-square w-full object-contain" />}
                     <div className="min-w-0 flex-1">
                       <h4 className="font-serif text-xl">{perfume.name}</h4>
                       {perfume.line && <p className="text-small text-muted">{perfume.line}</p>}
                       <p className="mt-1 text-small">{euro(perfume.priceCents ?? 0)}</p>
-                      <button
-                        type="button"
-                        className="mt-2 inline-flex min-h-11 items-center text-small underline underline-offset-4 disabled:cursor-not-allowed disabled:text-muted"
-                        aria-label={t('Aggiungi al carrello: {name}', { name: perfume.name })}
-                        disabled={busy || !!pendingToken}
-                        onClick={() => {
-                          addPerfume(perfume)
-                          // On phones addPerfume also triggers the storefront popup; the open cart is the confirmation here.
-                          setAdded(null)
-                        }}
-                      >
-                        {t('Aggiungi al carrello')}
-                      </button>
                     </div>
+                    <button
+                      type="button"
+                      className="perfume-cart-action"
+                      title={t(added ? 'Aggiunto al carrello' : 'Aggiungi al carrello')}
+                      aria-label={added ? `${t('Aggiunto al carrello')}: ${perfume.name}` : t('Aggiungi al carrello: {name}', { name: perfume.name })}
+                      aria-disabled={added || undefined}
+                      disabled={busy || !!pendingToken}
+                      onClick={() => {
+                        if (added || busy || pendingToken) return
+                        addPerfume(perfume)
+                        setPerfumeFeedback(current => [...current, perfume.id])
+                        // Keep confirmation inside the open cart, not the storefront's phone popup.
+                        setAdded(null)
+                      }}
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 24 24" className="perfume-cart-glyph" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 3h2l2.4 11h10.8L21 6H6" />
+                        <circle cx="9" cy="19" r="1.5" />
+                        <circle cx="18" cy="19" r="1.5" />
+                      </svg>
+                      <svg aria-hidden="true" viewBox="0 0 24 24" className="perfume-cart-check" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path pathLength="1" d="m5 12 4.5 4.5L19 7" />
+                      </svg>
+                    </button>
                   </li>
                 )
               })}
             </ul>
           </section>
         )}
+        <p role="status" className="sr-only">{perfumeFeedback.length > 0 ? t('Aggiunto al carrello') : ''}</p>
         </div>
         <aside aria-label={t('Riepilogo')} className="lg:pt-6">
         {!!cart.length && !paid && (

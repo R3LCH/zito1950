@@ -1,4 +1,4 @@
-import { useContent } from '../lib/i18n'
+import { t, useContent } from '../lib/i18n'
 import Picture from './Picture'
 import Panel from './Panel'
 
@@ -10,6 +10,7 @@ export default function PercheZito() {
     <Panel
       id="perche-zito"
       title={perche.title}
+      moreLabel={t('Cosa ci distingue')}
       preview={({ header, toggle }) => (
         <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-10">
           <div className="md:col-span-6 lg:col-span-7">

@@ -104,7 +104,7 @@
       "name": "Cart",
       "path": "src/components/Cart.tsx",
       "props": {},
-      "behaviour": "Native <dialog> opened from Header; optional per-line certificate and engraving; personalized lines quantity 1; PayPal approval and explicit capture. PayPal disabled in the static preview. Watch engraving requires engravable. With a watch present, suggest buy-available perfumes with positive prices not already in any cart line. Explicit Add to cart retains the open dialog and watch details; no storefront popup. No suggestions for empty/perfume-only carts, after payment or catalog errors; actions disabled while busy or approval pending."
+      "behaviour": "Native cart dialog; optional per-line personalization, payment locks and disabled PayPal in static preview. Watch carts suggest buy-available, priced perfumes not already chosen. Right-aligned 64px cart-icon action: hover inversion/lift, press compression, drawn check and fade hand-off to the arriving cart row. Cart data and total update immediately; no duplicate additions or storefront popup. Keyboard focus transfers to the new product. Reduced motion skips movement/delay. Empty/perfume-only carts and catalog errors have no offers."
     },
     {
       "name": "Footer",

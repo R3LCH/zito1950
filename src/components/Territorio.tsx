@@ -1,4 +1,4 @@
-import { useContent } from '../lib/i18n'
+import { t, useContent } from '../lib/i18n'
 import Picture from './Picture'
 import Panel from './Panel'
 
@@ -12,6 +12,7 @@ export default function Territorio() {
       id="territorio"
       eyebrow={territorio.eyebrow}
       title={territorio.title}
+      moreLabel={t('Scopri Scalea')}
       preview={({ header, toggle }) => (
         <div className="grid gap-8 md:grid-cols-12 md:items-center md:gap-x-10">
           <figure className="md:sticky md:top-[calc(var(--header-h)+1.5rem)] md:col-span-7 md:col-start-6 md:row-start-1 md:self-start">
