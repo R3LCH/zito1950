@@ -64,8 +64,9 @@ function physical(THREE: typeof Three, source: Three.MeshStandardMaterial): Thre
       // the softbox over the dial (washed-out grey) or refracted the bracelet across it.
       return new THREE.MeshPhysicalMaterial({ name: source.name, side: source.side, color: 0x000000, metalness: 0, roughness: 0, transparent: true, opacity: 0.08, depthWrite: false })
     case 'Cyclops':
-      // Sapphire date magnifier: transmissive and refractive, so the date reads enlarged through it.
-      return new THREE.MeshPhysicalMaterial({ name: source.name, side: source.side, color: 0xffffff, metalness: 0, roughness: 0, transmission: 1, ior: 1.77, thickness: 1 })
+      // Plain clear glass, not `transmission`: three.js renders refraction by resampling an offscreen copy of the
+      // scene, which blurred the date and the hands passing under the lens. The magnified date is printed instead.
+      return new THREE.MeshPhysicalMaterial({ name: source.name, side: source.side, color: 0xffffff, metalness: 0, roughness: 0, transparent: true, opacity: 0.1, clearcoat: 1, clearcoatRoughness: 0, depthWrite: false })
     case 'HandFrame':
       return new THREE.MeshPhysicalMaterial({ ...base, metalness: 1, roughness: 0.18 })
     case 'Lume':

@@ -107,7 +107,8 @@ def main() -> None:
     for i in range(24):
         shade = int(248 - 60 * (1 - i / 24) ** 2)
         d.line([(wx0, wy0 + i), (wx1, wy0 + i)], fill=(shade, shade, shade - 4))
-    text(im, ((wx0 + wx1) / 2, (wy0 + wy1) / 2 + 6), '20', font('arialbd.ttf', 196), (22, 22, 22))
+    # Printed larger than the real date disc: the lens is plain glass in the viewer, so this is the magnified view.
+    text(im, ((wx0 + wx1) / 2, (wy0 + wy1) / 2 + 8), '20', font('arialbd.ttf', 250), (22, 22, 22))
 
     im.filter(ImageFilter.GaussianBlur(0.6)).save(OUT / 'dial.png')
 
