@@ -363,11 +363,12 @@ def build_indices(polished, lume):
 
 
 def build_cyclops(glass):
-    """Raised rounded magnifier over the date window (24, 01.jpg), standing on the crystal at r = 11.9 mm."""
+    """Rounded magnifier over the date window, inside the watch: between the hands and the crystal."""
     outline = rrect(-3.7, 3.7, -2.6, 2.6, (1.3, 1.3, 1.3, 1.3), 5)
-    z0 = 2.6  # crystal top is ~2.79 at r = 8.2 and ~2.62 at r = 15.8; the base stays inside it
+    # Seconds hand top is z = 0.76 and the crystal underside z = 1.5; the dome spans 0.88-1.45.
+    z0 = 0.88
     rings = [[Vector((11.9 + x * s, y * s, z0 + dz)) for x, y in outline]
-             for s, dz in ((1.0, 0.0), (1.0, 0.3), (0.97, 0.62), (0.9, 0.85), (0.78, 0.98), (0.6, 1.04))]
+             for s, dz in ((1.0, 0.0), (1.0, 0.165), (0.97, 0.34), (0.9, 0.47), (0.78, 0.54), (0.6, 0.57))]
     return finish('Cyclops', loft(rings), [glass], sharp_deg=60)
 
 
