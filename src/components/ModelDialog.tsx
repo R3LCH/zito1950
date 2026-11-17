@@ -8,6 +8,7 @@ import { genderOf } from '../lib/catalogFilters'
 import type { Model } from '../data/types'
 import { dims } from '../lib/imageMeta'
 import { BuyButton } from './Cart'
+import Watch3D from './Watch3D'
 
 interface Props {
   model: Model | null
@@ -32,6 +33,8 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
   const [variant, setVariant] = useState(0)
   const isOpen = !!model
   const modelId = model?.id
+  // Products with a 3D model show it as slide 0, before the photos.
+  const offset = model?.model3d ? 1 : 0
 
   // Open/close follows presence only, so switching models keeps the dialog (and its focus trap) in place.
   useEffect(() => {
@@ -48,14 +51,14 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
   }, [isOpen, trigger])
 
   useEffect(() => {
-    setActive(initialImage)
+    setActive(offset ? 0 : initialImage)
     setVariant(initialVariant)
     if (!switched.current) return
     switched.current = false
     // Instant jump: the new model replaces the old one in place; a long smooth scroll would only add latency.
     if (ref.current) ref.current.scrollTop = 0
     titleRef.current?.focus({ preventScroll: true })
-  }, [modelId, initialVariant, initialImage])
+  }, [modelId, initialVariant, initialImage, offset])
 
   const select = (next: Model) => {
     switched.current = true
@@ -63,10 +66,11 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
   }
 
   const view = model ? resolveView(model, variant) : null
-  const count = view?.images.length ?? 0
+  const count = (view?.images.length ?? 0) + offset
   const swipe = useSwipe((dir) => setActive((i) => (i + dir + count) % count))
   const titleId = 'model-dialog-title'
-  const image = view?.images[active] ?? view?.images[0]
+  const on3d = offset === 1 && active === 0
+  const image = on3d ? undefined : view?.images[active - offset] ?? view?.images[0]
   const size = image && dims(image.src)
   // Wide photos stack above the text so the grid doesn't leave an empty block under them.
   const wide = !!size && size.w / size.h > 1.3
@@ -99,6 +103,12 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
           </div>
           <div className={`grid gap-8 px-5 pb-10 md:gap-12 md:p-12 ${wide ? '' : 'md:grid-cols-2'}`}>
             <div>
+              {on3d && model.model3d && (
+                <div className="relative">
+                  <Watch3D src={model.model3d} label={model.name} />
+                  <Arrows count={count} index={active} onChange={setActive} label={model.name} />
+                </div>
+              )}
               {image && (
                 <div className="flex justify-center" {...swipe}>
                   {/* Natural aspect ratio, capped in height and never wider than the file's pixel width. */}
@@ -128,14 +138,27 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
               )}
               {count > 1 && view && (
                 <ul className="mt-3 flex flex-wrap gap-2">
+                  {offset === 1 && (
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => setActive(0)}
+                        aria-pressed={active === 0}
+                        aria-label={t('Modello 3D')}
+                        className={`flex h-14 w-14 cursor-pointer items-center justify-center bg-well font-sans text-small font-medium text-ink ${active === 0 ? 'outline outline-1 outline-ink' : 'outline outline-1 outline-line'}`}
+                      >
+                        3D
+                      </button>
+                    </li>
+                  )}
                   {view.images.map((im, i) => (
                     <li key={im.src}>
                       <button
                         type="button"
-                        onClick={() => setActive(i)}
-                        aria-pressed={i === active}
+                        onClick={() => setActive(i + offset)}
+                        aria-pressed={i + offset === active}
                         aria-label={`${orologi.catalog.viewImage} ${i + 1}: ${im.alt}`}
-                        className={`block h-14 w-14 cursor-pointer bg-bg ${i === active ? 'outline outline-1 outline-ink' : 'outline outline-1 outline-line'}`}
+                        className={`block h-14 w-14 cursor-pointer bg-bg ${i + offset === active ? 'outline outline-1 outline-ink' : 'outline outline-1 outline-line'}`}
                       >
                         <Picture src={im.src.replace('img/models/', 'img/cards/')} alt="" sizes="56px" pictureClassName="block h-full w-full" className="h-full w-full object-contain" />
                       </button>

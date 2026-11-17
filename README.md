@@ -203,3 +203,8 @@ The script pulls `main`, rebuilds the image, restarts the container and waits fo
 - Replaced the perfume cross-sell text link with a large right-aligned cart-icon button: press feedback, checkmark confirmation and a short hand-off to the added row. Cart data updates immediately while the visual confirmation stays in place; repeated presses do not add duplicates, keyboard focus is preserved and reduced motion bypasses movement and delay.
 - Replaced generic “Mostra tutto” labels with “Scopri Scalea” and “Cosa ci distingue” for the territory and brand-reasons sections, with translations for every site language.
 - Centred the footer background logo on both axes at every viewport width; its size, opacity and foreground layout remain unchanged.
+
+## Change record — 2026-11-18
+
+- Added the **3d_watch** placeholder product (`3d-watch`, showcase only, 1.000 EUR) with photos from `3d_watch_referencess`. The card shows photos; the product dialog opens on a rotatable, zoomable 3D view (`src/components/Watch3D.tsx`, three.js loaded on demand), followed by the photos. Catalog `catalogVersion` 11 adds it to existing databases once; an owner product with the same id is kept.
+- The 3D model is built from measured reference photos by `scripts/watch3d/dial_texture.py` (dial texture) and `scripts/watch3d/build_watch.py` (run inside Blender), exporting `public/models/3d-watch.glb` (≈87k triangles, meshopt-compressed, WebP textures, ≈0.9 MB). The CSP now allows `'wasm-unsafe-eval'` (meshopt decoder) and `blob:` images/connections (embedded GLB textures).

@@ -90,6 +90,7 @@ const modelSchema = z.object({
   specs: z.array(text).max(50),
   images: z.array(image).max(30),
   variants: z.array(variantSchema).max(20).optional(),
+  model3d: z.string().regex(/^models\/[a-z0-9-]+\.glb$/).optional(),
   translations,
 })
 const perfumeSchema = z.object({
@@ -183,6 +184,15 @@ const retiredOudImage = 'img/profumo/n7-oud.jpg'
 const oudImage = (({ src, alt }) => ({ src, alt }))(profumo.images[0])
 // Blank quote parts are dropped: no author key without an author.
 const cleanQuote = ({ text, author }) => (author ? { text, author } : { text })
+// Seed watch as stored in the catalog: cents from the display price, showcase only.
+const seedModel = (m) => ({
+  ...m,
+  priceCents: initialPrice(m.price),
+  availability: 'no-buy',
+  limitedEdition: limitedEditions.has(m.id),
+  piecesRemaining: null,
+  variants: m.variants?.map((v) => ({ ...v, priceCents: initialPrice(v.price) })),
+})
 
 export function createApp(options = {}) {
   const env = options.env ?? process.env
@@ -202,14 +212,7 @@ export function createApp(options = {}) {
   if (!db.prepare('SELECT id FROM catalog').get()) {
     const seed = {
       hero: site.hero.image,
-      models: models.map((m) => ({
-        ...m,
-        priceCents: initialPrice(m.price),
-        availability: 'no-buy',
-        limitedEdition: limitedEditions.has(m.id),
-        piecesRemaining: null,
-        variants: m.variants?.map((v) => ({ ...v, priceCents: initialPrice(v.price) })),
-      })),
+      models: models.map(seedModel),
       photos: [],
       imageOverrides: {},
       siteImages: [
@@ -222,7 +225,7 @@ export function createApp(options = {}) {
       ],
       perfumes: [profumo, tesoroDiAlarico].map(seedPerfume),
       featured: [],
-      catalogVersion: 10,
+      catalogVersion: 11,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
@@ -329,6 +332,13 @@ export function createApp(options = {}) {
     existing.catalogVersion = 10
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
+  if (existing.catalogVersion < 11) {
+    // The 3d_watch placeholder joins, showcase only; an owner product with the same id is kept.
+    const watch3d = models.find((m) => m.id === '3d-watch')
+    if (!existing.models.some((m) => m.id === watch3d.id)) existing.models.push(seedModelTranslations(seedModel(watch3d)))
+    existing.catalogVersion = 11
+    db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
   const catalog = () => {
     const row = db.prepare('SELECT * FROM catalog WHERE id=1').get()
     return { ...JSON.parse(row.body), revision: row.revision }
@@ -355,10 +365,11 @@ export function createApp(options = {}) {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
+          // wasm-unsafe-eval: three.js MeshoptDecoder (WebAssembly); blob: textures embedded in the 3D watch GLB.
+          scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", 'data:'],
-          connectSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          connectSrc: ["'self'", 'blob:'],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],
         },
