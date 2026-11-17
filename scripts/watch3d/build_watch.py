@@ -6,9 +6,9 @@ Run inside Blender (MCP execute or Text Editor):
 Needs scripts/watch3d/build/dial.png (python scripts/watch3d/dial_texture.py).
 
 Units: millimetres (1 Blender unit = 1 mm). Face normal +Z, 12 o'clock +Y, 3 o'clock +X.
-Dimensions measured on 3d_watch_referencess/24.jpg (front, 11.8 px/mm), 19.jpg (profile, 12.5 px/mm)
-and 15.jpg (bracelet): case 43.4 mm, 13 mm thick, bezel opening 19.3 mm radius, lugs 25.8 mm from the
-centre, 22 mm five-row bracelet tapering to 18 mm, loop 80 x 58 mm, clasp 25 mm offset 9 mm towards 6.
+Dimensions measured on 3d_watch_referencess/24.jpg (front, 11.8 px/mm), 19.jpg (profile) and 13/15.jpg
+(bracelet, clasp): case 45.4 mm, bezel opening 19.3 mm radius, lugs 24.8 mm from the centre, 21.2 mm
+five-row bracelet narrowing to 20.1 mm at the clasp, loop 80 x 58 mm, clasp 25 mm offset 9 mm towards 6.
 """
 
 import math
@@ -278,27 +278,45 @@ def build_case(brushed, polished):
     for sx in (-1, 1):
         for sy in (-1, 1):
             append(bm, lug(sx, sy))
-    return finish('Case', bm, [brushed, polished])
+    ob = finish('Case', bm, [brushed, polished])
+    # Rectangular notches in the lower case edge at 3 and 9 (18.jpg, 19.jpg); other positions not visible.
+    # Cut by a boolean that the glTF export applies (export_apply=True); the cutter itself is not exported.
+    cut = bmesh.new()
+    for deg in (0, 180):
+        a = math.radians(deg)
+        append(cut, box((3.8, 1.6, 3.0)), Matrix.Translation((21.6 * math.cos(a), 21.6 * math.sin(a), -9.1)) @ Matrix.Rotation(a, 4, 'Z'))
+    cutter = finish('CaseNotchCutter', cut, [])
+    cutter.hide_render = True
+    cutter.display_type = 'WIRE'
+    mod = ob.modifiers.new('Notches', 'BOOLEAN')
+    mod.operation, mod.object, mod.solver = 'DIFFERENCE', cutter, 'EXACT'
+    return ob
 
 
 def build_crowns(polished):
     bm = bmesh.new()
 
-    def crown(angle_deg, r_out, length, teeth, z):
+    def crown(angle_deg, r_out, length, teeth, z, depth, cap):
+        """Fluted crown; cap=True puts a smooth domed cap over a short toothed base (GMT crown, 18.jpg)."""
         a0 = math.radians(angle_deg)
         m = Matrix.Translation(((CASE_R + 0.6) * math.cos(a0), (CASE_R + 0.6) * math.sin(a0), z)) @ Matrix.Rotation(a0, 4, 'Z') @ Matrix.Rotation(math.pi / 2, 4, 'Y')
         samples = teeth * 6
-        ring = [(math.cos(TAU * i / samples), math.sin(TAU * i / samples), 1 - 0.06 * (0.5 - 0.5 * math.cos(teeth * TAU * i / samples))) for i in range(samples)]
+        ring = [(math.cos(TAU * i / samples), math.sin(TAU * i / samples), 1 - depth * (0.5 - 0.5 * math.cos(teeth * TAU * i / samples))) for i in range(samples)]
+        body = length * 0.45 if cap else length
         rings = []
-        for t, scale in ((0.0, 0.86), (0.25, 0.97), (0.5, 1.0), (length - 0.5, 1.0), (length - 0.2, 0.96), (length, 0.86)):
+        for t, scale in ((0.0, 0.86), (0.25, 0.97), (0.5, 1.0), (body - 0.5, 1.0), (body - 0.2, 0.96), (body, 0.86)):
             rings.append([Vector((c * k * r_out * scale, s * k * r_out * scale, t)) for c, s, k in ring])
         append(bm, loft(rings), m, 0)
-        dome = lathe([(0.0, length + 0.3), (r_out * 0.5, length + 0.25), (r_out * 0.8, length + 0.08), (r_out * 0.84, length - 0.05)], 64)
+        if cap:
+            dome = lathe([(0.0, length + 0.45), (r_out * 0.55, length + 0.38), (r_out * 0.85, length + 0.12), (r_out * 0.96, length - 0.4),
+                          (r_out * 0.96, body - 0.1), (r_out * 0.6, body - 0.1)], 64)
+        else:  # flat end (01.jpg)
+            dome = lathe([(0.0, length + 0.06), (r_out * 0.8, length + 0.05), (r_out * 0.86, length - 0.05)], 64)
         append(bm, dome, m, 0)
         append(bm, disc(r_out * 0.5, -1.0, 0.05, 32), m, 0)  # tube
 
-    crown(0.0, 3.6, 3.0, 36, -3.05)  # winding crown at 3
-    crown(150.5, 3.4, 3.4, 30, -3.05)  # GMT crown near 10
+    crown(0.0, 3.6, 3.0, 36, -3.05, 0.14, False)  # winding crown at 3: deep flutes (01, 19.jpg)
+    crown(150.5, 3.4, 3.4, 30, -3.05, 0.1, True)  # GMT crown near 10: domed cap over teeth (18.jpg)
     return finish('Crowns', bm, [polished], sharp_deg=50)
 
 
@@ -344,17 +362,13 @@ def build_indices(polished, lume):
     return finish('Indices', bm, [polished, lume], sharp_deg=40)
 
 
-def build_date_frame(polished):
-    cx, w, h, t = 11.9, 6.1, 4.0, 0.38
-    bm = bmesh.new()
-    for size, (dx, dy) in (
-        ((t, h + 2 * t, 0.35), (-(w + t) / 2, 0)),
-        ((t, h + 2 * t, 0.35), ((w + t) / 2, 0)),
-        ((w + 2 * t, t, 0.35), (0, -(h + t) / 2)),
-        ((w + 2 * t, t, 0.35), (0, (h + t) / 2)),
-    ):
-        append(bm, box(size, bevel=0.12, segments=2), at(cx + dx, dy, DIAL_Z + 0.17), 0)
-    return finish('DateFrame', bm, [polished], sharp_deg=40)
+def build_cyclops(glass):
+    """Raised rounded magnifier over the date window (24, 01.jpg), standing on the crystal at r = 11.9 mm."""
+    outline = rrect(-3.7, 3.7, -2.6, 2.6, (1.3, 1.3, 1.3, 1.3), 5)
+    z0 = 2.6  # crystal top is ~2.79 at r = 8.2 and ~2.62 at r = 15.8; the base stays inside it
+    rings = [[Vector((11.9 + x * s, y * s, z0 + dz)) for x, y in outline]
+             for s, dz in ((1.0, 0.0), (1.0, 0.3), (0.97, 0.62), (0.9, 0.85), (0.78, 0.98), (0.6, 1.04))]
+    return finish('Cyclops', loft(rings), [glass], sharp_deg=60)
 
 
 def hand(bm, outline, z, clockwise_deg, mat_index, thick):
@@ -393,7 +407,7 @@ def build_crystal(glass):
 
 # ---------- bracelet ----------
 
-def build_bracelet(brushed, polished):
+def build_bracelet(brushed, polished, dark):
     """Five-row bracelet on the measured loop (ref 19), brick-laid centre row (ref 15), folding clasp."""
     A, B, ZC = 40.0, 29.0, -30.0
     point = lambda t: Vector((0.0, A * math.sin(t), ZC + B * math.cos(t)))
@@ -420,12 +434,12 @@ def build_bracelet(brushed, polished):
         return ts[lo] + (ts[hi] - ts[lo]) * f
 
     def frame(s):
-        """x across (tapered 22 → 18 mm towards the clasp), y along the loop, z outward."""
+        """x across (21.2 mm at the case, 20.1 mm at the clasp: 24, 13.jpg), y along the loop, z outward."""
         t = t_at(s)
         p = point(t)
         tangent = Vector((0.0, A * math.cos(t), -B * math.sin(t))).normalized()
         normal = Vector((0.0, p.y / A**2, (p.z - ZC) / B**2)).normalized()
-        taper = 0.82 + 0.18 * min(1.0, abs(s - mid) / (mid * 0.85))
+        taper = 0.95 + 0.05 * min(1.0, abs(s - mid) / (mid * 0.85))
         m = Matrix.Identity(4)
         m.col[0] = (taper, 0, 0, 0)
         m.col[1] = (*tangent, 0)
@@ -481,18 +495,18 @@ def build_bracelet(brushed, polished):
     CENTRE = rrect(-1.62, 1.62, -1.65, 1.74, (0.3, 0.3, 0.3, 0.3))
 
     def rows(a, b, centre=True, side=True):
-        """Brushed outer rows, polished side rows and brushed centre row between a and b."""
+        """Brushed outer rows, polished side rows and polished centre row between a and b."""
         for mirror in (False, True):
             sweep(OUTER, a + GAP, b - GAP, 0, mirror, ROUND)
             if side:
                 sweep(SIDE, a + GAP, b - GAP, 1, mirror, ROUND)
         if centre:
-            sweep(CENTRE, a + GAP, b - GAP, 0, round_end=ROUND)
+            sweep(CENTRE, a + GAP, b - GAP, 1, round_end=ROUND)  # polished centre pieces (13.jpg)
 
     def pin(s):
         m = frame(s)
         for sx in (-1, 1):
-            append(bm, disc(0.32, -0.04, 0.06, 12), m @ Matrix.Translation((sx * 11.0, 0, 0.0)) @ Matrix.Rotation(sx * math.pi / 2, 4, 'Y'), 1)
+            append(bm, disc(0.32, -0.04, 0.06, 12), m @ Matrix.Translation((sx * 10.6, 0, 0.0)) @ Matrix.Rotation(sx * math.pi / 2, 4, 'Y'), 1)
 
     s_end = s_for_y(25.3)
     clasp_c, clasp_half = mid + 9.0, 12.5
@@ -512,16 +526,20 @@ def build_bracelet(brushed, polished):
             for mirror in (False, True):
                 sweep(SIDE, a + GAP, b - GAP, 1, mirror, ROUND)
 
-    # Folding clasp, swept so it follows the loop.
+    # Folding clasp as wide as the bracelet at the clasp (13.jpg), swept so it follows the loop.
     c0, c1 = clasp_c - clasp_half, clasp_c + clasp_half
-    sweep(rrect(-11.2, 11.2, -1.6, 2.4, (0.6, 1.0, 1.0, 0.6)), c0, c1, 0)
-    sweep(rrect(-9.6, 9.6, 2.3, 2.9, (0.2, 0.3, 0.3, 0.2)), clasp_c - 2.0, c1 - 0.8, 0)  # safety lid
+    sweep(rrect(-10.6, 10.6, -1.6, 2.4, (0.6, 1.0, 1.0, 0.6)), c0, c1, 0)
+    sweep(rrect(-9.0, 9.0, 2.3, 2.9, (0.2, 0.3, 0.3, 0.2)), clasp_c - 2.0, c1 - 0.8, 0)  # safety lid
     sweep(rrect(-2.0, 2.0, 2.3, 2.55, (0.1, 0.12, 0.12, 0.1), 2), c0 + 2.0, clasp_c - 3.0, 1)  # polished strip
     sweep(rrect(-3.0, 3.0, 2.3, 3.3, (0.2, 0.45, 0.45, 0.2)), c1 - 2.4, c1 + 0.4, 1)  # lift tab
-    m = frame(clasp_c + 2.0)
-    for sx in (-1, 1):  # push buttons
-        append(bm, disc(0.9, -0.1, 0.45, 24), m @ Matrix.Translation((sx * 11.2, 0, 0.3)) @ Matrix.Rotation(sx * math.pi / 2, 4, 'Y'), 1)
-    return finish('Bracelet', bm, [brushed, polished], sharp_deg=40)
+    for k in range(5):  # ribs across the lift tab (13.jpg)
+        s = c1 - 2.1 + 0.5 * k
+        sweep(rrect(-2.7, 2.7, 3.25, 3.5, (0.08, 0.08, 0.08, 0.08), 2), s, s + 0.22, 1)
+    # Side: hinge pins at both ends and three micro-adjust holes (15.jpg).
+    for sx in (-1, 1):
+        for s, r, mat in ((c0 + 1.2, 0.45, 1), (c1 - 1.2, 0.45, 1), (c0 + 3.4, 0.3, 2), (c0 + 4.6, 0.3, 2), (c0 + 5.8, 0.3, 2)):
+            append(bm, disc(r, -0.03, 0.04, 16), frame(s) @ Matrix.Translation((sx * 10.6, 0, 0.4)) @ Matrix.Rotation(sx * math.pi / 2, 4, 'Y'), mat)
+    return finish('Bracelet', bm, [brushed, polished, dark], sharp_deg=40)
 
 
 def main():
@@ -534,17 +552,21 @@ def main():
     lume = material('Lume', srgb('eef0e8'), 0.0, 0.4)
     red = material('GmtRed', srgb('cf2420'), 0.0, 0.3)
     glass = material('Crystal', (1, 1, 1), 0.0, 0.02, alpha=0.06)
+    cyclops = material('Cyclops', (1, 1, 1), 0.0, 0.0)
+    lens = cyclops.node_tree.nodes['Principled BSDF']
+    lens.inputs['Transmission Weight'].default_value = 1.0
+    lens.inputs['IOR'].default_value = 1.77  # sapphire
     dial = material('Dial', (1, 1, 1), 0.0, 0.38, image=BUILD / 'dial.png')
 
     parts = [
         build_case(brushed, polished),
         build_crowns(polished),
         build_dial(dial),
-        build_date_frame(polished),
+        build_cyclops(cyclops),
         build_indices(polished, lume),
         build_hands(hand_frame, lume, red),
         build_crystal(glass),
-        build_bracelet(brushed, polished),
+        build_bracelet(brushed, polished, hand_frame),
     ]
     total = 0
     for ob in parts:

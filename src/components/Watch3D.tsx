@@ -63,6 +63,9 @@ function physical(THREE: typeof Three, source: Three.MeshStandardMaterial): Thre
       // Sapphire with anti-reflective coating: a dark, faint shell. A white or refractive crystal mirrored
       // the softbox over the dial (washed-out grey) or refracted the bracelet across it.
       return new THREE.MeshPhysicalMaterial({ name: source.name, side: source.side, color: 0x000000, metalness: 0, roughness: 0, transparent: true, opacity: 0.08, depthWrite: false })
+    case 'Cyclops':
+      // Sapphire date magnifier: transmissive and refractive, so the date reads enlarged through it.
+      return new THREE.MeshPhysicalMaterial({ name: source.name, side: source.side, color: 0xffffff, metalness: 0, roughness: 0, transmission: 1, ior: 1.77, thickness: 1 })
     case 'HandFrame':
       return new THREE.MeshPhysicalMaterial({ ...base, metalness: 1, roughness: 0.18 })
     case 'Lume':

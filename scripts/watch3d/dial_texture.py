@@ -103,9 +103,9 @@ def main() -> None:
     # Date disc seen through the window, with the window's inner shadow at the top.
     wx0, wx1 = C + px(DATE_X - DATE_W / 2), C + px(DATE_X + DATE_W / 2)
     wy0, wy1 = C - px(DATE_H / 2), C + px(DATE_H / 2)
-    d.rectangle([wx0, wy0, wx1, wy1], fill=(232, 232, 226))
+    d.rectangle([wx0, wy0, wx1, wy1], fill=(248, 248, 244))  # white date wheel (24, 01.jpg)
     for i in range(24):
-        shade = int(232 - 60 * (1 - i / 24) ** 2)
+        shade = int(248 - 60 * (1 - i / 24) ** 2)
         d.line([(wx0, wy0 + i), (wx1, wy0 + i)], fill=(shade, shade, shade - 4))
     text(im, ((wx0 + wx1) / 2, (wy0 + wy1) / 2 + 6), '20', font('arialbd.ttf', 196), (22, 22, 22))
 
