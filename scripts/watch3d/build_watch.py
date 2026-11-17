@@ -363,12 +363,20 @@ def build_indices(polished, lume):
 
 
 def build_cyclops(glass):
-    """Rounded magnifier over the date window, inside the watch: between the hands and the crystal."""
-    outline = rrect(-3.7, 3.7, -2.6, 2.6, (1.3, 1.3, 1.3, 1.3), 5)
-    # Seconds hand top is z = 0.76 and the crystal underside z = 1.5; the dome spans 0.88-1.45.
+    """Flat cushion-shaped magnifier over the date window, inside the watch, between the hands and the crystal.
+
+    Shape from the user's close-up: width/height 1.32, sides a superellipse (n = 3), flat top with a thin rounded rim.
+    """
+    a, b, n, steps = 3.7, 2.8, 3.0, 96  # 7.4 x 5.6 mm, covers the 6.1 x 4.0 mm window
+    outline = []
+    for i in range(steps):
+        t = TAU * i / steps
+        c, s = math.cos(t), math.sin(t)
+        outline.append((a * math.copysign(abs(c) ** (2 / n), c), b * math.copysign(abs(s) ** (2 / n), s)))
+    # Seconds hand top is z = 0.76 and the crystal underside z = 1.5; the lens spans 0.88-1.43.
     z0 = 0.88
-    rings = [[Vector((11.9 + x * s, y * s, z0 + dz)) for x, y in outline]
-             for s, dz in ((1.0, 0.0), (1.0, 0.165), (0.97, 0.34), (0.9, 0.47), (0.78, 0.54), (0.6, 0.57))]
+    rings = [[Vector((11.9 + x * k, y * k, z0 + dz)) for x, y in outline]
+             for k, dz in ((1.0, 0.0), (1.0, 0.36), (0.99, 0.46), (0.975, 0.52), (0.955, 0.55))]
     return finish('Cyclops', loft(rings), [glass], sharp_deg=60)
 
 
