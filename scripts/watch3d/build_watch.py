@@ -227,35 +227,35 @@ def at(x=0.0, y=0.0, z=0.0, rot_z=0.0):
 
 # ---------- case ----------
 
-CASE_R = 21.7
+# Measured on 24.jpg: case edge 22.7 mm, flat satin bezel ~20.0-22.7 mm, flat case back.
+CASE_R = 22.7
 
 def case_profile():
-    p = [(DIAL_R - 0.05, DIAL_Z + 0.7), (DIAL_R - 0.05, 1.95)]
-    p += arc(DIAL_R + 0.3, 1.95, 0.35, 180, 90)[1:]  # rounded inner lip
-    p += [(20.8, 2.3)]  # flat brushed bezel
-    p += arc(20.8, 1.95, 0.35, 90, 20)[1:]
-    p += [(21.55, 1.45), (21.55, 1.05)]  # polished outer chamfer
-    p += [(21.3, 0.85), (21.3, 0.62)]  # groove between bezel and case
-    p += arc(21.35, 0.3, 0.35, 100, 0)  # case middle shoulder
-    p += [(CASE_R, 0.0), (CASE_R, -6.4)]
+    p = [(DIAL_R - 0.05, DIAL_Z + 0.7), (DIAL_R - 0.05, 1.7)]
+    p += arc(DIAL_R + 0.35, 1.7, 0.35, 180, 90)[1:]  # rounded inner lip
+    p += [(22.1, 2.05)]  # broad flat satin bezel
+    p += arc(22.1, 1.45, 0.6, 90, 0)[1:]  # rounded outer edge into the side
+    p += [(CASE_R, -6.4)]  # tall polished case side
     p += arc(CASE_R - 0.9, -6.4, 0.9, 0, -90)[1:]
-    p += [(20.2, -7.6), (20.0, -7.8), (19.85, -8.4), (19.55, -9.3)]  # screw case back
-    p += arc(18.6, -9.3, 0.9, 0, -80)[1:]
-    p += [(16.5, -10.15), (0.0, -10.25)]
+    p += [(21.2, -7.6), (20.6, -8.8)]  # chamfer to the back
+    p += arc(19.6, -8.8, 1.0, 0, -90)[1:]
+    p += [(0.0, -9.8)]  # flat case back; 19.jpg ratios put the case ~0.6 mm thinner
     return p
 
 
 def lug(sx, sy):
     """Lofted lug: blends into the case side, slopes and drops towards the wrist (ref 19)."""
     rings = []
-    # Start outside the bezel opening (hypot(11.1, 16.8) = 20.1 > DIAL_R) so the root hides under the bezel.
-    ys = [16.8 + 9.0 * (i / 18) ** 0.9 for i in range(19)]
+    # Shoulder starts at y=14.9 mm and the lug ends 24.8 mm from the centre (24.jpg).
+    ys = [14.9 + 9.9 * (i / 22) ** 0.9 for i in range(23)]
     for i, y in enumerate(ys):
-        f = (y - 16.8) / 9.0
-        x_out = 15.2 + 1.6 * max(0.0, (18.0 - y) / 4.0) ** 2
-        top = 0.55 - 4.6 * f**1.7
+        f = max(0.0, (y - 16.8) / 8.0)
+        # Outer edge tapers linearly: 18.3 mm at y=14.9 to 14.0 mm at y=24.3 (24.jpg silhouette).
+        x_out = 18.3 - 0.457 * (y - 14.9)
+        top = 1.2 - 4.4 * f**1.7
         bot = -7.3 - 1.2 * f**1.3
-        x_in = 11.1
+        # 21.2 mm end link between the lugs; near the root the inner edge stays outside the dial opening.
+        x_in = max(10.65, math.sqrt(max(0.0, 19.8**2 - y**2)))
         if i == len(ys) - 1:  # rounded tip
             x_in, x_out, top, bot = x_in + 0.35, x_out - 0.35, top - 0.35, bot + 0.35
         sec = rrect(x_in, x_out, bot, top, (0.6, 1.0, 0.4, 0.4), 3)
@@ -273,7 +273,7 @@ def build_case(brushed, polished):
         c = f.calc_center_median()
         r = math.hypot(c.x, c.y)
         # Ref 24/19: bezel, case top and back satin; only the vertical case side is polished.
-        side = r > CASE_R - 0.05 and -6.45 < c.z < 0.05
+        side = r > CASE_R - 0.05 and -6.45 < c.z < 1.5
         f.material_index = 1 if side else 0
     for sx in (-1, 1):
         for sy in (-1, 1):
@@ -286,7 +286,7 @@ def build_crowns(polished):
 
     def crown(angle_deg, r_out, length, teeth, z):
         a0 = math.radians(angle_deg)
-        m = Matrix.Translation((22.3 * math.cos(a0), 22.3 * math.sin(a0), z)) @ Matrix.Rotation(a0, 4, 'Z') @ Matrix.Rotation(math.pi / 2, 4, 'Y')
+        m = Matrix.Translation(((CASE_R + 0.6) * math.cos(a0), (CASE_R + 0.6) * math.sin(a0), z)) @ Matrix.Rotation(a0, 4, 'Z') @ Matrix.Rotation(math.pi / 2, 4, 'Y')
         samples = teeth * 6
         ring = [(math.cos(TAU * i / samples), math.sin(TAU * i / samples), 1 - 0.06 * (0.5 - 0.5 * math.cos(teeth * TAU * i / samples))) for i in range(samples)]
         rings = []
@@ -335,9 +335,9 @@ def build_indices(polished, lume):
         angle = math.radians(90 - h * 30)
         rot = angle - math.pi / 2
         if h in (12, 6):
-            r, w, length = 14.6, 1.3, 1.3
+            r, w, length = 14.65, 0.95, 1.24  # measured on 24.jpg
         else:
-            r, w, length = 12.75, 1.05, 3.5
+            r, w, length = 13.4, 0.96, 3.84  # measured on 24.jpg
         x, y = r * math.cos(angle), r * math.sin(angle)
         append(bm, box((w, length, 0.5), bevel=0.16, segments=3), at(x, y, DIAL_Z + 0.25, rot), 0)
         append(bm, box((w - 0.42, length - 0.42, 0.05)), at(x, y, DIAL_Z + 0.51, rot), 1)
@@ -366,16 +366,20 @@ def build_hands(polished, lume, red):
     # 10:12:32 with the GMT hand on 22, as in ref 24.
     hour, minute, second, gmt = 305.0, 72.0, 194.0, 332.0
     z = DIAL_Z + 0.55
-    hand(bm, [(-0.15, -4.0), (0.15, -4.0), (0.15, 13.9), (-0.15, 13.9)], z, gmt, 2, 0.1)
-    hand(bm, [(-0.95, 13.6), (0.0, 14.2), (0.95, 13.6), (0.0, 16.3)], z, gmt, 2, 0.1)
+    hand(bm, [(-0.12, -4.0), (0.12, -4.0), (0.12, 12.9), (-0.12, 12.9)], z, gmt, 2, 0.1)
+    # Plane-shaped GMT tip with swept-back wings, centred 13.7 mm out (24.jpg).
+    hand(bm, [(0.0, 15.0), (0.25, 14.2), (1.1, 13.5), (1.0, 13.25), (0.2, 13.5), (0.15, 12.9), (0.5, 12.5), (0.45, 12.35), (0.0, 12.6),
+              (-0.45, 12.35), (-0.5, 12.5), (-0.15, 12.9), (-0.2, 13.5), (-1.0, 13.25), (-1.1, 13.5), (-0.25, 14.2)], z, gmt, 2, 0.1)
     z += 0.2
-    hand(bm, [(-0.45, -2.2), (0.45, -2.2), (0.5, 1.0), (0.85, 6.4), (0.0, 9.9), (-0.85, 6.4), (-0.5, 1.0)], z, hour, 0, 0.14)
-    hand(bm, [(-0.3, 1.5), (0.3, 1.5), (0.6, 6.3), (0.0, 9.2), (-0.6, 6.3)], z + 0.14, hour, 1, 0.04)
+    # Hour: wide framed sword, frame tip 9.2 mm; lume 2.4-8.8 mm, ~1.6 mm wide (24.jpg).
+    hand(bm, [(-0.45, -2.2), (0.45, -2.2), (0.5, 1.5), (0.95, 3.5), (0.95, 5.0), (0.0, 9.2), (-0.95, 5.0), (-0.95, 3.5), (-0.5, 1.5)], z, hour, 0, 0.14)
+    hand(bm, [(-0.3, 2.4), (0.3, 2.4), (0.8, 3.5), (0.8, 5.0), (0.0, 8.8), (-0.8, 5.0), (-0.8, 3.5)], z + 0.14, hour, 1, 0.04)
     z += 0.22
-    hand(bm, [(-0.4, -2.8), (0.4, -2.8), (0.45, 1.2), (0.7, 10.5), (0.0, 15.0), (-0.7, 10.5), (-0.45, 1.2)], z, minute, 0, 0.14)
-    hand(bm, [(-0.25, 1.9), (0.25, 1.9), (0.5, 10.4), (0.0, 14.2), (-0.5, 10.4)], z + 0.14, minute, 1, 0.04)
+    # Minute: slim framed sword, frame tip 13.6 mm; lume 2.2-12.0 mm, ~1.2 mm wide (24.jpg).
+    hand(bm, [(-0.4, -2.8), (0.4, -2.8), (0.45, 1.5), (0.75, 5.0), (0.7, 10.0), (0.0, 13.6), (-0.7, 10.0), (-0.75, 5.0), (-0.45, 1.5)], z, minute, 0, 0.14)
+    hand(bm, [(-0.25, 2.2), (0.25, 2.2), (0.6, 5.0), (0.55, 10.0), (0.0, 12.0), (-0.55, 10.0), (-0.6, 5.0)], z + 0.14, minute, 1, 0.04)
     z += 0.22
-    hand(bm, [(-0.08, -4.2), (0.08, -4.2), (0.05, 16.0), (-0.05, 16.0)], z, second, 0, 0.07)
+    hand(bm, [(-0.08, -4.2), (0.08, -4.2), (0.05, 16.0), (-0.05, 16.0)], z, second, 2, 0.07)  # red needle
     append(bm, disc(0.6, z, z + 0.07, 24), Matrix.Rotation(-math.radians(second), 4, 'Z') @ Matrix.Translation((0, -2.9, 0)), 0)
     append(bm, disc(1.1, DIAL_Z + 0.5, z + 0.1, 40), Matrix(), 0)
     append(bm, lathe([(0.0, z + 0.32), (0.45, z + 0.28), (0.65, z + 0.1)], 32), Matrix(), 0)
@@ -472,7 +476,7 @@ def build_bracelet(brushed, polished):
     bm = bmesh.new()
     GAP = 0.3
     ROUND = 0.9
-    OUTER = rrect(5.2, 11.0, -1.8, 1.8, (0.5, 0.95, 0.45, 0.5))
+    OUTER = rrect(5.0, 10.6, -1.8, 1.8, (0.5, 0.95, 0.45, 0.5))  # 21.2 mm bracelet (24.jpg)
     SIDE = rrect(1.72, 5.08, -1.65, 1.74, (0.3, 0.3, 0.3, 0.3))
     CENTRE = rrect(-1.62, 1.62, -1.65, 1.74, (0.3, 0.3, 0.3, 0.3))
 
