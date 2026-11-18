@@ -70,8 +70,6 @@ export interface Model {
   description?: string
   specs: string[]
   images: Img[]
-  /** Public path to a GLB shown first in the product dialog as a rotatable 3D view, e.g. "models/3d-watch.glb". */
-  model3d?: string
   /** First variant is the default view. */
   variants?: Variant[]
   translations?: TextTranslations

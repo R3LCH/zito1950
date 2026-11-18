@@ -555,25 +555,6 @@ export const models: Model[] = [
     ],
     images: img('vintage', 'Orologi Vintage con bracciale, lunetta zigrinata e numeri romani'),
   },
-  {
-    // Placeholder product for the 3D viewer; photos from 3d_watch_referencess, model from scripts/watch3d.
-    id: '3d-watch',
-    engravable: true,
-    gender: 'uomo',
-    codes: ['3D-GMT01'],
-    name: '3d_watch',
-    price: '1.000 EUR',
-    specs: [
-      'Movimento automatico con funzione GMT',
-      'Cassa in acciaio 44 mm',
-      'Quadrante blu soleil con lancette luminescenti',
-      'Datario a ore 3',
-      'Bracciale in acciaio a cinque file',
-      'Impermeabile 20 ATM',
-    ],
-    images: img('3d-watch', 'Orologio 3d_watch con quadrante blu, lunetta in acciaio e bracciale in acciaio', 4),
-    model3d: 'models/3d-watch.glb',
-  },
 ]
 
 export const storia: Storia = {

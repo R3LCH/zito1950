@@ -14,4 +14,3 @@ research/old-site-images/
 .env
 .env.*
 !.env.example
-scripts/watch3d/build/
