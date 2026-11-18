@@ -1,6 +1,7 @@
 import { t, useContent } from '../lib/i18n'
 import Picture from './Picture'
 import Panel from './Panel'
+import SectionText from './SectionText'
 
 /** Why choose ZITO1950: the serif lead and the client's photo beside the reasons, closed by the brand line. */
 export default function PercheZito() {
@@ -34,11 +35,8 @@ export default function PercheZito() {
       )}
     >
       <div className="grid md:grid-cols-12 md:gap-x-10">
-        <div className="max-w-[60ch] space-y-5 text-ink-2 md:col-span-6 md:col-start-7 lg:col-span-5 lg:col-start-8">
-          {perche.paragraphs.slice(1).map((p) => (
-            <p key={p}>{p}</p>
-          ))}
-          <p className="pt-3 font-serif text-h3 text-ink">{perche.closing}</p>
+        <div className="md:col-span-6 md:col-start-7 lg:col-span-5 lg:col-start-8">
+          <SectionText blocks={perche.blocks} closing={perche.closing} />
         </div>
       </div>
     </Panel>

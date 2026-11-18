@@ -67,15 +67,16 @@ function withPerfumeText(d: Profumo, locale: Locale, patch: TextTranslation): Pr
   return { ...d, ...(patch.paragraphs !== undefined ? { paragraphs: patch.paragraphs } : {}), ...(patch.specs !== undefined ? { specs: patch.specs } : {}), ...(patch.quoteText !== undefined ? { quote: { ...d.quote, text: patch.quoteText } } : {}) }
 }
 // Admin copy for each public availability state: tile title and one-line effect on the site. Watches use every state except coming-soon.
-const AVAILABILITY_COPY: Record<PerfumeAvailability, { label: string; hint: string }> = {
+const AVAILABILITY_COPY: Record<PerfumeAvailability | Availability, { label: string; hint: string }> = {
   buy: { label: 'Acquistabile', hint: 'Mostra il pulsante Acquista e il prezzo.' },
   'no-buy': { label: 'Solo vetrina', hint: 'Visibile, senza pulsante di acquisto.' },
+  'store-only': { label: 'Solo in negozio', hint: 'Etichetta «Solo in negozio» e pulsante Contatti al posto di Acquista.' },
   'coming-soon': { label: 'Prossimamente', hint: 'Visibile come Prossimamente, senza codice, prezzo né pulsanti.' },
   'out-of-stock': { label: 'Esaurito', hint: 'Visibile con l’etichetta Esaurito.' },
   hidden: { label: 'Nascosto', hint: 'Non compare sul sito.' },
 }
 /** «Disponibilità» tile radio group shared by the watch and perfume editors; `children` render below the tiles. */
-function AvailabilityTiles<T extends PerfumeAvailability>({ values, value, onChange, children }: { values: readonly T[]; value: T; onChange: (value: T) => void; children?: ReactNode }) {
+function AvailabilityTiles<T extends PerfumeAvailability | Availability>({ values, value, onChange, children }: { values: readonly T[]; value: T; onChange: (value: T) => void; children?: ReactNode }) {
   return (
     <fieldset className="min-w-0">
       <legend className="mb-3 text-small font-medium">{t("Disponibilità")}</legend>

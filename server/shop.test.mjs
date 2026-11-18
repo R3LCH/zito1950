@@ -471,7 +471,7 @@ test('similar picks keep owner order, drop self/unknown/duplicates, and lose del
 test('out-of-stock, showcase and hidden models are not purchasable; sold is no longer a state', async (t) => {
   const { admin, buyer, enable } = await fixture(t, true)
   const items = [{ modelId: 'takimo', variantId: null, quantity: 1 }]
-  for (const availability of ['out-of-stock', 'no-buy', 'hidden']) {
+  for (const availability of ['out-of-stock', 'no-buy', 'store-only', 'hidden']) {
     await enable('takimo', availability)
     const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
     assert.equal(order.status, 409, availability)

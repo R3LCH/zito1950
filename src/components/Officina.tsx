@@ -1,10 +1,11 @@
 import { useContent } from '../lib/i18n'
 import Picture from './Picture'
 import Panel from './Panel'
+import SectionText from './SectionText'
 
-/** The owner at the workbench; header, craft line and toggle sit in the column beside the photo. */
+/** Assistance: the owner at the workbench beside the opening text; the button opens the services and how to ask for them. */
 export default function Officina() {
-  const { officina, orologi } = useContent()
+  const { officina } = useContent()
   const { image } = officina
 
   return (
@@ -31,14 +32,11 @@ export default function Officina() {
         </div>
       )}
     >
-      <ul className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-4">
-        {orologi.pillars.map((p) => (
-          <li key={p.title} className="border-t border-line pb-8 pt-6">
-            <h3 className="font-serif text-h3">{p.title}</h3>
-            <p className="mt-3 text-small text-ink-2">{p.text}</p>
-          </li>
-        ))}
-      </ul>
+      <div className="grid md:grid-cols-12 md:gap-x-12">
+        <div className="md:col-span-5 md:col-start-8">
+          <SectionText blocks={officina.blocks} closing={officina.closing} />
+        </div>
+      </div>
     </Panel>
   )
 }

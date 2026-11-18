@@ -10,6 +10,7 @@ import { resolve, join } from 'node:path'
 import { z } from 'zod'
 import { models, site, storia, profumo, tesoroDiAlarico, officina, territorio } from '../src/data/content.ts'
 import {
+  AVAILABILITIES,
   GENDERS,
   PERFUME_AVAILABILITIES,
   ENGRAVING_MAX_WORDS,
@@ -86,7 +87,7 @@ const modelSchema = z.object({
   name: text.min(1).max(120),
   codes: z.array(text.max(80)).max(20),
   priceCents: cents,
-  availability: z.enum(['buy', 'no-buy', 'out-of-stock', 'hidden']),
+  availability: z.enum(AVAILABILITIES),
   gender: z.enum(GENDERS).default('unisex'),
   limitedEdition: z.boolean().optional(),
   oneOfOne: z.boolean().optional(),

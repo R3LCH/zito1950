@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LANGUAGE_NAMES, LOCALES, translateSource, type Locale } from '../data/localization'
-import { editableTexts, type SiteTexts } from '../data/siteTexts'
+import { EDITABLE_PATHS, editableTexts, type SiteTexts } from '../data/siteTexts'
 import { AutoTranslateHint, Field, isBlank, useAutoTranslate, type TranslatableField } from '../lib/autoTranslate'
 import { t } from '../lib/i18n'
 import { STATIC_PREVIEW } from '../lib/shop'
@@ -10,7 +10,7 @@ const SECTION_LABELS: Record<string, string> = {
   orologi: 'Orologi',
   storia: 'La nostra storia',
   profumiSection: 'Profumi',
-  officina: 'L’officina',
+  officina: 'Assistenza ZITO1950®',
   territorio: 'Scopri il territorio',
   perche: 'Perché ZITO1950®',
   contatti: 'Dove siamo',
@@ -22,7 +22,8 @@ const LONG = /\.(intro|introMore|text|paragraphs\.\d+|lead|closing|hint|caption)
 
 /** Admin → Testi del sito: every section's copy, per language, with "Traduci" from the shown language. */
 export default function SiteTextsEditor({ texts, busy, onSave }: { texts: SiteTexts; busy: boolean; onSave: (texts: SiteTexts) => void }) {
-  const [draft, setDraft] = useState<SiteTexts>(() => structuredClone(texts))
+  // Edits to fields the copy no longer has (e.g. replaced section texts) are dropped, so saving never sends a path the server rejects.
+  const [draft, setDraft] = useState<SiteTexts>(() => Object.fromEntries(Object.entries(structuredClone(texts)).filter(([path]) => EDITABLE_PATHS.has(path))))
   const [language, setLanguage] = useState<Locale>('it')
   const [open, setOpen] = useState('storia')
   const { status, busy: translating, translate } = useAutoTranslate()

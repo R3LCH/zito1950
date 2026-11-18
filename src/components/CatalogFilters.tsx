@@ -33,6 +33,7 @@ const OPTION_LABELS: Record<string, string> = {
   donna: 'Donna',
   buy: 'Acquistabile',
   'no-buy': 'Solo vetrina',
+  'store-only': 'Solo in negozio',
   'out-of-stock': 'Esaurito',
   automatic: 'Automatico',
   manual: 'Carica manuale',

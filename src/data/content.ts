@@ -656,24 +656,6 @@ export const orologi: Orologi = {
   title: 'La collezione',
   intro:
     'L\'orologio era per me, allo stesso tempo, uno strumento meraviglioso e un compagno fedele. Il primo battito, il primo "tic" era un\'esperienza unica come l\'inizio di una nuova vita.',
-  pillars: [
-    {
-      title: 'Movimenti meccanici',
-      text: 'Dopo aver assemblato e data la prima carica al complesso insieme di ruote e bilanciere, l\'orecchio entra in una sorta di "melodia galattica", dove ogni parte dipende dall\'altra come in un "universo microscopico"! Calibri ETA 2824, 7001 e 2671, Valjoux 7750, Tourbillon.',
-    },
-    {
-      title: 'Cassa e movimento',
-      text: "Cassa e movimento si accoppiano diventando un tutt'uno armonico con albero e corona. Ogni elemento funziona alla perfezione: gli ingranaggi cominciano a ruotare e la lancetta dei secondi inizia le sue infinite rotazioni, in sincronia e con la complicità di quella dei minuti e delle ore.",
-    },
-    {
-      title: 'Antiurto Incabloc',
-      text: 'Eta 2824, 25 rubini, 28.800 a/h (4hz), regolazione ETACHRON con vite micrometrica, riserva di carica 38h. Antiurto Incabloc. Quindi robusto e affidabile.',
-    },
-    {
-      title: 'Vetro zaffiro',
-      text: 'Vetro zaffiro convesso e fondello zaffiro: sul 40.000 µm il fondello zaffiro porta impressa la famosa 10 lire.',
-    },
-  ],
   catalog: {
     eyebrow: 'Catalogo',
     title: 'I modelli',
@@ -686,13 +668,40 @@ export const orologi: Orologi = {
   },
 }
 
+/** Client copy: «Assistenza ZITO1950». */
 export const officina: Officina = {
-  eyebrow: 'L’officina',
-  title: 'Il tempo, costruito con cura.',
+  eyebrow: 'Assistenza ZITO1950®',
+  title: 'La cura del tempo, nel tempo.',
   paragraphs: [
-    'Ogni orologio ZITO1950® unisce tradizione orologiera, design italiano e selezione di materiali di alta qualità.',
+    'In ZITO1950® crediamo che il valore di un orologio non si esaurisca nel momento dell’acquisto. Un segnatempo è un oggetto da vivere, custodire e tramandare.',
   ],
-  more: 'Assistenza',
+  more: 'Scopri l’assistenza',
+  blocks: [
+    {
+      paragraphs: [
+        'Per questo mettiamo a disposizione dei nostri clienti un servizio di assistenza dedicato, pensato per garantire nel tempo affidabilità, precisione e cura dei dettagli.',
+        'Il nostro reparto assistenza è a disposizione per:',
+      ],
+      items: [
+        { title: 'Assistenza tecnica', text: 'Verifiche, controlli e interventi sui nostri segnatempo.' },
+        { title: 'Manutenzione', text: 'Controlli periodici per preservare funzionalità e prestazioni.' },
+        { title: 'Garanzia', text: 'Supporto e gestione delle richieste relative alla garanzia internazionale.' },
+        { title: 'Ricambi e componenti', text: 'Informazioni sulla disponibilità di parti originali.' },
+        { title: 'Informazioni e supporto', text: 'Risposte a domande tecniche e richieste relative ai prodotti ZITO1950®.' },
+      ],
+    },
+    {
+      heading: 'Siamo al tuo fianco.',
+      paragraphs: [
+        'Per richiedere assistenza, ti invitiamo a contattarci indicando il modello dell’orologio, il numero di referenza e una descrizione del problema riscontrato.',
+        'Il nostro personale prenderà in carico la richiesta e ti fornirà le indicazioni necessarie.',
+      ],
+    },
+  ],
+  closing: {
+    title: 'ZITO1950® – Officine del Tempo',
+    text: 'La nostra storia è fatta di orologi. La nostra reputazione si costruisce nel tempo.',
+  },
   image: {
     src: 'img/storia/owner.jpg',
     alt: 'Il titolare di ZITO1950® al banco di lavoro mentre regola un orologio con il monocolo da orologiaio',
@@ -700,19 +709,43 @@ export const officina: Officina = {
   },
 }
 
-/** Client copy: «Perché scegliere ZITO1950». */
+/** Client copy: «Perché ZITO1950». */
 export const perche: Perche = {
-  title: 'Perché scegliere ZITO1950®',
-  lead: 'Perché il valore di un orologio va oltre il nome sul quadrante.',
+  title: 'Perché ZITO1950®',
+  lead: 'Non è soltanto una questione di tempo. È una questione di identità.',
   paragraphs: [
-    'Scegliere ZITO1950® significa scegliere un’identità indipendente, uno stile riconoscibile e una diversa idea di eleganza.',
-    'Significa indossare un orologio che unisce personalità, ricerca estetica e una storia italiana che affonda le proprie radici nel 1950.',
-    'Non cerchiamo di essere come tutti gli altri. Vogliamo offrire un’alternativa a chi ama gli orologi, apprezza il design e desidera distinguersi senza inseguire necessariamente i marchi più celebrati.',
-    'Crediamo in un lusso fatto di carattere, cura dei dettagli e valore concreto. In orologi capaci di esprimere chi li indossa, senza bisogno di ostentazione.',
-    'Perché non è il prezzo a definire il tuo stile. Non è la notorietà di un marchio a determinare il tuo gusto.',
-    'È la scelta che fai a raccontare chi sei.',
+    'Ci sono cose che non si possono misurare con un orologio: la passione, il coraggio di sognare, la determinazione di realizzare un progetto, il valore di una promessa mantenuta.',
   ],
-  closing: 'ZITO1950®. Non seguire il tempo. Scegli come viverlo.',
+  blocks: [
+    {
+      paragraphs: [
+        'ZITO1950® nasce da questa visione.',
+        'Siamo espressione di una cultura del fare che appartiene al Sud Italia, una terra di antiche civiltà, di arte, di bellezza e di tradizioni. Una terra che porta dentro di sé l’eredità della Magna Grecia, dove l’armonia delle forme, la ricerca della bellezza e il senso dell’arte hanno lasciato un patrimonio straordinario.',
+        'È questa sensibilità che ispira il nostro modo di concepire l’orologeria.',
+      ],
+    },
+    {
+      paragraphs: [],
+      items: [
+        { title: 'La passione', text: 'Crediamo che ogni progetto importante nasca da una passione autentica. La stessa passione che ci spinge a ricercare, progettare e selezionare ogni elemento delle nostre creazioni.' },
+        { title: 'La cura dei dettagli', text: 'La qualità si riconosce soprattutto nei particolari. Dedichiamo attenzione alle proporzioni, alle finiture, ai materiali, ai quadranti e a ogni singolo componente. Perché sono i dettagli a trasformare un oggetto in qualcosa di speciale.' },
+        { title: 'La cultura dello stile', text: 'Lo stile non è seguire una moda. È avere una propria identità. Le nostre creazioni interpretano il dialogo tra eleganza classica, carattere sportivo e sensibilità contemporanea, con una personalità riconoscibile.' },
+        { title: 'Le radici e la cultura del Sud', text: 'Portiamo nei nostri orologi qualcosa della nostra terra: il calore, la creatività, il senso della bellezza, il rispetto delle tradizioni e quella naturale inclinazione a dare carattere a ogni cosa. La Calabria non è soltanto la nostra origine: è una parte della nostra ispirazione.' },
+        { title: 'Il valore della parola', text: 'Crediamo nella serietà, nella lealtà e nel rispetto degli impegni. La parola data ha ancora un valore. È un principio semplice, ma fondamentale, che guida il nostro rapporto con chi sceglie ZITO1950®.' },
+        { title: 'Il coraggio di osare', text: 'Ogni nuova idea richiede coraggio. Crediamo nell’indipendenza di pensiero, nella libertà creativa e nella capacità di percorrere strade proprie, senza rinunciare alla nostra identità.' },
+        { title: 'La visione e il futuro', text: 'Guardiamo avanti con curiosità e lungimiranza. Ogni progetto nasce da un sogno, ma prende forma attraverso ricerca, competenza, impegno e volontà di realizzarlo.' },
+      ],
+    },
+    {
+      heading: 'Il nostro modo di interpretare il tempo',
+      paragraphs: [
+        'Scegliere ZITO1950® significa riconoscersi in un modo di pensare e di vivere.',
+        'Significa apprezzare la bellezza delle cose ben fatte, rispettare le tradizioni senza rinunciare all’innovazione e credere che anche un sogno nato in una terra lontana dai grandi centri dell’industria possa diventare qualcosa di straordinario.',
+        'Perché dalla Calabria, terra di antiche civiltà e di grande cultura artistica, continuano a nascere idee, progetti e cose meravigliose.',
+      ],
+    },
+  ],
+  closing: { title: 'ZITO1950®', text: 'Le nostre radici ispirano il nostro futuro.' },
   // Photo supplied by the client.
   image: {
     src: 'img/storia/perche-zito.jpg',
@@ -720,19 +753,52 @@ export const perche: Perche = {
   },
 }
 
-/** Client copy: «Scopri il territorio»; photo supplied by the client. */
+/** Client copy: «Dove la bellezza incontra il tempo»; photo supplied by the client. */
 export const territorio: Territorio = {
   eyebrow: 'Scopri il territorio',
-  title: 'Scalea. Dove la bellezza incontra il tempo.',
+  title: 'Dove la bellezza incontra il tempo',
+  lead: 'Calabria. Una terra da vivere, una bellezza da scoprire.',
   paragraphs: [
-    'Ci sono luoghi che non hanno bisogno di essere inventati. Basta scoprirli.',
-    'Affacciata sul Mar Tirreno, lungo la Riviera dei Cedri, Scalea custodisce l’anima autentica della Calabria: il blu del mare, la pietra antica del centro storico, i vicoli che raccontano generazioni e una luce capace di trasformare ogni giornata in un ricordo.',
-    'Qui la storia incontra la bellezza della natura. Il ritmo del mare si alterna a quello lento delle strade antiche, mentre il paesaggio conserva il fascino di una terra orgogliosa delle proprie radici.',
-    'È in questo contesto che ZITO1950® sceglie di raccontare la propria identità: un marchio italiano che guarda al futuro senza dimenticare il valore della propria storia.',
-    'Perché il territorio non è soltanto un luogo sulla carta. È cultura, carattere, memoria e ispirazione.',
-    'Scoprire Scalea significa entrare in contatto con una Calabria da vivere, conoscere e portare con sé.',
+    'Ci sono luoghi che non si visitano soltanto. Si vivono, si respirano e rimangono dentro.',
+    'Scalea è uno di questi.',
   ],
-  closing: 'ZITO1950®. Il tempo ha una storia. La Calabria, mille da raccontare.',
+  blocks: [
+    {
+      paragraphs: [
+        'Nel cuore della Riviera dei Cedri, sulla costa tirrenica della Calabria, si apre un territorio straordinario, dove il blu intenso del mare incontra il verde della montagna, dove la natura conserva ancora angoli incontaminati e i borghi custodiscono secoli di storia, cultura e tradizioni.',
+        'Qui il paesaggio cambia continuamente: spiagge luminose, scogliere modellate dal mare, baie nascoste, acque cristalline e antichi centri storici affacciati sul Mediterraneo.',
+      ],
+    },
+    {
+      heading: 'Una terra, mille emozioni',
+      paragraphs: [
+        'Da Scalea si può partire alla scoperta di alcuni degli scenari più suggestivi del Sud Italia.',
+        'La suggestiva Torre Talao, simbolo della nostra città, si affaccia sul mare e racconta il legame antico tra Scalea e il Mediterraneo.',
+        'Poco distante, l’Arcomagno di San Nicola Arcella sorprende con la sua spettacolare arcata naturale, mentre l’Isola di Dino, a Praia a Mare, regala scenari marini di rara bellezza.',
+        'L’Isola di Cirella, i borghi di Diamante e Aieta, le montagne del Pollino e la Valle del fiume Lao completano un paesaggio di straordinaria varietà.',
+        'È una Calabria da esplorare lentamente, lasciandosi sorprendere dalla sua natura, dalla sua gastronomia, dalla sua ospitalità e dalla sua autenticità.',
+      ],
+    },
+    {
+      heading: 'Il mare, la natura, la bellezza',
+      paragraphs: [
+        'Qui il mare assume mille sfumature di blu e turchese. Le coste si alternano tra lunghe spiagge, piccole insenature e scogliere, mentre nell’entroterra boschi, montagne e corsi d’acqua offrono un contatto autentico con la natura.',
+        'È una terra che invita a rallentare, a riscoprire il piacere delle cose semplici e a concedersi il tempo di vivere ogni momento.',
+      ],
+    },
+    {
+      heading: 'Vieni a conoscere la nostra casa',
+      paragraphs: [
+        'È proprio qui, a Scalea, che nasce e vive ZITO1950®.',
+        'Vogliamo che il nostro marchio sia anche un invito a conoscere la Calabria, a scoprirne i luoghi, le tradizioni e le meraviglie.',
+        'Per questo le porte della nostra casa sono aperte a chi desidera incontrarci, conoscere da vicino le nostre creazioni e condividere la passione per il bello e per il tempo.',
+        'Che tu arrivi dall’Italia o da qualsiasi parte del mondo, sarai il benvenuto.',
+        'Ti aspettiamo a Scalea, in Calabria.',
+        'Una terra meravigliosa. Una casa da scoprire. Una storia da vivere.',
+      ],
+    },
+  ],
+  closing: { title: 'ZITO1950® – Officine del Tempo', text: 'Il tempo passa. I luoghi del cuore rimangono.' },
   image: {
     src: 'img/storia/scalea-mare.jpg',
     alt: 'Acqua turchese tra gli scogli e una canoa rossa sulla costa di Scalea',

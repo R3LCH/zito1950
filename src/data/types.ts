@@ -42,7 +42,7 @@ export interface Variant {
 }
 
 /** Public availability of a watch; set per product in the admin panel. */
-export const AVAILABILITIES = ['buy', 'no-buy', 'out-of-stock', 'hidden'] as const
+export const AVAILABILITIES = ['buy', 'no-buy', 'store-only', 'out-of-stock', 'hidden'] as const
 export type Availability = (typeof AVAILABILITIES)[number]
 
 /** Who a watch is made for; set per product in the admin panel. Unisex models are listed under both Uomo and Donna. */
@@ -56,7 +56,7 @@ export interface Model {
   /** Exactly as printed on the price card, e.g. "3.890 EUR". */
   price: string
   priceCents?: number
-  /** buy: Acquista button · no-buy: showcase only · out-of-stock: Esaurito · hidden: not listed. Default no-buy. A limited edition with 0 pieces left reads as out-of-stock. */
+  /** buy: Acquista button · no-buy: showcase only · store-only: «Solo in negozio» tag and a Contatti button instead of Acquista · out-of-stock: Esaurito · hidden: not listed. Default no-buy. A limited edition with 0 pieces left reads as out-of-stock. */
   availability?: Availability
   /** Uomo, Donna or Unisex; seeded from the old site's Uomo/Donna menu. Default unisex. */
   gender?: Gender
@@ -249,22 +249,44 @@ export interface ProfumiSection extends SectionCopy {
 export const PERFUME_AVAILABILITIES = ['buy', 'no-buy', 'coming-soon', 'out-of-stock', 'hidden'] as const
 export type PerfumeAvailability = (typeof PERFUME_AVAILABILITIES)[number]
 
-/** The owner at the workbench: photo plus the craft notes (the former watch pillars). */
+/** A titled point inside a section body, e.g. one assistance service. */
+export interface Pillar {
+  title: string
+  text: string
+}
+
+/** One part of an expanded section: optional serif heading, paragraphs, then titled points. */
+export interface TextBlock {
+  heading?: string
+  paragraphs: string[]
+  items?: Pillar[]
+}
+
+/** Closing signature of a section: small uppercase brand line over a serif sentence. */
+export interface Signature {
+  title: string
+  text: string
+}
+
+/** «Assistenza ZITO1950®»: the owner at the workbench, the service and how to ask for it. */
 export interface Officina {
   eyebrow: string
   title: string
   paragraphs: string[]
-  /** Label of the toggle that opens the craft notes. */
+  /** Label of the toggle that opens the service details. */
   more: string
+  blocks: TextBlock[]
+  closing: Signature
   image: Img & { caption: string }
 }
 
-/** «Perché scegliere ZITO1950»: serif lead, reasons, closing brand line. */
+/** «Perché ZITO1950®»: serif lead, opening paragraph, the reasons and the closing signature. */
 export interface Perche {
   title: string
   lead: string
   paragraphs: string[]
-  closing: string
+  blocks: TextBlock[]
+  closing: Signature
   image: Img
 }
 
@@ -272,21 +294,17 @@ export interface Perche {
 export interface Territorio {
   eyebrow: string
   title: string
+  lead: string
   paragraphs: string[]
-  closing: string
+  blocks: TextBlock[]
+  closing: Signature
   image: Img
-}
-
-export interface Pillar {
-  title: string
-  text: string
 }
 
 export interface Orologi {
   eyebrow: string
   title: string
   intro: string
-  pillars: Pillar[]
   catalog: {
     eyebrow: string
     title: string

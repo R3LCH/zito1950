@@ -1,6 +1,7 @@
 import { t, useContent } from '../lib/i18n'
 import Picture from './Picture'
 import Panel from './Panel'
+import SectionText from './SectionText'
 
 /** «Scopri il territorio»: text on the left, the sea photo held in view beside it on desktop. */
 export default function Territorio() {
@@ -20,18 +21,20 @@ export default function Territorio() {
           </figure>
           <div className="md:col-span-5 md:col-start-1 md:row-start-1">
             {header}
-            <p className="mt-6 max-w-[52ch] text-ink-2">{territorio.paragraphs[0]}</p>
+            <div className="mt-6 max-w-[52ch] space-y-5 text-ink-2">
+              <p className="font-serif text-h3 italic leading-[1.3] text-ink">{territorio.lead}</p>
+              {territorio.paragraphs.map((p) => (
+                <p key={p}>{p}</p>
+              ))}
+            </div>
             {toggle && <div className="mt-8">{toggle}</div>}
           </div>
         </div>
       )}
     >
       <div className="grid md:grid-cols-12 md:gap-x-10">
-        <div className="max-w-[60ch] space-y-5 text-ink-2 md:col-span-5">
-          {territorio.paragraphs.slice(1).map((p) => (
-            <p key={p}>{p}</p>
-          ))}
-          <p className="pt-3 font-serif text-h3 text-ink">{territorio.closing}</p>
+        <div className="md:col-span-5">
+          <SectionText blocks={territorio.blocks} closing={territorio.closing} />
         </div>
       </div>
     </Panel>

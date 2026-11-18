@@ -83,7 +83,7 @@ export function availabilityOf(model: Model): Availability {
 }
 
 /** Public availabilities, in the order the catalog groups them. */
-export const PUBLIC_AVAILABILITIES = ['buy', 'no-buy', 'out-of-stock'] as const satisfies readonly Availability[]
+export const PUBLIC_AVAILABILITIES = ['buy', 'no-buy', 'store-only', 'out-of-stock'] as const satisfies readonly Availability[]
 
 /** A model's line; models without one are unisex. */
 export const genderOf = (model: Model): Gender => model.gender ?? 'unisex'
@@ -162,7 +162,7 @@ export function matches(model: Model, facets: Facets, f: FilterState): boolean {
   )
 }
 
-const RANK: Record<Availability, number> = { buy: 0, 'no-buy': 1, 'out-of-stock': 2, hidden: 3 }
+const RANK: Record<Availability, number> = { buy: 0, 'no-buy': 1, 'store-only': 1, 'out-of-stock': 2, hidden: 3 }
 
 /** Featured: new first, then purchasable → showcase → out of stock, most expensive first. */
 export function compareModels(sort: SortKey): (a: Model, b: Model) => number {

@@ -73,7 +73,28 @@ export function BuyButton({
 }) {
   const { catalog, add, error } = useShop()
   const model = catalog.models.find((m) => m.id === modelId)
-  if (!model || availabilityOf(model) !== 'buy' || error) return null
+  if (!model) return null
+  // Store-only watches are sold in person: the purchase slot leads to the contact section instead.
+  if (availabilityOf(model) === 'store-only')
+    return (
+      <a
+        href="#contatti"
+        className="btn mt-3 w-full"
+        onClick={(e) => {
+          if (!beforeOpen) return
+          // Inside the product dialog: close it first, then jump once the page is scrollable again.
+          e.preventDefault()
+          beforeOpen()
+          requestAnimationFrame(() => {
+            history.pushState(null, '', '#contatti')
+            document.getElementById('contatti')?.scrollIntoView({ block: 'start' })
+          })
+        }}
+      >
+        {t('Contatti')}
+      </a>
+    )
+  if (availabilityOf(model) !== 'buy' || error) return null
   return (
     <button type="button"
     className="btn mt-3 w-full"

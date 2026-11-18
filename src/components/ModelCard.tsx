@@ -17,11 +17,12 @@ export function infoHref(model: Model, codes: string[] = model.codes): string {
 /** Price style shared by the card, the dialog and the recommendations; colour comes from `priceTone`. */
 export const priceClass = 'font-sans text-base font-medium tabular-nums'
 
-/** Out-of-stock watches stay listed, with a quieter price. */
-export const priceTone = (model: Model) => (statusLabel(model) ? 'text-muted' : 'text-ink')
+/** Out-of-stock watches stay listed, with a quieter price; store-only watches keep theirs. */
+export const priceTone = (model: Model) => (availabilityOf(model) === 'out-of-stock' ? 'text-muted' : 'text-ink')
 
 export function statusLabel(model: Model): string | null {
-  return availabilityOf(model) === 'out-of-stock' ? t('Esaurito') : null
+  const availability = availabilityOf(model)
+  return availability === 'out-of-stock' ? t('Esaurito') : availability === 'store-only' ? t('Solo in negozio') : null
 }
 
 // White ground, ink text and a hairline so labels stay legible on the white product photos.
