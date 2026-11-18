@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { models, officina, profumo, site, storia, tesoroDiAlarico, territorio } from '../data/content'
 import type { CertificateHolder, Img, Model, Profumo } from '../data/types'
+import type { SiteTexts } from '../data/siteTexts'
 import { ENGRAVING_MAX_CHARS } from '../data/types'
 import { localizeImage, localizeModel, localizePerfume, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../data/localization'
 import { formatMoney, useLocale } from './i18n'
@@ -16,8 +17,12 @@ export interface Catalog {
   featured: string[]
   hero: Img
   photos: Img[]
+  /** Uploaded product videos (`uploads/<uuid>.mp4`, with `width`/`height`). */
+  videos: Img[]
   imageOverrides: Record<string, Img>
   siteImages: Img[]
+  /** Owner edits to section copy, keyed by content path; see `withTexts`. */
+  texts: SiteTexts
 }
 export interface CartLine {
   /** Missing = 'model', so carts stored before perfumes were sold keep working. */
@@ -91,7 +96,9 @@ const initial: Catalog = {
   featured: [],
   hero: seedImageTranslations(site.hero.image),
   photos: [],
+  videos: [],
   imageOverrides: {},
+  texts: {},
   siteImages: [site.hero.image, storia.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), officina.image, territorio.image, ...profumo.images],
 }
 interface ShopState {

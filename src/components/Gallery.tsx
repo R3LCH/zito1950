@@ -1,12 +1,16 @@
 import { useRef } from 'react'
 import { useContent } from '../lib/i18n'
 import type { Img, Model, Variant } from '../data/types'
+import { stillImages } from '../data/media'
 
-/** Codes, price, specs and photos for the chosen variant (or the model itself). */
-export function resolveView(model: Model, variant: number): { codes: string[]; price: string; specs: string[]; images: Img[]; current?: Variant } {
+/**
+ * Codes, price, specs and media for the chosen variant (or the model itself). `images` holds photos and
+ * videos for the open product dialog; `stills` is what closed cards show (photos, else the first video frame).
+ */
+export function resolveView(model: Model, variant: number): { codes: string[]; price: string; specs: string[]; images: Img[]; stills: Img[]; current?: Variant } {
   const v = model.variants?.[variant]
-  if (!v) return { codes: model.codes, price: model.price, specs: model.specs, images: model.images }
-  return { codes: v.codes, price: v.price, specs: v.specs ?? model.specs, images: v.images, current: v }
+  if (!v) return { codes: model.codes, price: model.price, specs: model.specs, images: model.images, stills: stillImages(model.images) }
+  return { codes: v.codes, price: v.price, specs: v.specs ?? model.specs, images: v.images, stills: stillImages(v.images), current: v }
 }
 
 interface ArrowsProps {

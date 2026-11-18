@@ -100,7 +100,7 @@ export default function Recommended({ current, models, onSelect }: Props) {
       >
         {picks.map((m) => {
           const view = resolveView(m, 0)
-          const image = view.images[0]
+          const image = view.stills[0]
           return (
             <li key={m.id} className="w-[42%] shrink-0 snap-start md:w-[calc((100%-4.5rem)/4)]">
               <button type="button" onClick={() => onSelect(m)} className="group block w-full cursor-pointer text-left">
@@ -114,7 +114,7 @@ export default function Recommended({ current, models, onSelect }: Props) {
                       className={`h-full w-full object-contain transition-transform duration-500 ease-out-quint ${fine}:group-hover:scale-[1.02]`}
                     />
                   )}
-                  <Tags model={m} className="absolute left-2 top-2 max-w-[calc(100%-1rem)] flex-col" />
+                  <Tags model={m} overlay className="pointer-events-none absolute left-1.5 top-1.5 max-w-[calc(100%-0.75rem)] flex-col" />
                 </span>
                 <span className={`mt-3 block font-serif text-lg leading-snug underline decoration-transparent underline-offset-4 transition-colors duration-200 ${fine}:group-hover:decoration-current`}>
                   {m.name}

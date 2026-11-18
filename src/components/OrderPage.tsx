@@ -5,6 +5,7 @@ import { availabilityOf } from '../lib/catalogFilters'
 import { t, useLocale } from '../lib/i18n'
 import { euro, STATIC_PREVIEW, useShop } from '../lib/shop'
 import Picture from './Picture'
+import { stillImages } from '../data/media'
 
 /** Token for `${BASE_URL}ordine/<token>`, `anteprima` for the static preview demo, otherwise null. */
 export function orderToken(): string | null {
@@ -36,7 +37,7 @@ export default function OrderPage({ token }: { token: string }) {
         codes: variant?.codes ?? watches[0].codes,
         quantity: 1,
         priceCents: variant?.priceCents ?? watches[0].priceCents ?? 0,
-        image: variant?.images[0] ?? watches[0].images[0] ?? null,
+        image: stillImages(variant?.images ?? [])[0] ?? stillImages(watches[0].images)[0] ?? null,
         certificate: { firstName: 'Maria', lastName: 'Rossi', email: 'maria.rossi@example.com' },
         engraving: 'Per Luca, 12 giugno 2026',
       })
@@ -44,7 +45,7 @@ export default function OrderPage({ token }: { token: string }) {
     if (perfume) {
       items.push({ kind: 'perfume', name: perfume.name, codes: perfume.code ? [perfume.code] : [], quantity: 1, priceCents: perfume.priceCents ?? 0, image: perfume.images[0] ?? null, certificate: null, engraving: null })
     } else if (watches[1]) {
-      items.push({ kind: 'model', name: watches[1].name, codes: watches[1].codes, quantity: 1, priceCents: watches[1].priceCents ?? 0, image: watches[1].images[0] ?? null, certificate: null, engraving: null })
+      items.push({ kind: 'model', name: watches[1].name, codes: watches[1].codes, quantity: 1, priceCents: watches[1].priceCents ?? 0, image: stillImages(watches[1].images)[0] ?? null, certificate: null, engraving: null })
     }
     const day = 24 * 60 * 60 * 1000
     const created = Date.now() - 3 * day

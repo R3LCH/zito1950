@@ -6,7 +6,9 @@ import { officina, profumo as originalPerfume, storia, territorio } from '../dat
 import { asset } from '../lib/asset'
 import { t, LanguageSelector, useLocale } from '../lib/i18n'
 import { LOCALES, LANGUAGE_NAMES, LANGUAGE_TAGS, missingTranslationFields, type Locale } from '../data/localization'
-import { AUTO_TRANSLATE_SUPPORTED, isBlank, useAutoTranslate, type TextValue, type TranslatableField, type TranslateKeyHandler } from '../lib/autoTranslate'
+import { AutoTranslateHint, Field, isBlank, useAutoTranslate, type TextValue, type Translate, type TranslatableField } from '../lib/autoTranslate'
+import { isVideo, posterOf, stillImages } from '../data/media'
+import SiteTextsEditor from './SiteTextsEditor'
 
 // The translate route returns the source's shape, so a list field always receives a list and a line a string.
 const textPatch = (key: keyof TextTranslation, value: TextValue): TextTranslation => ({ [key]: value })
@@ -48,7 +50,10 @@ const blankPerfume = (): Profumo => ({
 })
 /** Uploads files to the library and resolves to the new photos (empty when the upload failed). */
 type UploadPhotos = (files: File[]) => Promise<Img[]>
+/** Uploads one video to the library; resolves to it, or null when the upload failed. */
+type UploadVideo = (file: File) => Promise<Img | null>
 const PHOTO_TYPES = 'image/jpeg,image/png,image/webp'
+const VIDEO_TYPES = 'video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm'
 const modelText = (d: Model, locale: Locale): TextTranslation => (locale === 'it' ? { description: d.description, specs: d.specs, quoteText: d.quote?.text } : d.translations?.[locale] ?? {})
 function withModelText(d: Model, locale: Locale, patch: TextTranslation): Model {
   if (locale !== 'it') return { ...d, translations: { ...d.translations, [locale]: { ...d.translations?.[locale], ...patch } } }
@@ -136,12 +141,6 @@ function GenderTiles({ value, onChange }: { value: Gender; onChange: (value: Gen
   )
 }
 
-function AutoTranslateHint({ status }: { status: string }) {
-  return <>
-    <p className="text-small text-muted">{AUTO_TRANSLATE_SUPPORTED ? t('Invio traduce il testo nei campi vuoti delle altre lingue; nei campi a più righe usa Ctrl+Invio (⌘+Invio su Mac).') : t('La traduzione automatica non è disponibile nell’anteprima.')}</p>
-    <p role="status" aria-live="polite" className="text-small">{status}</p>
-  </>
-}
 function TextLanguages({ language, onChange, product, translationStatus }: { language: Locale; onChange: (language: Locale) => void; product: Model | Profumo; translationStatus: string }) {
   return <section className="space-y-3 border-y border-line py-5">
     <p className="eyebrow">{t('Lingua dei contenuti')}</p>
@@ -156,46 +155,59 @@ function TextLanguages({ language, onChange, product, translationStatus }: { lan
 function PhotoEditor({
   images,
   onChange,
-  onTranslateKey,
+  translate,
+  translating,
   onUpload,
   library,
+  videos,
   language = 'it',
 }: {
   images: Img[]
   /** Receives an updater so asynchronous translations apply to the latest photos. */
   onChange: (update: (images: Img[]) => Img[]) => void
-  onTranslateKey: TranslateKeyHandler
+  translate: Translate
+  translating: boolean
   onUpload: UploadPhotos
   library: Img[]
+  /** Watches only: the uploaded video library and its uploader; perfumes take photos only. */
+  videos?: { library: Img[]; onUpload: UploadVideo }
   language?: Locale
 }) {
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [videoPickerOpen, setVideoPickerOpen] = useState(false)
   return (
     <div className="space-y-4">
-      <p className="eyebrow">{t("Fotografie")}</p>
+      <p className="eyebrow">{videos ? t('Fotografie e video') : t('Fotografie')}</p>
+      {videos && <p className="text-small text-muted">{t('I video si vedono e partono da soli quando si apre il prodotto. Nel catalogo compaiono le foto; senza foto, il primo fotogramma del primo video.')}</p>}
       <ul className="space-y-3">
         {images.map((im, index) => (
-          <li key={`${im.src}-${index}`} className="grid grid-cols-[64px_1fr] gap-3 border-b border-line pb-3">
-            <img src={asset(im.src)} alt="" className="h-16 w-16 object-contain" />
+          <li key={`${im.src}-${index}`} className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 border-b border-line pb-3">
+            <span className="relative block h-16 w-16">
+              <img src={asset(isVideo(im.src) ? posterOf(im.src) : im.src)} alt="" className="h-16 w-16 bg-well object-contain" />
+              {isVideo(im.src) && <span className="absolute bottom-0 left-0 bg-ink px-1 text-[0.625rem] font-medium uppercase tracking-[0.08em] text-bg">{t('Video')}</span>}
+            </span>
             <div className="min-w-0">
               {im.name && <p className="mb-1 break-words text-xs text-muted">{im.name}</p>}
-              <label className="text-small">
-                {t("Descrizione foto")}
-                <input
+              <Field
+                label={isVideo(im.src) ? t('Descrizione video') : t('Descrizione foto')}
+                busy={translating}
+                onTranslate={() => translate(language, {
+                  read: locale => altOf(im, locale),
+                  // Match by position and file: the photo may have been moved or removed while translating.
+                  fill: (locale, value, overwrite) => typeof value === 'string' && onChange(current => current.map((item, i) => (i === index && item.src === im.src && (overwrite || isBlank(altOf(item, locale))) ? withAlt(item, locale, value) : item))),
+                })}
+              >
+                {id => <input
+                  id={id}
                   className="shop-input w-full"
                   value={altOf(im, language) ?? ''}
                   onChange={(e) => onChange(current => current.map((item, i) => (i === index ? withAlt(item, language, e.target.value) : item)))}
-                  onKeyDown={(e) => onTranslateKey(e, language, {
-                    read: locale => altOf(im, locale),
-                    // Match by position and file: the photo may have been moved or removed while translating.
-                    fill: (locale, value) => typeof value === 'string' && onChange(current => current.map((item, i) => (i === index && item.src === im.src && isBlank(altOf(item, locale)) ? withAlt(item, locale, value) : item))),
-                  })}
-                />
-              </label>
-              <div className="mt-2 flex gap-4 text-small">
+                />}
+              </Field>
+              <div className="mt-2 flex flex-wrap gap-x-4 text-small">
                 <button
                   type="button"
-                  className="underline"
+                  className="min-h-11 underline"
                   disabled={index === 0}
                   onClick={() => onChange(current => {
                     const reordered = [...current]
@@ -207,20 +219,23 @@ function PhotoEditor({
                 </button>
                 <button
                   type="button"
-                  className="underline"
+                  className="min-h-11 underline"
                   onClick={() => onChange(current => current.filter((_, i) => i !== index))}
                 >
-                  {t("Rimuovi foto")}
+                  {isVideo(im.src) ? t('Rimuovi video') : t("Rimuovi foto")}
                 </button>
               </div>
             </div>
           </li>
         ))}
       </ul>
-      <div>
+      <div className="flex flex-wrap gap-3">
         <button className="btn" type="button" onClick={() => setPickerOpen(true)}>
           {t("Aggiungi foto")}
         </button>
+        {videos && <button className="btn" type="button" onClick={() => setVideoPickerOpen(true)}>
+          {t('Aggiungi video')}
+        </button>}
       </div>
       <PhotoPicker
         open={pickerOpen}
@@ -230,21 +245,13 @@ function PhotoEditor({
         onPick={(photo) => onChange(current => [...current, { ...photo }])}
         onClose={() => setPickerOpen(false)}
       />
-      <label className="shop-label">
-        {t("Carica nuove foto")}
-        <input
-          type="file"
-          multiple
-          className="shop-input"
-          accept={PHOTO_TYPES}
-          disabled={STATIC_PREVIEW}
-          onChange={(e) => {
-            const files = Array.from(e.target.files ?? [])
-            e.target.value = ''
-            if (files.length) void onUpload(files).then((uploaded) => uploaded.length > 0 && onChange(current => [...current, ...uploaded]))
-          }}
-        />
-      </label>
+      {videos && <VideoPicker
+        open={videoPickerOpen}
+        library={videos.library}
+        onUpload={videos.onUpload}
+        onPick={(video) => onChange(current => [...current, { ...video }])}
+        onClose={() => setVideoPickerOpen(false)}
+      />}
     </div>
   )
 }
@@ -342,6 +349,85 @@ function PhotoPicker({
     </dialog>
   )
 }
+/** Modal list of uploaded videos (first-frame previews); a new upload is picked as soon as it is converted. */
+function VideoPicker({ open, library, onPick, onUpload, onClose }: { open: boolean; library: Img[]; onPick: (video: Img) => void; onUpload: UploadVideo; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+  const [uploading, setUploading] = useState(false)
+  useEffect(() => {
+    const dialog = ref.current
+    if (!open || !dialog) return
+    dialog.showModal()
+    return () => {
+      if (dialog.open) dialog.close()
+    }
+  }, [open])
+  const pick = (video: Img) => {
+    onPick(video)
+    onClose()
+  }
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !uploading) onClose()
+      }}
+      className="m-auto max-h-[85dvh] w-[min(56rem,calc(100vw-2rem))] max-w-none border border-line bg-bg p-0 text-ink backdrop:bg-ink/30"
+    >
+      {open && (
+        <div className="flex max-h-[85dvh] flex-col">
+          <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-3 sm:px-6">
+            <h2 id={titleId} className="font-serif text-h3">{t('Scegli un video')}</h2>
+            <button type="button" onClick={onClose} className="min-h-11 px-1 text-small underline decoration-line underline-offset-4 hover:decoration-current">
+              {t("Chiudi")}
+            </button>
+          </div>
+          <div className="border-b border-line px-4 py-4 sm:px-6">
+            <label className="shop-label">
+              {t('Carica un nuovo video (MP4, MOV o WebM, fino a 3 minuti e 300 MB)')}
+              <input
+                type="file"
+                className="shop-input"
+                accept={VIDEO_TYPES}
+                disabled={uploading || STATIC_PREVIEW}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (!file) return
+                  setUploading(true)
+                  void onUpload(file).then((video) => {
+                    setUploading(false)
+                    if (video) pick(video)
+                  })
+                }}
+              />
+            </label>
+            {uploading && <p role="status" className="mt-3 text-small">{t('Caricamento e conversione del video… Può richiedere qualche minuto: lascia aperta questa pagina.')}</p>}
+          </div>
+          <div className="overflow-y-auto overscroll-contain px-4 py-6 sm:px-6">
+            {!library.length && <p className="text-small">{t('Nessun video caricato.')}</p>}
+            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {library.map((video) => (
+                <li key={video.src}>
+                  <button
+                    type="button"
+                    className="block w-full border border-transparent p-1 text-left hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                    onClick={() => pick(video)}
+                  >
+                    <img src={asset(posterOf(video.src))} alt="" loading="lazy" className="aspect-square w-full bg-well object-contain" />
+                    <span className="mt-2 block break-words text-xs">{photoLabel(video)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </dialog>
+  )
+}
 function PriceInput({
   value,
   onChange,
@@ -382,6 +468,7 @@ function ProductEditor({
   onSave,
   onDelete,
   onUpload,
+  videos,
 }: {
   model: Model
   /** Whole catalog, hidden included, for the similar-models picker. */
@@ -391,10 +478,11 @@ function ProductEditor({
   onSave: (model: Model) => void
   onDelete: () => void
   onUpload: UploadPhotos
+  videos: { library: Img[]; onUpload: UploadVideo }
 }) {
   const [draft, setDraft] = useState<Model>(() => structuredClone(model))
   const [language, setLanguage] = useState<Locale>('it')
-  const { status: translationStatus, handle: onTranslateKey } = useAutoTranslate()
+  const { status: translationStatus, busy: translating, translate } = useAutoTranslate()
   const text = modelText(draft, language)
   const setText = (patch: TextTranslation) => setDraft(d => withModelText(d, language, patch))
   // Functional updates throughout: translations land asynchronously and must not overwrite newer edits.
@@ -404,11 +492,11 @@ function ProductEditor({
     setDraft(d => ({ ...d, variants: d.variants?.map(item => (item.id === id ? withVariantText(item, language, patch) : item)) }))
   const modelField = (key: 'description' | 'specs' | 'quoteText'): TranslatableField => ({
     read: locale => modelText(draft, locale)[key],
-    fill: (locale, value) => setDraft(d => (isBlank(modelText(d, locale)[key]) ? withModelText(d, locale, textPatch(key, value)) : d)),
+    fill: (locale, value, overwrite) => setDraft(d => (overwrite || isBlank(modelText(d, locale)[key]) ? withModelText(d, locale, textPatch(key, value)) : d)),
   })
   const variantField = (variant: Variant, key: 'label' | 'specs'): TranslatableField => ({
     read: locale => variantText(variant, locale)[key],
-    fill: (locale, value) => setDraft(d => ({ ...d, variants: d.variants?.map(item => (item.id === variant.id && isBlank(variantText(item, locale)[key]) ? withVariantText(item, locale, textPatch(key, value)) : item)) })),
+    fill: (locale, value, overwrite) => setDraft(d => ({ ...d, variants: d.variants?.map(item => (item.id === variant.id && (overwrite || isBlank(variantText(item, locale)[key])) ? withVariantText(item, locale, textPatch(key, value)) : item)) })),
   })
   return (
     <form
@@ -462,6 +550,16 @@ function ProductEditor({
               />
               {t("Edizione limitata")}
             </label>
+            <label className="flex items-center gap-3 text-small">
+              <input
+                type="checkbox"
+                className="accent-ink"
+                checked={!!draft.oneOfOne}
+                onChange={(e) => setDraft(d => ({ ...d, oneOfOne: e.target.checked }))}
+              />
+              {t("Pezzo unico (1 of 1)")}
+            </label>
+            <p className="text-xs text-muted">{t("Mostra l’etichetta dorata «1 of 1» sul modello.")}</p>
             <label className="flex items-center gap-3 text-small">
               <input
                 type="checkbox"
@@ -557,34 +655,31 @@ function ProductEditor({
           </fieldset>
         </div>
         <TextLanguages language={language} onChange={setLanguage} product={draft} translationStatus={translationStatus} />
-        <label className="shop-label">
-          {t("Descrizione")}
-          <textarea
+        <Field label={t("Descrizione")} busy={translating} onTranslate={() => translate(language, modelField('description'))}>
+          {id => <textarea
+            id={id}
             className="shop-input min-h-32"
             value={text.description ?? ''}
             onChange={(e) => setText({ description: e.target.value })}
-            onKeyDown={(e) => onTranslateKey(e, language, modelField('description'))}
-          />
-        </label>
-        <label className="shop-label">
-          {t("Caratteristiche (una per riga)")}
-          <textarea
+          />}
+        </Field>
+        <Field label={t("Caratteristiche (una per riga)")} busy={translating} onTranslate={() => translate(language, modelField('specs'))}>
+          {id => <textarea
+            id={id}
             className="shop-input min-h-32"
             value={text.specs?.join('\n') ?? ''}
             onChange={(e) => setText({ specs: e.target.value.split('\n') })}
-            onKeyDown={(e) => onTranslateKey(e, language, modelField('specs'))}
-          />
-        </label>
+          />}
+        </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="shop-label">
-            {t("Citazione")}
-            <input
+          <Field label={t("Citazione")} busy={translating} onTranslate={() => translate(language, modelField('quoteText'))}>
+            {id => <input
+              id={id}
               className="shop-input"
               value={text.quoteText ?? ''}
               onChange={(e) => setText({ quoteText: e.target.value })}
-              onKeyDown={(e) => onTranslateKey(e, language, modelField('quoteText'))}
-            />
-          </label>
+            />}
+          </Field>
           <label className="shop-label">
             {t("Autore")}
             <input
@@ -594,22 +689,21 @@ function ProductEditor({
             />
           </label>
         </div>
-        <PhotoEditor language={language} images={draft.images} library={library} onUpload={onUpload} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, images: update(d.images) }))} />
+        <PhotoEditor language={language} images={draft.images} library={library} videos={videos} onUpload={onUpload} translate={translate} translating={translating} onChange={(update) => setDraft(d => ({ ...d, images: update(d.images) }))} />
         <div className="space-y-6 border-t border-line pt-6">
           <h3 className="text-h3">{t("Varianti / colori")}</h3>
           {draft.variants?.map((v, index) => (
-            <section key={v.id} className="space-y-4 border border-line p-5">
+            <section key={v.id} className="space-y-4 border border-line p-4 sm:p-5">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="shop-label">
-                  {t("Nome variante")}
-                  <input
+                <Field label={t("Nome variante")} busy={translating} onTranslate={() => translate(language, variantField(v, 'label'))}>
+                  {id => <input
+                    id={id}
                     className="shop-input"
                     required={language === 'it'}
                     value={language === 'it' ? v.label : v.translations?.[language]?.label ?? ''}
                     onChange={(e) => setVariantText(v.id, { label: e.target.value })}
-                    onKeyDown={(e) => onTranslateKey(e, language, variantField(v, 'label'))}
-                  />
-                </label>
+                  />}
+                </Field>
                 <PriceInput value={v.priceCents ?? 1} onChange={(priceCents) => setVariant(index, { priceCents })} />
                 <label className="shop-label">
                   {t("Codici variante")}
@@ -636,16 +730,15 @@ function ProductEditor({
                   />
                 </label>
               </div>
-              <label className="shop-label">
-                {t("Caratteristiche variante (una per riga; vuoto usa quelle del prodotto)")}
-                <textarea
+              <Field label={t("Caratteristiche variante (una per riga; vuoto usa quelle del prodotto)")} busy={translating} onTranslate={() => translate(language, variantField(v, 'specs'))}>
+                {id => <textarea
+                  id={id}
                   className="shop-input"
                   value={(language === 'it' ? v.specs : v.translations?.[language]?.specs)?.join('\n') ?? ''}
                   onChange={(e) => setVariantText(v.id, { specs: language === 'it' && !e.target.value ? undefined : e.target.value.split('\n') })}
-                  onKeyDown={(e) => onTranslateKey(e, language, variantField(v, 'specs'))}
-                />
-              </label>
-              <PhotoEditor language={language} images={v.images} library={library} onUpload={onUpload} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, variants: d.variants?.map(item => (item.id === v.id ? { ...item, images: update(item.images) } : item)) }))} />
+                />}
+              </Field>
+              <PhotoEditor language={language} images={v.images} library={library} videos={videos} onUpload={onUpload} translate={translate} translating={translating} onChange={(update) => setDraft(d => ({ ...d, variants: d.variants?.map(item => (item.id === v.id ? { ...item, images: update(item.images) } : item)) }))} />
               <button
                 type="button"
                 className="underline text-small"
@@ -795,12 +888,12 @@ function PerfumeEditor({
   // Selling needs a real price; the server rejects the same case.
   const priceMissing = draft.availability === 'buy' && !((draft.priceCents ?? 0) > 0)
   const [language, setLanguage] = useState<Locale>('it')
-  const { status: translationStatus, handle: onTranslateKey } = useAutoTranslate()
+  const { status: translationStatus, busy: translating, translate } = useAutoTranslate()
   const text = perfumeText(draft, language)
   const setText = (patch: TextTranslation) => setDraft(d => withPerfumeText(d, language, patch))
   const perfumeField = (key: 'paragraphs' | 'specs' | 'quoteText'): TranslatableField => ({
     read: locale => perfumeText(draft, locale)[key],
-    fill: (locale, value) => setDraft(d => (isBlank(perfumeText(d, locale)[key]) ? withPerfumeText(d, locale, textPatch(key, value)) : d)),
+    fill: (locale, value, overwrite) => setDraft(d => (overwrite || isBlank(perfumeText(d, locale)[key]) ? withPerfumeText(d, locale, textPatch(key, value)) : d)),
   })
   return (
     <form
@@ -851,24 +944,22 @@ function PerfumeEditor({
           )}
         </AvailabilityTiles>
         <TextLanguages language={language} onChange={setLanguage} product={draft} translationStatus={translationStatus} />
-        <label className="shop-label">
-          {t("Descrizione (paragrafi separati da una riga vuota)")}
-          <textarea
+        <Field label={t("Descrizione (paragrafi separati da una riga vuota)")} busy={translating} onTranslate={() => translate(language, perfumeField('paragraphs'))}>
+          {id => <textarea
+            id={id}
             className="shop-input min-h-48"
             value={text.paragraphs?.join('\n\n') ?? ''}
             onChange={(event) => setText({ paragraphs: event.target.value.split('\n\n') })}
-            onKeyDown={(event) => onTranslateKey(event, language, perfumeField('paragraphs'))}
-          />
-        </label>
-        <label className="shop-label">
-          {t("Caratteristiche (una per riga)")}
-          <textarea
+          />}
+        </Field>
+        <Field label={t("Caratteristiche (una per riga)")} busy={translating} onTranslate={() => translate(language, perfumeField('specs'))}>
+          {id => <textarea
+            id={id}
             className="shop-input"
             value={text.specs?.join('\n') ?? ''}
             onChange={(event) => setText({ specs: event.target.value.split('\n') })}
-            onKeyDown={(event) => onTranslateKey(event, language, perfumeField('specs'))}
-          />
-        </label>
+          />}
+        </Field>
         <label className="shop-label">
           {t("Ingredienti (uno per riga)")}
           <textarea
@@ -877,15 +968,14 @@ function PerfumeEditor({
             onChange={(event) => setDraft({ ...draft, ingredients: event.target.value.split('\n') })}
           />
         </label>
-        <label className="shop-label">
-          {t("Citazione")}
-          <input
+        <Field label={t("Citazione")} busy={translating} onTranslate={() => translate(language, perfumeField('quoteText'))}>
+          {id => <input
+            id={id}
             className="shop-input"
             value={text.quoteText ?? ''}
             onChange={(event) => setText({ quoteText: event.target.value })}
-            onKeyDown={(event) => onTranslateKey(event, language, perfumeField('quoteText'))}
-          />
-        </label>
+          />}
+        </Field>
         <label className="shop-label">
           {t("Autore")}
           <input
@@ -894,7 +984,7 @@ function PerfumeEditor({
             onChange={(event) => setDraft({ ...draft, quote: { ...draft.quote, author: event.target.value } })}
           />
         </label>
-        <PhotoEditor language={language} images={draft.images} library={library} onUpload={onUpload} onTranslateKey={onTranslateKey} onChange={(update) => setDraft(d => ({ ...d, images: update(d.images) }))} />
+        <PhotoEditor language={language} images={draft.images} library={library} onUpload={onUpload} translate={translate} translating={translating} onChange={(update) => setDraft(d => ({ ...d, images: update(d.images) }))} />
         <div className="flex gap-5">
           <button className="btn" type="submit" disabled={STATIC_PREVIEW}>
             {t("Salva profumo")}
@@ -955,7 +1045,7 @@ function sampleOrder(models: Model[], status: FulfillmentStatus): PublicOrder {
       codes: model?.codes ?? [],
       quantity: 1,
       priceCents,
-      image: model?.images[0] ?? null,
+      image: stillImages(model?.images ?? [])[0] ?? null,
       certificate: { firstName: 'Mario', lastName: 'Rossi', email: 'mario.rossi@example.com' },
       engraving: 'Per sempre',
     }],
@@ -1076,7 +1166,7 @@ export default function Admin() {
   const [newProduct, setNewProduct] = useState<Model | null>(null)
   const [selectedPerfume, setSelectedPerfume] = useState<string | null>(null)
   const [newPerfume, setNewPerfume] = useState<Profumo | null>(null)
-  const [tab, setTab] = useState<'products' | 'perfume' | 'photos' | 'orders' | 'email'>('products')
+  const [tab, setTab] = useState<'products' | 'perfume' | 'photos' | 'texts' | 'orders' | 'email'>('products')
   const [orders, setOrders] = useState<Order[]>([])
   // Defaults until the server copy loads; the static preview keeps them, so its preview still renders.
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplates>(DEFAULT_EMAIL_TEMPLATES)
@@ -1093,13 +1183,13 @@ export default function Admin() {
   // Uploads only add library photos, so open editors keep their drafts; any other catalog change remounts them.
   const uploadRevision = useRef<number | null>(null)
   const [editorRevision, setEditorRevision] = useState(catalog.revision)
-  const { status: heroTranslationStatus, handle: onHeroTranslateKey } = useAutoTranslate()
+  const { status: heroTranslationStatus, busy: heroTranslating, translate: translateHero } = useAutoTranslate()
   const heroAltField: TranslatableField = {
     read: language => (language === 'it' ? heroAlt : heroTranslations?.[language]),
     // Alt text is a single line, so the translation is always a string.
-    fill: (language, value) => typeof value === 'string' && (language === 'it'
-      ? setHeroAlt(current => (current.trim() ? current : value))
-      : setHeroTranslations(current => (isBlank(current?.[language]) ? { ...current, [language]: value } : current))),
+    fill: (language, value, overwrite) => typeof value === 'string' && (language === 'it'
+      ? setHeroAlt(current => (overwrite || !current.trim() ? value : current))
+      : setHeroTranslations(current => (overwrite || isBlank(current?.[language]) ? { ...current, [language]: value } : current))),
   }
   useEffect(() => {
     if (STATIC_PREVIEW) return
@@ -1116,13 +1206,14 @@ export default function Admin() {
   useEffect(() => {
     if (catalog.revision !== uploadRevision.current) setEditorRevision(catalog.revision)
   }, [catalog.revision])
+  // Product media lists mix photos and videos; every photo slot (hero, site photos, perfumes) takes photos only.
   const library = [
     ...new Map(
       [
         ...catalog.photos,
         ...catalog.siteImages,
         ...catalog.perfumes.flatMap((p) => p.images),
-        ...catalog.models.flatMap((m) => [...m.images, ...(m.variants ?? []).flatMap((v) => v.images)]),
+        ...catalog.models.flatMap((m) => [...m.images, ...(m.variants ?? []).flatMap((v) => v.images)]).filter((im) => !isVideo(im.src)),
       ].map((im) => [im.src, im]),
     ).values(),
   ]
@@ -1136,8 +1227,8 @@ export default function Admin() {
     {
       label: 'Modelli',
       entries: heroGroup(catalog.models.flatMap((m) => [
-        ...m.images.map((image) => ({ image, label: `${m.name} · ${photoLabel(image)}` })),
-        ...(m.variants ?? []).flatMap((v) => v.images.map((image) => ({ image, label: `${m.name} · ${v.label} · ${photoLabel(image)}` }))),
+        ...m.images.filter((image) => !isVideo(image.src)).map((image) => ({ image, label: `${m.name} · ${photoLabel(image)}` })),
+        ...(m.variants ?? []).flatMap((v) => v.images.filter((image) => !isVideo(image.src)).map((image) => ({ image, label: `${m.name} · ${v.label} · ${photoLabel(image)}` }))),
       ])),
     },
     {
@@ -1184,6 +1275,20 @@ export default function Admin() {
     }, 'Foto caricate.')
     return images
   }
+  async function uploadVideo(file: File): Promise<Img | null> {
+    let video: Img | null = null
+    await perform(async () => {
+      const form = new FormData()
+      form.append('video', file)
+      form.append('revision', String(catalog.revision))
+      const result = await api<{ catalog: Catalog; video: Img }>('/admin/videos', 'POST', form)
+      uploadRevision.current = result.catalog.revision
+      setCatalog(result.catalog)
+      video = result.video
+    }, 'Video caricato.')
+    return video
+  }
+  const videoLibrary = { library: catalog.videos, onUpload: uploadVideo }
   // Every photo the site shows, once per file, with where it appears; the hero is tagged rather than listed as a place.
   const inUse = new Map<string, { image: Img; places: string[] }>()
   const use = (image: Img, place?: string) => {
@@ -1194,8 +1299,8 @@ export default function Admin() {
   // Hero and perfume slots get their places from the live hero and perfumes below, not from the seed.
   catalog.siteImages.forEach((slot) => use(catalog.imageOverrides[slot.src] ?? slot, SITE_SECTIONS[slot.src] && t(SITE_SECTIONS[slot.src])))
   catalog.models.forEach((m) => {
-    m.images.forEach((image) => use(image, m.name))
-    m.variants?.forEach((v) => v.images.forEach((image) => use(image, `${m.name} · ${v.label}`)))
+    m.images.forEach((image) => !isVideo(image.src) && use(image, m.name))
+    m.variants?.forEach((v) => v.images.forEach((image) => !isVideo(image.src) && use(image, `${m.name} · ${v.label}`)))
   })
   catalog.perfumes.forEach((p) => p.images.forEach((image) => use(image, p.name)))
   const photoNeedle = photoQuery.trim().toLowerCase()
@@ -1279,12 +1384,13 @@ export default function Admin() {
       )}
       {authenticated && (
         <>
-          <nav aria-label={t("Amministrazione")} className="mb-10 flex flex-wrap gap-6 border-b border-line pb-5">
+          <nav aria-label={t("Amministrazione")} className="-mx-[var(--gutter)] mb-10 flex gap-x-6 overflow-x-auto border-b border-line px-[var(--gutter)] [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
             {(
               [
                 ['products', t('Prodotti')],
                 ['perfume', t('Profumi')],
                 ['photos', t('Fotografie')],
+                ['texts', t('Testi del sito')],
                 ['orders', t('Ordini')],
                 ['email', t('Email')],
               ] as const
@@ -1294,7 +1400,7 @@ export default function Admin() {
                 key={key}
                 disabled={busy}
                 aria-current={tab === key ? 'page' : undefined}
-                className={`text-small ${tab === key ? 'underline underline-offset-8' : 'text-muted'}`}
+                className={`min-h-12 shrink-0 whitespace-nowrap border-b-2 text-small ${tab === key ? 'border-ink text-ink' : 'border-transparent text-muted hover:text-ink'}`}
                 onClick={() => {
                   setTab(key)
                   if (key === 'orders' && !STATIC_PREVIEW)
@@ -1315,7 +1421,7 @@ export default function Admin() {
             ))}
             <button
               type="button"
-              className="ml-auto underline text-small"
+              className="ml-auto min-h-12 shrink-0 whitespace-nowrap underline text-small"
               disabled={busy || STATIC_PREVIEW}
               onClick={() =>
                 void perform(async () => {
@@ -1430,6 +1536,7 @@ export default function Admin() {
                       availability: 'no-buy',
                       gender: 'unisex',
                       limitedEdition: false,
+                      oneOfOne: false,
                       piecesRemaining: null,
                       isNew: false,
                       engravable: false,
@@ -1441,12 +1548,12 @@ export default function Admin() {
                 >
                   {t("Aggiungi prodotto")}
                 </button>
-                <ul className="max-h-[70vh] overflow-y-auto">
+                <ul className="max-h-[40vh] overflow-y-auto overscroll-contain border-y border-line md:max-h-[70vh] md:border-y-0">
                   {catalog.models.map((m) => (
                     <li key={m.id}>
                       <button
                         type="button"
-                        className={`w-full border-b border-line py-4 text-left ${selected === m.id ? 'font-medium' : ''}`}
+                        className={`flex min-h-14 w-full items-center gap-3 border-b border-line py-3 text-left ${selected === m.id ? 'font-medium' : ''}`}
                         disabled={busy}
                         onClick={() => {
                           if (
@@ -1458,11 +1565,15 @@ export default function Admin() {
                           setNewProduct(null)
                         }}
                       >
-                        <span className="block font-serif text-xl">{m.name}</span>
-                        <span className="text-xs text-muted">
-                          {t(AVAILABILITY_COPY[m.availability ?? 'no-buy'].label)}
-                          {m.isNew && ` · ${t('Nuovo')}`}
-                          {m.limitedEdition && ` · ${t('Edizione limitata')}`}
+                        {stillImages(m.images)[0] ? <img src={asset(stillImages(m.images)[0].src.replace('img/models/', 'img/cards/'))} alt="" loading="lazy" className="h-12 w-12 shrink-0 bg-well object-contain" /> : <span className="h-12 w-12 shrink-0 bg-well" />}
+                        <span className="min-w-0">
+                          <span className="block font-serif text-xl leading-tight">{m.name}</span>
+                          <span className="text-xs text-muted">
+                            {t(AVAILABILITY_COPY[m.availability ?? 'no-buy'].label)}
+                            {m.isNew && ` · ${t('Nuovo')}`}
+                            {m.limitedEdition && ` · ${t('Edizione limitata')}`}
+                            {m.oneOfOne && ' · 1 of 1'}
+                          </span>
                         </span>
                       </button>
                     </li>
@@ -1478,6 +1589,7 @@ export default function Admin() {
                     library={library}
                     busy={busy}
                     onUpload={uploadPhotos}
+                    videos={videoLibrary}
                     onSave={(product) =>
                       void perform(async () => {
                         setCatalog(
@@ -1604,14 +1716,12 @@ export default function Admin() {
                     ))}
                   </select>
                 </label>
-                <label className="shop-label">
-                  {t("Descrizione")}
-                  <input className="shop-input" required value={heroAlt} onChange={(e) => setHeroAlt(e.target.value)} onKeyDown={(e) => onHeroTranslateKey(e, 'it', heroAltField)} />
-                </label>
-                {LOCALES.filter(language => language !== 'it').map(language => <label key={language} className="shop-label">
-                  {LANGUAGE_NAMES[language]} · {t('Descrizione foto')}
-                  <input className="shop-input" maxLength={500} value={heroTranslations?.[language] ?? ''} onChange={event => setHeroTranslations(current => ({ ...current, [language]: event.target.value }))} onKeyDown={event => onHeroTranslateKey(event, language, heroAltField)} />
-                </label>)}
+                <Field label={t("Descrizione")} busy={heroTranslating} onTranslate={() => translateHero('it', heroAltField)}>
+                  {id => <input id={id} className="shop-input" required value={heroAlt} onChange={(e) => setHeroAlt(e.target.value)} />}
+                </Field>
+                {LOCALES.filter(language => language !== 'it').map(language => <Field key={language} label={`${LANGUAGE_NAMES[language]} · ${t('Descrizione foto')}`} busy={heroTranslating} onTranslate={() => translateHero(language, heroAltField)}>
+                  {id => <input id={id} className="shop-input" maxLength={500} value={heroTranslations?.[language] ?? ''} onChange={event => setHeroTranslations(current => ({ ...current, [language]: event.target.value }))} />}
+                </Field>)}
                 <AutoTranslateHint status={heroTranslationStatus} />
                 <button type="submit" className="btn" disabled={busy || STATIC_PREVIEW}>
                   {t("Salva foto principale")}
@@ -1762,7 +1872,40 @@ export default function Admin() {
                   ))}
                 </ul>
               </section>
+              <section className="border-t border-line pt-8">
+                <h2 className="text-h2">{t('Video caricati')}</h2>
+                <p className="mt-3 text-small text-muted">{t('Aggiungi i video a un orologio dalla sua scheda in Prodotti. Qui puoi eliminare quelli che non usi più.')}</p>
+                {!catalog.videos.length && <p className="mt-6 text-small">{t('Nessun video caricato.')}</p>}
+                <ul className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                  {catalog.videos.map((video) => (
+                    <li key={video.src}>
+                      <video src={asset(video.src)} poster={asset(posterOf(video.src))} controls muted playsInline preload="none" className="h-48 w-full bg-well object-contain" />
+                      <p className="mt-3 break-words text-small">{photoLabel(video)}</p>
+                      <button
+                        type="button"
+                        className="mt-1 min-h-11 underline text-small"
+                        disabled={busy || STATIC_PREVIEW}
+                        onClick={() => {
+                          if (window.confirm(t('Rimuovere il video dalla libreria?')))
+                            void perform(async () =>
+                              setCatalog(await api<Catalog>(`/admin/videos/${video.src.slice('uploads/'.length, -'.mp4'.length)}`, 'DELETE', { revision: catalog.revision })), 'Video rimosso dalla libreria.')
+                        }}
+                      >
+                        {t('Elimina video')}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             </div>
+          )}
+          {tab === 'texts' && (
+            <SiteTextsEditor
+              key={editorRevision}
+              texts={catalog.texts}
+              busy={busy}
+              onSave={(texts) => void perform(async () => setCatalog(await api<Catalog>('/admin/texts', 'PUT', { texts, revision: catalog.revision })), 'Testi salvati e pubblicati.')}
+            />
           )}
           {tab === 'orders' && (
             <section>

@@ -15,6 +15,9 @@ export interface Img {
   altTranslations?: Partial<Record<TranslationLocale, string>>
   /** Original upload file name (without extension), shown only in the admin panel. */
   name?: string
+  /** Pixel size recorded for uploaded videos (`uploads/<uuid>.mp4`); bundled photos use public/img/manifest.json. */
+  width?: number
+  height?: number
 }
 
 export interface Quote {
@@ -58,6 +61,8 @@ export interface Model {
   /** Uomo, Donna or Unisex; seeded from the old site's Uomo/Donna menu. Default unisex. */
   gender?: Gender
   limitedEdition?: boolean
+  /** A single piece: shows a gold "1 of 1" label; set in the admin panel. */
+  oneOfOne?: boolean
   /** Pieces still available for a limited edition; null/undefined = not shown, 0 = Esaurito and not purchasable. */
   piecesRemaining?: number | null
   /** Shown with a "Nuovo" tag and listed first; set in the admin panel. */

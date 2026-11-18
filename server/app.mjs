@@ -21,6 +21,9 @@ import {
 import { LOCALES, TRANSLATION_LOCALES, seedImageTranslations, seedModelTranslations, seedPerfumeTranslations } from '../src/data/localization.ts'
 import { renderCustomerEmail, renderOwnerEmail } from '../src/lib/orderEmail.ts'
 import { createTranslator } from './translate.mjs'
+import { transcodeVideo } from './video.mjs'
+import { stillImages } from '../src/data/media.ts'
+import { EDITABLE_PATHS } from '../src/data/siteTexts.ts'
 import { createMailer } from './mail.mjs'
 
 const digest = (value) => createHash('sha256').update(value).digest('hex')
@@ -59,7 +62,12 @@ const image = z.object({
   alt: text.max(500),
   altTranslations: z.partialRecord(z.enum(TRANSLATION_LOCALES), text.max(500)).optional(),
   name: text.max(200).optional(),
+  // Pixel size, recorded for uploaded videos so the product dialog reserves the right frame.
+  width: z.number().int().min(1).max(10000).optional(),
+  height: z.number().int().min(1).max(10000).optional(),
 })
+// Watches (and their variants) may also show uploaded videos; every other slot takes photos only.
+const media = image.extend({ src: z.union([image.shape.src, z.string().regex(/^uploads\/[a-f0-9-]+\.mp4$/)]) })
 const variantSchema = z.object({
   id,
   label: text.min(1).max(120),
@@ -69,7 +77,7 @@ const variantSchema = z.object({
     .max(2),
   codes: z.array(text.max(80)).max(20),
   priceCents: cents,
-  images: z.array(image).max(30),
+  images: z.array(media).max(30),
   specs: z.array(text).max(50).optional(),
   translations,
 })
@@ -81,6 +89,7 @@ const modelSchema = z.object({
   availability: z.enum(['buy', 'no-buy', 'out-of-stock', 'hidden']),
   gender: z.enum(GENDERS).default('unisex'),
   limitedEdition: z.boolean().optional(),
+  oneOfOne: z.boolean().optional(),
   piecesRemaining: z.number().int().min(0).max(9999).nullable().optional(),
   isNew: z.boolean().optional(),
   engravable: z.boolean().optional(),
@@ -88,7 +97,7 @@ const modelSchema = z.object({
   description: text.optional(),
   quote: z.object({ text, author: text.optional() }).optional(),
   specs: z.array(text).max(50),
-  images: z.array(image).max(30),
+  images: z.array(media).max(30),
   variants: z.array(variantSchema).max(20).optional(),
   translations,
 })
@@ -188,6 +197,8 @@ export function createApp(options = {}) {
   const env = options.env ?? process.env
   const root = resolve(import.meta.dirname, '..')
   const dataDir = resolve(options.dataDir ?? env.DATA_DIR ?? join(root, 'data'))
+  // Injectable for tests; production runs ffmpeg.
+  const transcode = options.transcodeVideo ?? transcodeVideo
   mkdirSync(join(dataDir, 'uploads'), { recursive: true })
   const db = new DatabaseSync(join(dataDir, 'shop.sqlite'))
   db.exec(
@@ -331,7 +342,8 @@ export function createApp(options = {}) {
   }
   const catalog = () => {
     const row = db.prepare('SELECT * FROM catalog WHERE id=1').get()
-    return { ...JSON.parse(row.body), revision: row.revision }
+    // `videos` (upload library) and `texts` (owner edits to section copy) arrived after catalogVersion 10; absent means empty.
+    return { videos: [], texts: {}, ...JSON.parse(row.body), revision: row.revision }
   }
   const save = (body, revision) => {
     delete body.revision
@@ -464,7 +476,7 @@ export function createApp(options = {}) {
   const revision = (req) => z.number().int().positive().parse(req.body.revision)
   const validImage = (im) => {
     if (!existsSync(join(im.src.startsWith('uploads/') ? dataDir : join(root, 'public'), im.src)))
-      fail(400, 'Foto non trovata. Carica una foto dalla libreria.')
+      fail(400, im.src.endsWith('.mp4') ? 'Video non trovato. Caricalo dalla libreria.' : 'Foto non trovata. Carica una foto dalla libreria.')
     return im
   }
   app.put('/api/admin/products/:id', admin, csrf, (req, res) => {
@@ -509,6 +521,20 @@ export function createApp(options = {}) {
     const featured = [...new Set(ids)].filter((f) => known.has(f))
     if (featured.length > 4) fail(400, 'Massimo 4 orologi in evidenza.')
     body.featured = featured
+    res.json(save(body, revision(req)))
+  })
+  // Owner rewrites of section copy, per content path and language; blank values fall back to the bundled text.
+  const textsRequest = z.record(z.string().max(120), z.partialRecord(z.enum(LOCALES), z.string().trim().max(4000)))
+  app.put('/api/admin/texts', admin, csrf, (req, res) => {
+    const submitted = textsRequest.parse(req.body.texts)
+    const texts = {}
+    for (const [path, values] of Object.entries(submitted)) {
+      if (!EDITABLE_PATHS.has(path)) fail(400, 'Testo del sito non valido.')
+      const kept = Object.fromEntries(Object.entries(values).filter(([, value]) => value))
+      if (Object.keys(kept).length) texts[path] = kept
+    }
+    const body = catalog()
+    body.texts = texts
     res.json(save(body, revision(req)))
   })
   app.put('/api/admin/hero', admin, csrf, (req, res) => {
@@ -632,6 +658,58 @@ export function createApp(options = {}) {
     body.photos = body.photos.filter((im) => im.src !== src)
     res.json(save(body, revision(req)))
     // Keep the immutable file for in-flight customers and order history; prune offline after backup.
+  })
+  // Videos stream to disk (they are far larger than photos) and are transcoded one at a time,
+  // so a single small VPS core is never shared between two ffmpeg runs.
+  mkdirSync(join(dataDir, 'tmp'), { recursive: true })
+  const videoUpload = multer({
+    storage: multer.diskStorage({ destination: join(dataDir, 'tmp'), filename: (_req, _file, done) => done(null, randomUUID()) }),
+    defParamCharset: 'utf8',
+    limits: { fileSize: 300 * 1024 * 1024, files: 1 },
+  })
+  let transcoding = Promise.resolve()
+  app.post('/api/admin/videos', admin, csrf, videoUpload.single('video'), async (req, res) => {
+    const input = req.file?.path
+    try {
+      if (!input) fail(400, 'Seleziona un video MP4, MOV o WebM.')
+      const rev = Number(req.body.revision)
+      z.number().int().positive().parse(rev)
+      const alt = text.max(500).parse(req.body.alt ?? '')
+      const id = randomUUID()
+      const output = join(dataDir, 'uploads', `${id}.mp4`)
+      const poster = join(dataDir, 'uploads', `${id}.webp`)
+      const job = transcoding.then(() => transcode(input, output, poster))
+      transcoding = job.catch(() => {})
+      let size
+      try {
+        size = await job
+      } catch {
+        rmSync(output, { force: true })
+        rmSync(poster, { force: true })
+        fail(400, 'Video non valido o più lungo di 3 minuti.')
+      }
+      const name = req.file.originalname.replace(/\.[^.]*$/, '').trim().slice(0, 200)
+      const video = { src: `uploads/${id}.mp4`, alt, name, width: size.width, height: size.height }
+      const body = catalog()
+      body.videos = [...(body.videos ?? []), video]
+      try {
+        res.json({ catalog: save(body, rev), video })
+      } catch (error) {
+        rmSync(output, { force: true })
+        rmSync(poster, { force: true })
+        throw error
+      }
+    } finally {
+      if (input) rmSync(input, { force: true })
+    }
+  })
+  app.delete('/api/admin/videos/:id', admin, csrf, (req, res) => {
+    const src = `uploads/${z.string().uuid().parse(req.params.id)}.mp4`
+    const body = catalog()
+    if (body.models.some((m) => [...m.images, ...(m.variants ?? []).flatMap((v) => v.images)].some((im) => im.src === src)))
+      fail(409, 'Video in uso. Rimuovilo prima dai prodotti.')
+    body.videos = (body.videos ?? []).filter((v) => v.src !== src)
+    res.json(save(body, revision(req)))
   })
   const orderFields =
     'id, paypal_id, status, total, items, receipt, created, certificate, certificate_code, public_token, fulfillment, history, customer_email'
@@ -871,7 +949,8 @@ export function createApp(options = {}) {
         name: `${m.name}${v ? ` · ${v.label}` : ''}`,
         priceCents: v?.priceCents ?? m.priceCents,
         codes: v?.codes ?? m.codes,
-        image: photo(v?.images[0] ?? m.images[0]),
+        // Orders and emails show a still: the first photo, else the first video's opening frame.
+        image: photo(stillImages(v?.images ?? m.images)[0] ?? stillImages(m.images)[0]),
       }
     })
     // Pieces are per model, so variants of one limited edition share the count.

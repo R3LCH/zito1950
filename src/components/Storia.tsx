@@ -56,8 +56,8 @@ export default function Storia() {
       moreLabel={storia.more}
       preview={({ header, toggle }) => (
         <div className="grid gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:items-center md:gap-x-16 lg:gap-x-24">
-          {/* Portrait archive poster shown whole; capped near its 533px native width so it stays sharp. */}
-          <figure className="mx-auto w-full max-w-[460px]">
+          {/* Portrait archive poster shown whole: about 60% of a phone width so the intro stays in view; 460px cap near its 533px native width. */}
+          <figure className="mx-auto w-[min(60vw,16rem)] sm:w-full sm:max-w-[360px] md:max-w-[460px]">
             <Picture
               src={image.src}
               alt={image.alt}

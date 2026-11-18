@@ -9,7 +9,7 @@ import sharp from 'sharp'
 import { createApp } from './app.mjs'
 import { hashPassword } from './password.mjs'
 
-async function fixture(t, paypal = false, legacyBody = null) {
+async function fixture(t, paypal = false, legacyBody = null, transcodeVideo = undefined) {
   const dir = mkdtempSync(join(tmpdir(), 'zito-test-'))
   const remoteOrders = new Map()
   const seen = { captures: 0, amounts: [], mismatch: false, lostCapture: false, declineCapture: false }
@@ -84,7 +84,7 @@ async function fixture(t, paypal = false, legacyBody = null) {
       return { skipped: false }
     },
   }
-  const application = createApp({ env, dataDir: dir, fetch: transport, translateFetch, mailer })
+  const application = createApp({ env, dataDir: dir, fetch: transport, translateFetch, mailer, transcodeVideo })
   const server = application.app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const base = `http://127.0.0.1:${server.address().port}`
@@ -213,6 +213,74 @@ test('catalog mutations persist, reject stale revisions, and protect used upload
   invalid.append('photo', new Blob(['<svg><script>alert(1)</script></svg>']), 'evil.svg')
   invalid.append('revision', String(hero.body.revision))
   assert.equal((await admin.request('/admin/photos', 'POST', invalid)).status, 400)
+})
+
+test('product videos: upload, watch-only slots, still images in orders, protected deletion', async (t) => {
+  // Real ffmpeg runs only in server/video.mjs; here the conversion writes stand-in files.
+  const { readFileSync, writeFileSync } = await import('node:fs')
+  const transcode = async (input, output, poster) => {
+    if (readFileSync(input, 'utf8') === 'broken') throw new Error('not a video')
+    writeFileSync(output, 'mp4')
+    await sharp({ create: { width: 8, height: 6, channels: 3, background: '#000' } }).webp().toFile(poster)
+    return { width: 1280, height: 720 }
+  }
+  const { admin, buyer, application } = await fixture(t, true, null, transcode)
+  let catalog = (await admin.request('/catalog')).body
+  assert.deepEqual(catalog.videos, [])
+  const upload = (content, revision) => {
+    const form = new FormData()
+    form.append('video', new Blob([content], { type: 'video/mp4' }), 'giro del quadrante.mov')
+    form.append('revision', String(revision))
+    return admin.request('/admin/videos', 'POST', form)
+  }
+  assert.equal((await upload('broken', catalog.revision)).status, 400)
+  const uploaded = await upload('clip', catalog.revision)
+  assert.equal(uploaded.status, 200, JSON.stringify(uploaded.body))
+  const { video } = uploaded.body
+  assert.match(video.src, /^uploads\/[a-f0-9-]+\.mp4$/)
+  assert.deepEqual([video.name, video.width, video.height], ['giro del quadrante', 1280, 720])
+  catalog = uploaded.body.catalog
+  assert.deepEqual(catalog.videos, [video])
+  // A video may lead a watch's (and a variant's) media; the hero and perfume slots take photos only.
+  const product = catalog.models.find((m) => m.id === 'n7')
+  const variants = product.variants.map((v) => ({ ...v, images: [video, ...v.images] }))
+  const saved = await admin.request('/admin/products/n7', 'PUT', { product: { ...product, availability: 'buy', images: [video, ...product.images], variants }, revision: catalog.revision })
+  assert.equal(saved.status, 200, JSON.stringify(saved.body))
+  assert.equal((await admin.request('/admin/hero', 'PUT', { image: video, revision: saved.body.revision })).status, 400)
+  const perfume = saved.body.perfumes[0]
+  assert.equal((await admin.request(`/admin/perfumes/${perfume.id}`, 'PUT', { product: { ...perfume, images: [video] }, revision: saved.body.revision })).status, 400)
+  // Orders keep a still: the variant's first photo, never the video file.
+  const items = [{ modelId: 'n7', variantId: variants[0].id, quantity: 1 }]
+  const order = await buyer.request('/payments/orders', 'POST', { items, requestId: randomUUID() })
+  assert.equal(order.status, 200, JSON.stringify(order.body))
+  const [line] = JSON.parse(application.db.prepare('SELECT items FROM orders WHERE paypal_id=?').get(order.body.id).items)
+  assert.equal(line.image.src, variants[0].images[1].src)
+  const fileId = video.src.slice('uploads/'.length, -'.mp4'.length)
+  assert.equal((await admin.request(`/admin/videos/${fileId}`, 'DELETE', { revision: saved.body.revision })).status, 409)
+})
+
+test('site texts: only editable paths, blanks dropped, owner edit wins per language', async (t) => {
+  const { admin } = await fixture(t)
+  const { withTexts } = await import('../src/data/siteTexts.ts')
+  const { storia } = await import('../src/data/content.ts')
+  let catalog = (await admin.request('/catalog')).body
+  assert.deepEqual(catalog.texts, {})
+  assert.equal((await admin.request('/admin/texts', 'PUT', { texts: { 'contatti.email': { it: 'x@example.com' } }, revision: catalog.revision })).status, 400)
+  assert.equal((await admin.request('/admin/texts', 'PUT', { texts: { 'site.hero.image.src': { it: 'img/x.jpg' } }, revision: catalog.revision })).status, 400)
+  const saved = await admin.request('/admin/texts', 'PUT', {
+    texts: { 'storia.title': { it: 'Una storia di famiglia', en: 'A family story', de: '  ' }, 'storia.more': { it: '' } },
+    revision: catalog.revision,
+  })
+  assert.equal(saved.status, 200, JSON.stringify(saved.body))
+  assert.deepEqual(saved.body.texts, { 'storia.title': { it: 'Una storia di famiglia', en: 'A family story' } })
+  const { texts } = saved.body
+  assert.equal(withTexts({ storia }, texts, 'en').storia.title, 'A family story')
+  // German has no owner text: the edited Italian replaces the now-stale bundled translation.
+  assert.equal(withTexts({ storia }, texts, 'de').storia.title, 'Una storia di famiglia')
+  assert.equal(withTexts({ storia }, texts, 'it').storia.more, storia.more)
+  assert.equal(storia.title, 'Non ereditiamo un mestiere. Continuiamo un tempo.')
+  catalog = (await admin.request('/catalog')).body
+  assert.equal((await admin.request('/admin/texts', 'PUT', { texts: {}, revision: catalog.revision - 1 })).status, 409)
 })
 
 test('multilingual products retain shared identity, reject unsupported locales and fall back to Italian', async (t) => {

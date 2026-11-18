@@ -6,6 +6,7 @@ import { ENGRAVING_MAX_CHARS, ENGRAVING_MAX_WORDS, engravingWords, type Certific
 import { availabilityOf } from '../lib/catalogFilters'
 import Picture from './Picture'
 import { asset } from '../lib/asset'
+import { stillImages } from '../data/media'
 
 const CERTIFICATE_IMAGES = [
   { src: 'img/certificato/carta-fronte.jpg', alt: 'Certificato di proprietà ZITO1950®, fronte' },
@@ -334,7 +335,7 @@ function AddedPopup() {
   const perfume = added.kind === 'perfume' ? catalog.perfumes.find((p) => p.id === added.modelId) : null
   const model = perfume ? null : catalog.models.find((m) => m.id === added.modelId)
   const variant = added.variantId ? model?.variants?.find((v) => v.id === added.variantId) : null
-  const image = perfume?.images[0] ?? variant?.images[0] ?? model?.images[0] ?? null
+  const image = perfume?.images[0] ?? stillImages(variant?.images ?? [])[0] ?? stillImages(model?.images ?? [])[0] ?? null
   const count = cart.reduce((sum, line) => sum + line.quantity, 0)
   return (
     <section
@@ -418,7 +419,7 @@ export default function Cart() {
     const variant = line.variantId ? model?.variants?.find((v) => v.id === line.variantId) : null
     const available = !!model && availabilityOf(model) === 'buy' && (!model.variants?.length || !!variant)
     // The chosen variant's photo first, so the cart shows the finish the buyer picked.
-    const image = variant?.images[0] ?? model?.images[0] ?? null
+    const image = stillImages(variant?.images ?? [])[0] ?? stillImages(model?.images ?? [])[0] ?? null
     const codes = variant?.codes ?? model?.codes ?? []
     return { line, name: model?.name, variant, codes, image, available, price: variant?.priceCents ?? model?.priceCents ?? 0 }
   })

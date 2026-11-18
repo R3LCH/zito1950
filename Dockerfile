@@ -11,7 +11,8 @@ FROM node:24-alpine
 ENV NODE_ENV=production PORT=3001 DATA_DIR=/app/data
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && mkdir -p /app/data && chown node:node /app/data
+# ffmpeg transcodes admin-uploaded product videos (server/video.mjs).
+RUN apk add --no-cache ffmpeg && npm ci --omit=dev && mkdir -p /app/data && chown node:node /app/data
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
 COPY --from=build /app/src/data ./src/data

@@ -203,3 +203,10 @@ The script pulls `main`, rebuilds the image, restarts the container and waits fo
 - Replaced the perfume cross-sell text link with a large right-aligned cart-icon button: press feedback, checkmark confirmation and a short hand-off to the added row. Cart data updates immediately while the visual confirmation stays in place; repeated presses do not add duplicates, keyboard focus is preserved and reduced motion bypasses movement and delay.
 - Replaced generic “Mostra tutto” labels with “Scopri Scalea” and “Cosa ci distingue” for the territory and brand-reasons sections, with translations for every site language.
 - Centred the footer background logo on both axes at every viewport width; its size, opacity and foreground layout remain unchanged.
+
+## Change record — 2026-11-18
+
+- Watches (and their variants) accept videos in their media alongside photos. **Aggiungi video** in a product gallery picks from the video library or uploads MP4/MOV/WebM (3 minutes, 300 MB maximum); the server converts it with ffmpeg (`server/video.mjs`) to H.264 MP4 plus a WebP poster, so the runtime image now installs `ffmpeg`. In the watch dialog a video plays muted, inline and looped, with pause/play and a timeline. Catalog cards, the hero, perfumes, cart lines, order records and emails always use photos, never a video file; a video still in use cannot be deleted from **Fotografie → Video caricati**.
+- **Pezzo unico (1 of 1)** in the product editor shows a flat gold «1 of 1» label (`--color-gold` #7a5c14 on `--color-gold-wash`, 5.78:1) on the card and in the dialog. It is the only gold in the interface.
+- New **Testi del sito** tab: edit the site copy section by section for every language. An empty field falls back to the original text, shown in grey. **Traduci** fills empty languages from the selected one. Saving is revision-checked (`PUT /api/admin/texts`). Product names, prices, contacts and photo descriptions stay in their own tabs.
+- On narrow screens the admin product list is capped at 40% of the viewport and shows a thumbnail per row, so the editor is reachable without scrolling past every watch.

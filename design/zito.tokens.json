@@ -8,7 +8,9 @@
     "muted": { "$value": "#6B6B6B", "$description": "Captions, meta; 5.33:1 on white" },
     "line": { "$value": "#E7E7E5", "$description": "Hairline dividers" },
     "well": { "$value": "#F5F5F3", "$description": "Image wells behind isolated products" },
-    "brand": { "$value": "#D42E2E", "$description": "Logo red (public/logo.svg); split-section eyebrows and toggles" }
+    "brand": { "$value": "#D42E2E", "$description": "Logo red (public/logo.svg); split-section eyebrows and toggles" },
+    "gold": { "$value": "#7A5C14", "$description": "\"1 of 1\" label text and border only; 5.78:1 on gold-wash" },
+    "gold-wash": { "$value": "#FBF6E9", "$description": "\"1 of 1\" label ground only" }
   },
   "font": {
     "$type": "fontFamily",

@@ -24,6 +24,8 @@
   --color-line: #e7e7e5;
   --color-well: #f5f5f3;
   --color-brand: #d42e2e; /* logo red; 4.6:1 on white */
+  --color-gold: #7a5c14; /* "1 of 1" label only; 5.78:1 on gold-wash */
+  --color-gold-wash: #fbf6e9;
 
   --font-serif: 'EB Garamond', 'Garamond', 'Times New Roman', serif;
   --font-sans: 'Manrope Variable', 'Manrope', system-ui, sans-serif;
@@ -214,6 +216,14 @@
 @layer components {
   .shop-input { border: 1px solid var(--color-line); background: var(--color-bg); color: var(--color-ink); min-height: 44px; padding: 0.65rem 0.8rem; font: inherit; font-size: var(--text-small); max-width: 100%; }
   .shop-label { display: flex; flex-direction: column; gap: 0.5rem; font-size: var(--text-small); }
+  /* Product video seek bar: hairline track, ink progress (`--seek`), round ink thumb; 44px tall hit area. */
+  .video-seek { appearance: none; height: 44px; background: transparent; cursor: pointer; }
+  .video-seek:disabled { cursor: default; opacity: 0.55; }
+  .video-seek::-webkit-slider-runnable-track { height: 2px; background: linear-gradient(to right, var(--color-ink) var(--seek, 0%), var(--color-line) var(--seek, 0%)); }
+  .video-seek::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; margin-top: -6px; border-radius: 9999px; background: var(--color-ink); }
+  .video-seek::-moz-range-track { height: 2px; background: var(--color-line); }
+  .video-seek::-moz-range-progress { height: 2px; background: var(--color-ink); }
+  .video-seek::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 9999px; background: var(--color-ink); }
   /* The cart is a full page over the site: logo on top, items on the left, the summary on the right. */
   .shop-dialog { margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; overflow-y: auto; border: 0; padding: 0; background: var(--color-bg); color: var(--color-ink); }
   .shop-dialog::backdrop { background: var(--color-bg); }

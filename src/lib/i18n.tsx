@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { contatti, officina, orologi, perche, profumiSection, site, storia, territorio } from '../data/content'
 import { LANGUAGE_NAMES, LANGUAGE_TAGS, LOCALES, localizeContent, translateSource, type Locale } from '../data/localization'
+import { withTexts } from '../data/siteTexts'
+import { useShop } from './shop'
 
 function preferredLanguage(): Locale {
   if (typeof window === 'undefined') return 'it'
@@ -48,7 +50,12 @@ export function useLocale() {
   if (!context) throw new Error('LocaleProvider required')
   return context
 }
-export function useContent() { return useLocale().content }
+/** Section copy in the current language, with the owner's edits from Admin → Testi del sito applied. */
+export function useContent() {
+  const { locale, content } = useLocale()
+  const { texts } = useShop().catalog
+  return useMemo(() => withTexts(content, texts, locale), [content, texts, locale])
+}
 export function LanguageSelector({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale } = useLocale()
   const [open, setOpen] = useState(false)

@@ -4,6 +4,7 @@ import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
 import { contatti, orologi } from '../data/content'
 import { t, useContent } from '../lib/i18n'
 import type { Model } from '../data/types'
+import { isVideo, posterOf } from '../data/media'
 import { availabilityOf } from '../lib/catalogFilters'
 import { BuyButton } from './Cart'
 
@@ -23,19 +24,28 @@ export function statusLabel(model: Model): string | null {
   return availabilityOf(model) === 'out-of-stock' ? t('Esaurito') : null
 }
 
-const tag = 'inline-block border border-ink px-2 py-[5px] font-sans text-[0.6875rem] font-medium uppercase leading-[1.2] tracking-[0.08em] lg:tracking-[0.14em]'
-export const limitedTag = `${tag} bg-ink text-bg`
-export const statusTag = `${tag} bg-bg text-ink`
+// White ground, ink text and a hairline so labels stay legible on the white product photos.
+const tag = 'inline-block border font-sans font-medium uppercase leading-[1.2]'
+const plain = 'border-ink bg-bg text-ink'
+// The only gold in the page UI: a single piece. Flat colour, no gradient; text 5.78:1 on its ground.
+const gold = 'border-gold bg-gold-wash text-gold'
+const sized = 'px-2 py-[5px] text-[0.6875rem] tracking-[0.08em] lg:tracking-[0.14em]'
+export const statusTag = `${tag} ${plain} ${sized}`
+/** Smaller labels laid over a card photo, so they never cover the watch. */
+const overlaySized = 'px-1.5 py-[3px] text-[0.5625rem] tracking-[0.1em]'
 
-/** Limited-edition and status labels; the caller picks the direction (column on cards, row in the dialog). */
-export function Tags({ model, className = '' }: { model: Model; className?: string }) {
+/** One-of-one, new, limited-edition and status labels; the caller picks the direction (column on cards, row in the dialog). */
+export function Tags({ model, overlay = false, className = '' }: { model: Model; overlay?: boolean; className?: string }) {
   const status = statusLabel(model)
-  if (!model.isNew && !model.limitedEdition && !status) return null
+  if (!model.oneOfOne && !model.isNew && !model.limitedEdition && !status) return null
+  const size = overlay ? overlaySized : sized
+  const label = `${tag} ${plain} ${size}`
   return (
     <span className={`flex items-start gap-1 ${className}`}>
-      {model.isNew && <span className={limitedTag}>{t('Nuovo')}</span>}
-      {model.limitedEdition && <span className={limitedTag}>{t('Edizione limitata')}</span>}
-      {status && <span className={statusTag}>{status}</span>}
+      {model.oneOfOne && <span className={`${tag} ${gold} ${size}`}>1 of 1</span>}
+      {model.isNew && <span className={label}>{t('Nuovo')}</span>}
+      {model.limitedEdition && <span className={label}>{t('Edizione limitata')}</span>}
+      {status && <span className={label}>{status}</span>}
     </span>
   )
 }
@@ -61,8 +71,10 @@ export default function ModelCard({ model, onOpen }: Props) {
   const [variant, setVariant] = useState(0)
   const [index, setIndex] = useState(0)
   const view = resolveView(model, variant)
-  const image = view.images[index] ?? view.images[0]
-  const count = view.images.length
+  const image = view.stills[index] ?? view.stills[0]
+  const count = view.stills.length
+  // The dialog lists photos and videos; open it on the same photo (a poster opens its video).
+  const mediaIndex = Math.max(0, view.images.findIndex((item) => item.src === image?.src || isVideo(item.src) && posterOf(item.src) === image?.src))
   const titleId = `model-${model.id}-name`
   const detailsRef = useRef<HTMLButtonElement>(null)
   const swipe = useSwipe((dir) => setIndex((i) => (i + dir + count) % count))
@@ -72,7 +84,7 @@ export default function ModelCard({ model, onOpen }: Props) {
       <div className="relative aspect-square overflow-hidden bg-bg" {...swipe}>
         <button
           type="button"
-          onClick={() => detailsRef.current && onOpen(model, detailsRef.current, variant, index)}
+          onClick={() => detailsRef.current && onOpen(model, detailsRef.current, variant, mediaIndex)}
           className="block h-full w-full cursor-pointer"
           tabIndex={-1}
           aria-hidden="true"
@@ -95,7 +107,7 @@ export default function ModelCard({ model, onOpen }: Props) {
           label={model.name}
           className="[@media(hover:hover)_and_(pointer:fine)]:opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100"
         />
-        <Tags model={model} className="pointer-events-none absolute left-2 top-2 max-w-[calc(100%-1rem)] flex-col" />
+        <Tags model={model} overlay className="pointer-events-none absolute left-1.5 top-1.5 max-w-[calc(100%-0.75rem)] flex-col" />
       </div>
       <div className="flex flex-1 flex-col border-b border-line pt-4 pb-4">
         <h3 id={titleId} className="font-serif text-lg leading-snug lg:text-xl">
@@ -125,7 +137,7 @@ export default function ModelCard({ model, onOpen }: Props) {
           <button
             ref={detailsRef}
             type="button"
-            onClick={(e) => onOpen(model, e.currentTarget, variant, index)}
+            onClick={(e) => onOpen(model, e.currentTarget, variant, mediaIndex)}
             className="link-arrow min-h-11 w-full cursor-pointer text-left"
             aria-haspopup="dialog"
             aria-describedby={titleId}

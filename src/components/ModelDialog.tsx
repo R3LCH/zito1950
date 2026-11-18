@@ -7,6 +7,8 @@ import { t, useContent } from '../lib/i18n'
 import { genderOf } from '../lib/catalogFilters'
 import type { Model } from '../data/types'
 import { dims } from '../lib/imageMeta'
+import { isVideo, posterOf } from '../data/media'
+import ProductVideo from './ProductVideo'
 import { BuyButton } from './Cart'
 
 interface Props {
@@ -67,8 +69,10 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
   const swipe = useSwipe((dir) => setActive((i) => (i + dir + count) % count))
   const titleId = 'model-dialog-title'
   const image = view?.images[active] ?? view?.images[0]
-  const size = image && dims(image.src)
-  // Wide photos stack above the text so the grid doesn't leave an empty block under them.
+  const video = !!image && isVideo(image.src)
+  // Uploaded media carry their own pixel size; bundled photos come from the manifest.
+  const size = image && (image.width && image.height ? { w: image.width, h: image.height } : dims(image.src))
+  // Wide media stack above the text so the grid doesn't leave an empty block under them.
   const wide = !!size && size.w / size.h > 1.3
   const capVh = wide ? 60 : 70
 
@@ -100,29 +104,36 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
           <div className={`grid gap-8 px-5 pb-10 md:gap-12 md:p-12 ${wide ? '' : 'md:grid-cols-2'}`}>
             <div>
               {image && (
-                <div className="flex justify-center" {...swipe}>
+                // Swiping a video would fight its seek bar, so only photos swipe; the thumbnails switch media.
+                <div className="flex justify-center" {...(video ? {} : swipe)}>
                   {/* Natural aspect ratio, capped in height and never wider than the file's pixel width. */}
                   <div
                     className="relative w-full"
                     style={
                       size && {
-                        aspectRatio: `${size.w} / ${size.h}`,
                         maxWidth: `min(${size.w}px, calc(${capVh}vh * ${size.w / size.h}))`,
+                        ...(video ? {} : { aspectRatio: `${size.w} / ${size.h}` }),
                       }
                     }
                   >
-                    <Picture
-                      key={image.src}
-                      src={image.src}
-                      alt={image.alt}
-                      width={size?.w}
-                      height={size?.h}
-                      loading="eager"
-                      sizes={wide ? '(min-width: 768px) 940px, 100vw' : '(min-width: 768px) 480px, 100vw'}
-                      pictureClassName="block h-full w-full"
-                      className="h-full w-full object-contain"
-                    />
-                    <Arrows count={count} index={active} onChange={setActive} label={model.name} />
+                    {video ? (
+                      <ProductVideo key={image.src} src={image.src} label={image.alt || model.name} width={size?.w} height={size?.h} />
+                    ) : (
+                      <>
+                        <Picture
+                          key={image.src}
+                          src={image.src}
+                          alt={image.alt}
+                          width={size?.w}
+                          height={size?.h}
+                          loading="eager"
+                          sizes={wide ? '(min-width: 768px) 940px, 100vw' : '(min-width: 768px) 480px, 100vw'}
+                          pictureClassName="block h-full w-full"
+                          className="h-full w-full object-contain"
+                        />
+                        <Arrows count={count} index={active} onChange={setActive} label={model.name} />
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -134,10 +145,17 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
                         type="button"
                         onClick={() => setActive(i)}
                         aria-pressed={i === active}
-                        aria-label={`${orologi.catalog.viewImage} ${i + 1}: ${im.alt}`}
-                        className={`block h-14 w-14 cursor-pointer bg-bg ${i === active ? 'outline outline-1 outline-ink' : 'outline outline-1 outline-line'}`}
+                        aria-label={`${isVideo(im.src) ? t('Mostra video') : orologi.catalog.viewImage} ${i + 1}${im.alt ? `: ${im.alt}` : ''}`}
+                        className={`relative block h-14 w-14 cursor-pointer bg-bg ${i === active ? 'outline outline-1 outline-ink' : 'outline outline-1 outline-line'}`}
                       >
-                        <Picture src={im.src.replace('img/models/', 'img/cards/')} alt="" sizes="56px" pictureClassName="block h-full w-full" className="h-full w-full object-contain" />
+                        <Picture src={isVideo(im.src) ? posterOf(im.src) : im.src.replace('img/models/', 'img/cards/')} alt="" sizes="56px" pictureClassName="block h-full w-full" className="h-full w-full object-contain" />
+                        {isVideo(im.src) && (
+                          <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-bg/90 text-ink">
+                              <svg width="10" height="10" viewBox="0 0 14 14" fill="currentColor"><path d="M3.5 1.8v10.4L12 7z" /></svg>
+                            </span>
+                          </span>
+                        )}
                       </button>
                     </li>
                   ))}

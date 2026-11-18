@@ -14,7 +14,9 @@ Quiet Italian family catalogue on paper-white. Editorial, product-led, sober. Lu
 | muted | #6B6B6B | Captions/meta only (5.33:1 on white, AA). |
 | line | #E7E7E5 | Hairline dividers (1px). |
 | well | #F5F5F3 | Image wells behind isolated products. |
-No accent hue in the page UI. Footer social logos are the exception: Instagram #E4405F, Facebook #1877F2, WhatsApp #25D366, retained on hover.
+| gold | #7A5C14 | «1 of 1» label text and border only (5.78:1 on gold-wash). |
+| gold-wash | #FBF6E9 | «1 of 1» label ground only. |
+No other accent hue in the page UI; gold is flat (no gradient, no metallic effect) and never used beyond the «1 of 1» label. Footer social logos are the exception: Instagram #E4405F, Facebook #1877F2, WhatsApp #25D366, retained on hover.
 
 ## Typography
 - Serif `EB Garamond` 400/500 (italic only when meaningful) for headings, model names, quotes.
@@ -45,7 +47,8 @@ No accent hue in the page UI. Footer social logos are the exception: Instagram #
 - Catalog search: `type=search` pill (rounded-full hairline, 44px, magnifier icon) before the filters button, full width on mobile and 18rem from `sm`; live, accent/punctuation-insensitive match on the model name; Esc and “Azzera filtri” clear it.
 - Filters: outlined “Filtri e ordinamento” button with ink count badge, result count, “Azzera filtri” and removable outlined chips. Native `<dialog>` side sheet, 420px from the right on desktop, full screen on mobile; first the Linea group (Uomo, Donna; unisex models match both), then sort radios, then checkbox groups (Selezione, Disponibilità, Movimento, Funzioni, Cassa, Prezzo) with tabular live counts; zero-count options muted and disabled. `#edizioni-limitate` applies only the limited-edition filter.
 - ModelCard: image and detail controls open ModelDialog at the selected variant/photo; product `object-fit: contain`, never cropping bezels/bracelets; name serif h3, codes small, price sans. Purchase control only for `availability: buy`.
-- Badge/labels: “Nuovo” and “Edizione limitata” at the image’s top-left corner, ink fill, white uppercase small type with tracking, radius 0; “Venduto” / “Esaurito” status tags outlined. Limited editions with positive `piecesRemaining` show “Ancora N pezzi” or “Ultimo pezzo disponibile”; empty or 0 shows no count.
+- Badge/labels: “1 of 1” (admin flag `oneOfOne`, gold), “Nuovo” and “Edizione limitata” stacked at the image’s top-left corner, white ground, ink uppercase small type with tracking, 1px ink border, radius 0, smaller on cards so they never cover the watch; in ModelDialog they sit in a row under the price. “Venduto” / “Esaurito” status tags outlined. Limited editions with positive `piecesRemaining` show “Ancora N pezzi” or “Ultimo pezzo disponibile”; empty or 0 shows no count.
+- Product video: watch and variant galleries may include videos (`.mp4` in `catalog.videos`). Only ModelDialog plays them: muted, inline, looped, autoplay when selected, with a round pause/play button and a timeline below; the thumbnail carries a play mark. Cards, hero, perfumes, cart and emails use the first photo.
 - ModelDialog: native `<dialog>`; image views, name, codes, price, labels (plus an outlined Uomo / Donna / Unisex tag, sr-only “Linea:”), remaining pieces, quote, description, specs list; close button, Esc, backdrop; focus returns to opener; body scroll locked.
 - Recommended: “Scopri anche” inside ModelDialog, every other public model in one horizontal row: owner’s `similar` picks first, then by similarity. Square outlined prev/next buttons page by whole cards; wheel scrolls the row and releases at its ends. Selection replaces the current model in the open dialog, resets variant/photo, scrolls to top and focuses its title.
 - Profumi: `#profumi`, public `catalog.perfumes` as vertical cards in a grid, 2 per row from 640px up and stacked below: photo on top in a white `aspect-[4/5]` frame (`object-contain`, radius 1.25rem), then eyebrow, serif name, optional italic line (e.g. “Pepe Nero”), code, price, opening text and specs, with the action pinned to the card bottom so actions align across the row. Expanded shows each perfume's quote, full description and ingredients. Admin availability sets the action: `buy` (Acquistabile) an “Acquista” button adding it to the cart; `no-buy` (Solo vetrina) the information-request button; `coming-soon` (Prossimamente) a “Prossimamente” eyebrow and full text, with no code, price, quote or button and nothing in the expanded part; `out-of-stock` (Esaurito) an “Esaurito” tag, muted price and no button; `hidden` (Nascosto) omitted. Tesoro di Alarico (line “Pepe Nero”, box photo `img/profumo/coming-soon.jpg`) is seeded as `coming-soon`. The section is omitted when no perfume is public.
@@ -72,7 +75,7 @@ No accent hue in the page UI. Footer social logos are the exception: Instagram #
 ## Motion
 - Ease `cubic-bezier(.16,1,.3,1)`, 500ms. Reveal: opacity 0→1 + 8px rise, `.reveal` + `.is-visible` toggled by IntersectionObserver, once.
 - `prefers-reduced-motion: reduce` disables reveals, smooth scroll and transitions.
-- No parallax, loops, scroll-jacking, smooth-scroll libraries.
+- No parallax, loops, scroll-jacking, smooth-scroll libraries. The only looping motion is an admin-uploaded product video, muted, inside an open ModelDialog and pausable; with reduced motion it does not autoplay and waits for the play button.
 
 ## Prohibitions
 Dark mode or dark sections; stock/generated imagery; invented facts, prices, dates, names, specs or testimonials; shadows; gradients; emoji; autoplay carousels.
