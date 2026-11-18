@@ -19,5 +19,6 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm test
+      # Server tests serve dist/ (e.g. /email/logo.png), so build first.
       - run: npm run build
+      - run: npm test
