@@ -686,6 +686,43 @@ test('paid captures consume limited pieces once, reserve the last piece, and lea
   assert.equal(await pieces(), null)
 })
 
+test('a sold 1 of 1 watch becomes out of stock once, sells one unit only, and can be re-listed', async (t) => {
+  const { admin, buyer, client } = await fixture(t, true)
+  const one = [{ modelId: 'n2', variantId: null, quantity: 1 }]
+  const model = async () => (await admin.request('/catalog')).body.models.find((m) => m.id === 'n2')
+  const relist = async () => {
+    const current = (await admin.request('/catalog')).body
+    const product = { ...current.models.find((m) => m.id === 'n2'), availability: 'buy', oneOfOne: true }
+    assert.equal((await admin.request('/admin/products/n2', 'PUT', { product, revision: current.revision })).status, 200)
+  }
+  await relist()
+  const twice = await buyer.request('/payments/orders', 'POST', { items: [{ ...one[0], quantity: 2 }], requestId: randomUUID() })
+  assert.equal(twice.status, 409)
+  assert.equal(twice.body.error, 'Pezzi disponibili insufficienti. Aggiorna il carrello.')
+
+  // Two shoppers race for the single piece: one is charged, the other is refused.
+  const other = client()
+  await other.request('/session')
+  const a = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
+  const b = await other.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
+  const results = await Promise.all([
+    buyer.request(`/payments/orders/${a.body.id}/capture`, 'POST', {}),
+    other.request(`/payments/orders/${b.body.id}/capture`, 'POST', {}),
+  ])
+  assert.deepEqual(results.map((r) => r.status).sort(), [200, 409])
+  const sold = await model()
+  assert.equal(sold.availability, 'out-of-stock')
+  assert.equal(sold.oneOfOne, true)
+  const publicModel = (await buyer.request('/catalog')).body.models.find((m) => m.id === 'n2')
+  assert.equal(publicModel.availability, 'out-of-stock')
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })).status, 409)
+
+  // The owner can put it back on sale; other watches are untouched.
+  await relist()
+  assert.equal((await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })).status, 200)
+  assert.equal((await admin.request('/catalog')).body.models.find((m) => m.id === 'n3').availability === 'out-of-stock', false)
+})
+
 const pngFile = async (background) =>
   new Blob([await sharp({ create: { width: 20, height: 20, channels: 3, background } }).png().toBuffer()], {
     type: 'image/png',

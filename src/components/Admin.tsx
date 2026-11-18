@@ -560,7 +560,7 @@ function ProductEditor({
               />
               {t("Pezzo unico (1 of 1)")}
             </label>
-            <p className="text-xs text-muted">{t("Mostra l’etichetta dorata «1 of 1» sul modello.")}</p>
+            <p className="text-xs text-muted">{t("Mostra l’etichetta dorata «1 of 1» sul modello.")} {t("Venduto il pezzo, il modello appare Esaurito; per rimetterlo in vendita scegli di nuovo Acquistabile.")}</p>
             <label className="flex items-center gap-3 text-small">
               <input
                 type="checkbox"

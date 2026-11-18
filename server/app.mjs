@@ -899,13 +899,18 @@ export function createApp(options = {}) {
       else reserved.delete(id)
     }
   }
-  /** Lowers counted limited editions by the units sold; caller holds the transaction. */
+  /** Lowers counted limited editions by the units sold and marks a sold single piece out of stock; caller holds the transaction. */
   function consumePieces(rows) {
     const body = catalog()
     let changed = false
     for (const [id, n] of unitsByModel(rows)) {
       const m = body.models.find((m) => m.id === id)
-      if (!m?.limitedEdition || m.piecesRemaining == null) continue
+      if (!m) continue
+      if (m.oneOfOne === true) {
+        m.availability = 'out-of-stock'
+        changed = true
+      }
+      if (!m.limitedEdition || m.piecesRemaining == null) continue
       m.piecesRemaining = Math.max(0, m.piecesRemaining - n)
       changed = true
     }
@@ -957,7 +962,9 @@ export function createApp(options = {}) {
     // Pieces are per model, so variants of one limited edition share the count.
     for (const [id, n] of unitsByModel(rows)) {
       const m = current.models.find((m) => m.id === id)
-      if (m.limitedEdition === true && m.piecesRemaining != null && n + (reserved.get(id) ?? 0) > m.piecesRemaining)
+      // A single piece is one unit, shared by its variants and by captures awaiting PayPal.
+      const available = m.oneOfOne === true ? 1 : m.limitedEdition === true ? m.piecesRemaining : null
+      if (available != null && n + (reserved.get(id) ?? 0) > available)
         fail(409, 'Pezzi disponibili insufficienti. Aggiorna il carrello.')
     }
     return items

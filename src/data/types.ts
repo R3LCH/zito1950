@@ -61,7 +61,7 @@ export interface Model {
   /** Uomo, Donna or Unisex; seeded from the old site's Uomo/Donna menu. Default unisex. */
   gender?: Gender
   limitedEdition?: boolean
-  /** A single piece: shows a gold "1 of 1" label; set in the admin panel. */
+  /** A single piece: shows a gold "1 of 1" label; set in the admin panel. Sells one unit at a time; a paid sale sets availability to out-of-stock. */
   oneOfOne?: boolean
   /** Pieces still available for a limited edition; null/undefined = not shown, 0 = Esaurito and not purchasable. */
   piecesRemaining?: number | null
