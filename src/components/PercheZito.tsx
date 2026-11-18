@@ -34,11 +34,7 @@ export default function PercheZito() {
         </div>
       )}
     >
-      <div className="grid md:grid-cols-12 md:gap-x-10">
-        <div className="md:col-span-6 md:col-start-7 lg:col-span-5 lg:col-start-8">
-          <SectionText blocks={perche.blocks} closing={perche.closing} />
-        </div>
-      </div>
+      <SectionText blocks={perche.blocks} closing={perche.closing} />
     </Panel>
   )
 }

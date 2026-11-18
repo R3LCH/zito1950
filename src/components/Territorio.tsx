@@ -32,11 +32,7 @@ export default function Territorio() {
         </div>
       )}
     >
-      <div className="grid md:grid-cols-12 md:gap-x-10">
-        <div className="md:col-span-5">
-          <SectionText blocks={territorio.blocks} closing={territorio.closing} />
-        </div>
-      </div>
+      <SectionText blocks={territorio.blocks} closing={territorio.closing} />
     </Panel>
   )
 }

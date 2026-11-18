@@ -32,11 +32,7 @@ export default function Officina() {
         </div>
       )}
     >
-      <div className="grid md:grid-cols-12 md:gap-x-12">
-        <div className="md:col-span-5 md:col-start-8">
-          <SectionText blocks={officina.blocks} closing={officina.closing} />
-        </div>
-      </div>
+      <SectionText blocks={officina.blocks} closing={officina.closing} />
     </Panel>
   )
 }
