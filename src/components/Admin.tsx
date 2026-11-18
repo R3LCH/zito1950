@@ -581,7 +581,6 @@ function ProductEditor({
                 step="1"
                 inputMode="numeric"
                 placeholder={t("non mostrare")}
-                disabled={!draft.limitedEdition}
                 aria-describedby={`pieces-hint-${draft.id}`}
                 value={draft.piecesRemaining ?? ''}
                 onChange={(e) => {

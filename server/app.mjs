@@ -372,6 +372,8 @@ export function createApp(options = {}) {
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", 'data:'],
           connectSrc: ["'self'"],
+          // Contatti embeds the Google Maps location iframe.
+          frameSrc: ['https://www.google.com'],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],
         },
@@ -899,7 +901,7 @@ export function createApp(options = {}) {
       else reserved.delete(id)
     }
   }
-  /** Lowers counted limited editions by the units sold and marks a sold single piece out of stock; caller holds the transaction. */
+  /** Lowers counted watches by the units sold and marks a sold single piece out of stock; caller holds the transaction. */
   function consumePieces(rows) {
     const body = catalog()
     let changed = false
@@ -910,7 +912,7 @@ export function createApp(options = {}) {
         m.availability = 'out-of-stock'
         changed = true
       }
-      if (!m.limitedEdition || m.piecesRemaining == null) continue
+      if (m.piecesRemaining == null) continue
       m.piecesRemaining = Math.max(0, m.piecesRemaining - n)
       changed = true
     }
@@ -944,7 +946,7 @@ export function createApp(options = {}) {
         return { ...line, name: p.name, priceCents: p.priceCents, codes: p.code ? [p.code] : [], image: photo(p.images[0]) }
       }
       const m = current.models.find((m) => m.id === row.modelId)
-      if (m?.availability !== 'buy' || (m.limitedEdition === true && m.piecesRemaining === 0))
+      if (m?.availability !== 'buy' || m.piecesRemaining === 0)
         fail(409, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
       if (row.engraving && m.engravable !== true)
         fail(400, 'Questo orologio non può essere inciso sul retro.')
@@ -962,9 +964,9 @@ export function createApp(options = {}) {
     // Pieces are per model, so variants of one limited edition share the count.
     for (const [id, n] of unitsByModel(rows)) {
       const m = current.models.find((m) => m.id === id)
-      // A single piece is one unit, shared by its variants and by captures awaiting PayPal.
-      const available = m.oneOfOne === true ? 1 : m.limitedEdition === true ? m.piecesRemaining : null
-      if (available != null && n + (reserved.get(id) ?? 0) > available)
+      // A single piece is one unit; a count caps every watch. Variants and captures awaiting PayPal share it.
+      const available = Math.min(m.oneOfOne === true ? 1 : Infinity, m.piecesRemaining ?? Infinity)
+      if (available !== Infinity && n + (reserved.get(id) ?? 0) > available)
         fail(409, 'Pezzi disponibili insufficienti. Aggiorna il carrello.')
     }
     return items

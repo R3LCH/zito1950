@@ -723,6 +723,25 @@ test('a sold 1 of 1 watch becomes out of stock once, sells one unit only, and ca
   assert.equal((await admin.request('/catalog')).body.models.find((m) => m.id === 'n3').availability === 'out-of-stock', false)
 })
 
+test('a piece count works on any watch: sales lower it, quantity is capped and 0 sells out', async (t) => {
+  const { admin, buyer } = await fixture(t, true)
+  const one = [{ modelId: 'n2', variantId: null, quantity: 1 }]
+  const n2 = async () => (await admin.request('/catalog')).body.models.find((m) => m.id === 'n2')
+  assert.equal((await n2()).limitedEdition, false)
+  await savePieces(admin, 'n2', 2)
+  const tooMany = await buyer.request('/payments/orders', 'POST', { items: [{ ...one[0], quantity: 3 }], requestId: randomUUID() })
+  assert.equal(tooMany.status, 409)
+  assert.equal(tooMany.body.error, 'Pezzi disponibili insufficienti. Aggiorna il carrello.')
+  for (const left of [1, 0]) {
+    const order = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
+    assert.equal((await buyer.request(`/payments/orders/${order.body.id}/capture`, 'POST', {})).body.status, 'COMPLETED')
+    assert.equal((await n2()).piecesRemaining, left)
+  }
+  const refused = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
+  assert.equal(refused.status, 409)
+  assert.equal(refused.body.error, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
+})
+
 const pngFile = async (background) =>
   new Blob([await sharp({ create: { width: 20, height: 20, channels: 3, background } }).png().toBuffer()], {
     type: 'image/png',
@@ -1426,6 +1445,13 @@ test('email images load cross-origin and private pages are not indexed', async (
   assert.equal((await fetch(`${base}/`)).headers.get('cross-origin-resource-policy'), 'same-origin')
   assert.equal((await fetch(`${base}/admin`)).headers.get('x-robots-tag'), 'noindex, nofollow')
   assert.equal((await fetch(`${base}/`)).headers.get('x-robots-tag'), null)
+})
+
+test('the page may frame the Google Maps embed and nothing else', async (t) => {
+  const { base } = await fixture(t)
+  const csp = (await fetch(`${base}/`)).headers.get('content-security-policy')
+  assert.match(csp, /frame-src https:\/\/www\.google\.com(;|$)/)
+  assert.match(csp, /frame-ancestors 'none'/)
 })
 
 test('repeated wrong admin passwords are throttled with a readable error', async (t) => {

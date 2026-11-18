@@ -63,7 +63,7 @@ export interface Model {
   limitedEdition?: boolean
   /** A single piece: shows a gold "1 of 1" label; set in the admin panel. Sells one unit at a time; a paid sale sets availability to out-of-stock. */
   oneOfOne?: boolean
-  /** Pieces still available for a limited edition; null/undefined = not shown, 0 = Esaurito and not purchasable. */
+  /** Pieces still available for any watch; null/undefined = not counted or shown, 0 = Esaurito and not purchasable. Paid sales lower it. */
   piecesRemaining?: number | null
   /** Shown with a "Nuovo" tag and listed first; set in the admin panel. */
   isNew?: boolean

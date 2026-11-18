@@ -51,10 +51,10 @@ export function Tags({ model, overlay = false, className = '' }: { model: Model;
   )
 }
 
-/** Remaining pieces of a limited edition, shown only while at least one is left. */
+/** Remaining pieces of a watch, shown only while at least one is left. */
 export function PiecesNote({ model, className = '' }: { model: Model; className?: string }) {
   const pieces = model.piecesRemaining
-  if (!model.limitedEdition || pieces == null || pieces < 1) return null
+  if (pieces == null || pieces < 1) return null
   return (
     <p className={`border-l-2 border-ink pl-2 font-sans text-xs font-medium uppercase leading-snug tracking-[0.12em] text-ink ${className}`}>
       {pieces === 1 ? t('Ultimo pezzo disponibile') : t('Ancora {count} pezzi', { count: pieces })}
