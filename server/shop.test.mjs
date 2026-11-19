@@ -402,7 +402,7 @@ test('legacy catalog migrates buyEnabled, limited editions and default hero once
   const { admin, buyer, application, dir, env } = await fixture(t, true, legacyBody)
   const catalog = (await admin.request('/catalog')).body
   const n7 = catalog.models.find((m) => m.id === 'n7')
-  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.catalogVersion, 11)
   assert.equal(Object.hasOwn(catalog, 'perfume'), false)
   assert.deepEqual(catalog.perfumes.map((p) => p.id), ['n7-oud', 'tesoro-di-alarico'])
   assert.deepEqual(catalog.featured, [])
@@ -613,7 +613,7 @@ test('version-2 catalog migrates sold models to out-of-stock once', async (t) =>
   }
   const { admin, dir, env } = await fixture(t, false, legacyBody)
   const catalog = (await admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.catalogVersion, 11)
   assert.equal(catalog.revision, 9)
   assert.equal(catalog.models.find((m) => m.id === 'takimo').availability, 'out-of-stock')
   assert.equal(catalog.models.find((m) => m.id === 'n7').availability, 'buy')
@@ -711,10 +711,10 @@ test('a sold 1 of 1 watch becomes out of stock once, sells one unit only, and ca
   ])
   assert.deepEqual(results.map((r) => r.status).sort(), [200, 409])
   const sold = await model()
-  assert.equal(sold.availability, 'out-of-stock')
+  assert.equal(sold.availability, 'hidden')
   assert.equal(sold.oneOfOne, true)
-  const publicModel = (await buyer.request('/catalog')).body.models.find((m) => m.id === 'n2')
-  assert.equal(publicModel.availability, 'out-of-stock')
+  // A sold single piece disappears from the public site.
+  assert.equal((await buyer.request('/catalog')).body.models.find((m) => m.id === 'n2'), undefined)
   assert.equal((await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })).status, 409)
 
   // The owner can put it back on sale; other watches are untouched.
@@ -740,6 +740,9 @@ test('a piece count works on any watch: sales lower it, quantity is capped and 0
   const refused = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
   assert.equal(refused.status, 409)
   assert.equal(refused.body.error, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
+  // At 0 pieces the watch is gone from the public site but kept for the admin.
+  assert.equal((await buyer.request('/catalog')).body.models.find((m) => m.id === 'n2'), undefined)
+  assert.equal((await n2()).piecesRemaining, 0)
 })
 
 const pngFile = async (background) =>
@@ -954,7 +957,7 @@ test('version-3 catalog turns the single perfume into a list once, and a removed
   })
   const kept = await fixture(t, false, v3({ ...profumo, name: 'Oud del titolare', priceCents: 15000 }))
   const catalog = (await kept.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.catalogVersion, 11)
   assert.equal(catalog.revision, 8)
   assert.equal(Object.hasOwn(catalog, 'perfume'), false)
   assert.deepEqual(catalog.perfumes.map((p) => [p.id, p.name, p.priceCents]), [
@@ -1094,7 +1097,7 @@ test('version-5 catalog adds Tesoro di Alarico once, defaults perfume availabili
   const legacyOud = { ...profumo, priceCents: 12000 }
   const migrated = await fixture(t, false, v5([legacyOud]))
   const catalog = (await migrated.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.catalogVersion, 11)
   assert.equal(catalog.revision, 6)
   assert.deepEqual(catalog.perfumes.map((p) => [p.id, p.availability, p.priceCents]), [
     [profumo.id, 'no-buy', 12000],
@@ -1153,7 +1156,7 @@ test('version-6 catalog swaps the old N°7 Oud photo for the new one once, keepi
   })
   const migrated = await fixture(t, false, v6({}))
   const catalog = (await migrated.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.catalogVersion, 11)
   assert.equal(catalog.revision, 5)
   const oud = catalog.perfumes.find((p) => p.id === profumo.id)
   assert.deepEqual(oud.images.map((im) => im.src), [newSrc, journal.src])
@@ -1167,7 +1170,7 @@ test('version-6 catalog swaps the old N°7 Oud photo for the new one once, keepi
   const reopenedBody = reopened.db.prepare('SELECT revision, body FROM catalog').get()
   reopened.close()
   assert.equal(reopenedBody.revision, 5)
-  assert.equal(JSON.parse(reopenedBody.body).catalogVersion, 10)
+  assert.equal(JSON.parse(reopenedBody.body).catalogVersion, 11)
   // The owner's replacement of the old slot moves to the new slot.
   const replaced = await fixture(t, false, v6({ [oldSrc]: { src: upload, alt: 'Flacone caricato' } }))
   const owned = (await replaced.admin.request('/catalog')).body
@@ -1205,7 +1208,7 @@ test('version-7 catalog gives every watch a line once: seed watches by id, owner
   assert.ok(v7.models.every((m) => !Object.hasOwn(m, 'gender')))
   const migrated = await fixture(t, false, v7)
   const catalog = (await migrated.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.catalogVersion, 11)
   assert.equal(catalog.revision, 4)
   const gender = (id) => catalog.models.find((m) => m.id === id).gender
   assert.equal(gender('n9'), 'donna')
@@ -1217,7 +1220,7 @@ test('version-7 catalog gives every watch a line once: seed watches by id, owner
   const reopenedBody = reopened.db.prepare('SELECT revision, body FROM catalog').get()
   reopened.close()
   assert.equal(reopenedBody.revision, 4)
-  assert.equal(JSON.parse(reopenedBody.body).catalogVersion, 10)
+  assert.equal(JSON.parse(reopenedBody.body).catalogVersion, 11)
 })
 
 test('version-8 engraving migration seeds missing flags once without overwriting owner choices', async (t) => {
@@ -1238,7 +1241,7 @@ test('version-8 engraving migration seeds missing flags once without overwriting
   v8.models.find((m) => m.id === 'takimo').engravable = true
   const migrated = await fixture(t, false, v8)
   const catalog = (await migrated.admin.request('/catalog')).body
-  assert.equal(catalog.catalogVersion, 10)
+  assert.equal(catalog.catalogVersion, 11)
   assert.equal(catalog.revision, 3)
   for (const model of models.filter((m) => m.id !== 'n7' && m.id !== 'takimo'))
     assert.equal(catalog.models.find((m) => m.id === model.id).engravable, model.engravable)
@@ -1250,6 +1253,50 @@ test('version-8 engraving migration seeds missing flags once without overwriting
   reopened.close()
   assert.equal(row.revision, 3)
   assert.deepEqual(JSON.parse(row.body).models, catalog.models)
+})
+
+test('version-11 migration frees the main photo from Tutus ab uno once, and replacing photos never touches it', async (t) => {
+  const { models, profumo, tesoroDiAlarico, storia } = await import('../src/data/content.ts')
+  const shared = { src: 'img/models/tutus-ab-uno.jpg', alt: 'Tutus ab uno' }
+  const owner = { src: 'img/models/takimo.jpg', alt: 'Takimo' }
+  const v10 = {
+    hero: owner,
+    // The owner replaced the shared photo: the product lost it and an override pointed the slot elsewhere.
+    models: models.map((m) => (m.id === 'tutus-ab-uno' ? { ...m, images: m.images.slice(1) } : m)),
+    perfumes: [profumo, tesoroDiAlarico],
+    imageOverrides: { [shared.src]: owner },
+    siteImages: [shared, storia.image],
+    photos: [],
+    featured: [],
+    localizationVersion: 1,
+    catalogVersion: 10,
+  }
+  const migrated = await fixture(t, false, v10)
+  const catalog = (await migrated.admin.request('/catalog')).body
+  assert.equal(catalog.catalogVersion, 11)
+  assert.equal(catalog.revision, 2)
+  assert.equal(catalog.hero.src, owner.src)
+  assert.deepEqual(catalog.siteImages.map((s) => s.src), [storia.image.src])
+  assert.equal(Object.hasOwn(catalog.imageOverrides, shared.src), false)
+  const tutus = catalog.models.find((m) => m.id === 'tutus-ab-uno')
+  assert.deepEqual(tutus.images.map((im) => im.src), models.find((m) => m.id === 'tutus-ab-uno').images.map((im) => im.src))
+  const reopened = createApp({ env: migrated.env, dataDir: migrated.dir })
+  const row = reopened.db.prepare('SELECT revision FROM catalog').get()
+  reopened.close()
+  assert.equal(row.revision, 2)
+
+  // Replacing a photo that is also the main photo changes the product, not the main photo.
+  const { admin } = await fixture(t)
+  const fresh = (await admin.request('/catalog')).body
+  assert.equal(fresh.hero.src, shared.src)
+  assert.ok(!fresh.siteImages.some((s) => s.src === shared.src))
+  const replaced = await admin.request('/admin/images/replace', 'PUT', {
+    replacements: [{ source: shared.src, image: { src: 'img/models/tutus-ab-uno-2.jpg', alt: 'Dettaglio' } }],
+    revision: fresh.revision,
+  })
+  assert.equal(replaced.status, 200, JSON.stringify(replaced.body))
+  assert.equal(replaced.body.hero.src, shared.src)
+  assert.equal(replaced.body.models.find((m) => m.id === 'tutus-ab-uno').images[0].src, 'img/models/tutus-ab-uno-2.jpg')
 })
 
 test('watch line is validated on save and shared with the public catalog', async (t) => {

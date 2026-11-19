@@ -6,7 +6,7 @@ import { useShop } from '../lib/shop'
 export default function Hero() {
   const { site } = useContent()
   const textRef = useReveal<HTMLDivElement>()
-  const { localizedCatalog: catalog } = useShop()
+  const { localizedCatalog: catalog, loaded } = useShop()
 
   return (
     <section id="home" aria-labelledby="hero-title" className="container-site pt-6 md:pt-10">
@@ -15,17 +15,20 @@ export default function Hero() {
         <a
           href="#orologi"
           aria-label={site.cta.collection}
-          className="group flex justify-center rounded-[1.25rem] focus-visible:outline-offset-4 md:order-2 md:col-span-7"
+          className="group flex min-h-[min(56vh,32rem)] items-center justify-center rounded-[2rem] focus-visible:outline-offset-4 md:order-2 md:col-span-7"
         >
-          <Picture
-            src={catalog.hero.src}
-            alt={catalog.hero.alt}
-            loading="eager"
-            fetchPriority="high"
-            sizes="(min-width: 768px) 58vw, calc(100vw - 2 * clamp(1.25rem, 4vw, 4rem))"
-            pictureClassName="block"
-            className="h-auto max-h-[56vh] w-auto max-w-full object-contain transition-transform duration-700 ease-out-quint group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-          />
+          {/* The owner's photo comes from the server; until it arrives the slot stays empty, so the built-in photo never flashes. */}
+          {loaded && (
+            <Picture
+              src={catalog.hero.src}
+              alt={catalog.hero.alt}
+              loading="eager"
+              fetchPriority="high"
+              sizes="(min-width: 768px) 58vw, calc(100vw - 2 * clamp(1.25rem, 4vw, 4rem))"
+              pictureClassName="block overflow-hidden rounded-[2rem]"
+              className="h-auto max-h-[56vh] w-auto max-w-full object-contain transition-transform duration-700 ease-out-quint group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+            />
+          )}
         </a>
         <div ref={textRef} className="reveal md:order-1 md:col-span-5">
           <h1 id="hero-title" className="font-brand text-display font-normal tracking-[0.02em] text-ink">

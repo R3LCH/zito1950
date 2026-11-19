@@ -560,7 +560,7 @@ function ProductEditor({
               />
               {t("Pezzo unico (1 of 1)")}
             </label>
-            <p className="text-xs text-muted">{t("Mostra l’etichetta dorata «1 of 1» sul modello.")} {t("Venduto il pezzo, il modello appare Esaurito; per rimetterlo in vendita scegli di nuovo Acquistabile.")}</p>
+            <p className="text-xs text-muted">{t("Mostra l’etichetta dorata «1 of 1» sul modello.")} {t("Venduto il pezzo, il modello viene nascosto dal sito; per rimetterlo in vendita scegli di nuovo Acquistabile.")}</p>
             <label className="flex items-center gap-3 text-small">
               <input
                 type="checkbox"
@@ -591,7 +591,7 @@ function ProductEditor({
               />
             </label>
             <p id={`pieces-hint-${draft.id}`} className="text-xs text-muted">
-              {t("Mostrato sulla scheda del modello. Lascia vuoto per non mostrarlo.")} {t("Con 0 pezzi il modello appare Esaurito e non è acquistabile.")}
+              {t("Mostrato sulla scheda del modello. Lascia vuoto per non mostrarlo.")} {t("Con 0 pezzi il modello viene nascosto dal sito e non è acquistabile.")}
             </p>
           </fieldset>
         </div>
@@ -1289,14 +1289,13 @@ export default function Admin() {
     return video
   }
   const videoLibrary = { library: catalog.videos, onUpload: uploadVideo }
-  // Every photo the site shows, once per file, with where it appears; the hero is tagged rather than listed as a place.
+  // Every photo the site shows, once per file, with where it appears. The main photo is not here: it changes only in «Foto principale».
   const inUse = new Map<string, { image: Img; places: string[] }>()
   const use = (image: Img, place?: string) => {
     const entry = inUse.get(image.src) ?? inUse.set(image.src, { image, places: [] }).get(image.src)!
     if (place && !entry.places.includes(place)) entry.places.push(place)
   }
-  use(catalog.hero, t('Foto principale'))
-  // Hero and perfume slots get their places from the live hero and perfumes below, not from the seed.
+  // Perfume slots get their places from the live perfumes below, not from the seed.
   catalog.siteImages.forEach((slot) => use(catalog.imageOverrides[slot.src] ?? slot, SITE_SECTIONS[slot.src] && t(SITE_SECTIONS[slot.src])))
   catalog.models.forEach((m) => {
     m.images.forEach((image) => !isVideo(image.src) && use(image, m.name))
@@ -1754,9 +1753,6 @@ export default function Admin() {
                               <span className="min-w-0">
                                 <span className="flex flex-wrap items-center gap-2">
                                   <span className="break-words text-small font-medium">{photoLabel(image)}</span>
-                                  {image.src === catalog.hero.src && (
-                                    <span className="border border-ink bg-ink px-2 py-0.5 text-xs font-medium uppercase tracking-[0.08em] text-bg">{t("Principale")}</span>
-                                  )}
                                 </span>
                                 {places.length > 0 && <span className="mt-1 block break-words text-xs text-muted">{places.join(' · ')}</span>}
                               </span>

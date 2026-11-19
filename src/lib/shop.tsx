@@ -99,7 +99,7 @@ const initial: Catalog = {
   videos: [],
   imageOverrides: {},
   texts: {},
-  siteImages: [site.hero.image, storia.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), officina.image, territorio.image, ...profumo.images],
+  siteImages: [storia.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), officina.image, territorio.image, ...profumo.images],
 }
 interface ShopState {
   catalog: Catalog
@@ -119,6 +119,8 @@ interface ShopState {
   setViewing: (product: Pick<CartLine, 'kind' | 'modelId' | 'variantId'> | null) => void
   error: string
   reload: () => Promise<void>
+  /** False until the first server catalogue arrives (or fails); the hero waits for it so the seed photo never flashes. */
+  loaded: boolean
 }
 const Context = createContext<ShopState | null>(null)
 const isText = (value: unknown, max: number) => typeof value === 'string' && value.length <= max
@@ -178,6 +180,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       }),
     imageOverrides: Object.fromEntries(Object.entries(catalog.imageOverrides).map(([source, image]) => [source, localizeImage(image, locale)])),
   }), [catalog, locale])
+  // The GitHub Pages preview has no server catalogue: the seed is final from the start.
+  const [loaded, setLoaded] = useState(STATIC_PREVIEW)
   const reload = async () => {
     if (STATIC_PREVIEW) return
     try {
@@ -185,6 +189,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setError('')
     } catch {
       setError('Il negozio non è disponibile. Puoi consultare la collezione e contattarci.')
+    } finally {
+      setLoaded(true)
     }
   }
   useEffect(() => {
@@ -225,7 +231,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     addLine({ kind: 'perfume', modelId: perfume.id, variantId: null, quantity: 1 })
   }
   return (
-    <Context.Provider value={{ catalog, localizedCatalog, setCatalog, cart, setCart, add, addPerfume, cartOpen, setCartOpen, added, setAdded, viewing, setViewing, error, reload }}>
+    <Context.Provider value={{ catalog, localizedCatalog, setCatalog, cart, setCart, add, addPerfume, cartOpen, setCartOpen, added, setAdded, viewing, setViewing, error, reload, loaded }}>
       {children}
     </Context.Provider>
   )

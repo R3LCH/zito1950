@@ -225,7 +225,6 @@ export function createApp(options = {}) {
       photos: [],
       imageOverrides: {},
       siteImages: [
-        site.hero.image,
         storia.image,
         ...storia.chapters.flatMap((c) => (c.image ? [c.image] : [])),
         officina.image,
@@ -234,7 +233,7 @@ export function createApp(options = {}) {
       ],
       perfumes: [profumo, tesoroDiAlarico].map(seedPerfume),
       featured: [],
-      catalogVersion: 10,
+      catalogVersion: 11,
     }
     db.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(seed))
   }
@@ -265,7 +264,6 @@ export function createApp(options = {}) {
       piecesRemaining: m.piecesRemaining ?? null,
     }))
     if (existing.hero?.src === 'img/hero/new_hero.jpg') existing.hero = seedImageTranslations(site.hero.image)
-    if (!existing.siteImages.some((im) => im.src === site.hero.image.src)) existing.siteImages.push(seedImageTranslations(site.hero.image))
     existing.catalogVersion = 2
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
   }
@@ -340,6 +338,20 @@ export function createApp(options = {}) {
     existing.models = existing.models.map((m) => (widened.has(m.id) ? { ...m, engravable: true } : m))
     existing.catalogVersion = 10
     db.prepare('UPDATE catalog SET body=?, revision=revision+1 WHERE id=1').run(JSON.stringify(existing))
+  }
+  if (existing.catalogVersion < 11) {
+    // The main photo was seeded as Tutus ab uno's first photo and as a site-photo slot, so replacing one replaced all three.
+    // It now stands alone: drop its slot and override, and give Tutus ab uno back its first photo.
+    const before = JSON.stringify(existing)
+    const shared = site.hero.image.src
+    existing.siteImages = existing.siteImages.filter((s) => s.src !== shared)
+    delete existing.imageOverrides[shared]
+    const tutus = existing.models.find((m) => m.id === 'tutus-ab-uno')
+    const first = models.find((m) => m.id === 'tutus-ab-uno').images[0]
+    if (tutus && !tutus.images.some((im) => im.src === first.src)) tutus.images.unshift(seedImageTranslations(first))
+    const changed = JSON.stringify(existing) !== before
+    existing.catalogVersion = 11
+    db.prepare(`UPDATE catalog SET body=?${changed ? ', revision=revision+1' : ''} WHERE id=1`).run(JSON.stringify(existing))
   }
   const catalog = () => {
     const row = db.prepare('SELECT * FROM catalog WHERE id=1').get()
@@ -455,7 +467,8 @@ export function createApp(options = {}) {
   app.get('/api/catalog', (req, res) => {
     const body = catalog()
     if (!req.session?.admin) {
-      body.models = body.models.filter((m) => m.availability !== 'hidden')
+      // A watch with no pieces left disappears from the site until the owner sets a positive count.
+      body.models = body.models.filter((m) => m.availability !== 'hidden' && m.piecesRemaining !== 0)
       body.perfumes = body.perfumes.filter((p) => p.availability !== 'hidden')
     }
     res.json(body)
@@ -569,7 +582,6 @@ export function createApp(options = {}) {
       used.add(im.src)
       return swap(im, next)
     }
-    if (body.hero) body.hero = replace(body.hero)
     body.models = body.models.map((m) => ({
       ...m,
       images: m.images.map(replace),
@@ -909,7 +921,7 @@ export function createApp(options = {}) {
       const m = body.models.find((m) => m.id === id)
       if (!m) continue
       if (m.oneOfOne === true) {
-        m.availability = 'out-of-stock'
+        m.availability = 'hidden'
         changed = true
       }
       if (m.piecesRemaining == null) continue
