@@ -130,6 +130,33 @@
     .btn:hover { background: var(--color-ink); color: var(--color-bg); }
   }
   .btn:active { transform: translateY(1px); }
+  /* Header navigation pill: hairline at rest; the current section and hover get a bolder ink outline (inset shadow, no layout shift); small press. */
+  .nav-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 1.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: 9999px;
+    color: var(--color-ink-2);
+    font-size: var(--text-small);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    transition:
+      box-shadow 200ms var(--ease-out-quint),
+      border-color 200ms var(--ease-out-quint),
+      color 200ms var(--ease-out-quint),
+      translate 300ms var(--ease-out-quint),
+      scale 160ms var(--ease-out-quint);
+  }
+  .nav-pill[aria-current] { border-color: var(--color-ink); box-shadow: inset 0 0 0 1px var(--color-ink); color: var(--color-ink); }
+  @media (hover: hover) and (pointer: fine) {
+    .nav-pill:hover { border-color: var(--color-ink); box-shadow: inset 0 0 0 1px var(--color-ink); color: var(--color-ink); translate: 0 -1px; }
+  }
+  .nav-pill:active { scale: 0.96; translate: 0 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-pill, .nav-pill:hover, .nav-pill:active { translate: none; scale: none; }
+  }
   .link-arrow {
     display: inline-flex;
     align-items: center;

@@ -26,23 +26,18 @@ export default function Footer() {
   const { contatti, site } = useContent()
   const year = new Date().getFullYear()
 
+  // Link groups without headings: the links speak for themselves.
   const columns = [
-    {
-      title: t('Il marchio'),
-      links: [
-        { href: '#storia', label: t('La nostra storia') },
-        { href: '#officina', label: t('Il laboratorio') },
-        { href: '#territorio', label: t('La Calabria') },
-        { href: '#profumi', label: t('I profumi') },
-      ],
-    },
-    {
-      title: t('Assistenza'),
-      links: [
-        { href: '#orologi', label: site.panel.fullCatalog },
-        { href: '#contatti', label: t('Contatti') },
-      ],
-    },
+    [
+      { href: '#storia', label: t('La nostra storia') },
+      { href: '#officina', label: t('Il laboratorio') },
+      { href: '#territorio', label: t('La Calabria') },
+      { href: '#profumi', label: t('I profumi') },
+    ],
+    [
+      { href: '#orologi', label: site.panel.fullCatalog },
+      { href: '#contatti', label: t('Contatti') },
+    ],
   ]
 
   const social = [
@@ -71,24 +66,20 @@ export default function Footer() {
         </div>
 
         <nav aria-label={site.labels.footerNav} className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 md:col-span-7">
-          {columns.map((col) => (
-            <div key={col.title}>
-              <p className="eyebrow">{col.title}</p>
-              <ul className="mt-2 flex flex-col">
-                {col.links.map((link) => (
-                  <li key={link.href}>
-                    <a href={sectionHref(link.href)} className={linkClass}>
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {columns.map((links) => (
+            <ul key={links[0].href} className="flex flex-col">
+              {links.map((link) => (
+                <li key={link.href}>
+                  <a href={sectionHref(link.href)} className={linkClass}>
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
           ))}
 
           <div>
-            <p className="eyebrow">{contatti.labels.social}</p>
-            <ul className="mt-2 -ml-3 flex items-center">
+            <ul className="-ml-3 flex items-center">
               {social.map((s) => (
                 <li key={s.key}>
                   <a

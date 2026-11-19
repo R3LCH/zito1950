@@ -355,7 +355,6 @@ export interface Contatti {
   whatsapp: string
   labels: {
     email: string
-    social: string
     mapTitle: string
     instagram: string
     facebook: string

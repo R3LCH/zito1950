@@ -879,7 +879,6 @@ export const contatti: Contatti = {
   whatsapp: 'https://wa.me/390985271330',
   labels: {
     email: 'Email',
-    social: 'Social',
     mapTitle: 'Mappa: dove siamo',
     instagram: 'Instagram',
     facebook: 'Facebook',

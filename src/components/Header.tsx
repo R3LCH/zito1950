@@ -110,7 +110,7 @@ export default function Header() {
           </a>
 
           <nav aria-label={site.labels.mainNav} className="hidden md:block">
-            <ul className="flex items-center gap-8 lg:gap-10">
+            <ul className="flex items-center gap-2 lg:gap-3">
               {site.nav.map((item) => {
                 const isActive = active === item.href
                 return (
@@ -118,9 +118,7 @@ export default function Header() {
                     <a
                       href={sectionHref(item.href)}
                       aria-current={isActive ? 'location' : undefined}
-                      className={`relative inline-flex min-h-11 items-center text-small font-medium tracking-[0.04em] transition-colors duration-200 after:absolute after:inset-x-0 after:bottom-2 after:h-px after:origin-left after:bg-ink after:transition-transform after:duration-500 after:ease-out-quint ${
-                        isActive ? 'text-ink after:scale-x-100' : 'text-ink-2 hover:text-ink after:scale-x-0'
-                      }`}
+                      className="nav-pill"
                     >
                       {item.label}
                     </a>
