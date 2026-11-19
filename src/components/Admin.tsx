@@ -560,7 +560,7 @@ function ProductEditor({
               />
               {t("Pezzo unico (1 of 1)")}
             </label>
-            <p className="text-xs text-muted">{t("Mostra l’etichetta dorata «1 of 1» sul modello.")} {t("Venduto il pezzo, il modello viene nascosto dal sito; per rimetterlo in vendita scegli di nuovo Acquistabile.")}</p>
+            <p className="text-xs text-muted">{t("Mostra l’etichetta dorata «1 of 1» sul modello.")} {t("Venduto il pezzo, il modello appare Esaurito; per rimetterlo in vendita scegli di nuovo Acquistabile.")}</p>
             <label className="flex items-center gap-3 text-small">
               <input
                 type="checkbox"
@@ -580,7 +580,7 @@ function ProductEditor({
                 max="9999"
                 step="1"
                 inputMode="numeric"
-                placeholder={t("non mostrare")}
+                placeholder={t("non contare")}
                 aria-describedby={`pieces-hint-${draft.id}`}
                 value={draft.piecesRemaining ?? ''}
                 onChange={(e) => {
@@ -591,7 +591,7 @@ function ProductEditor({
               />
             </label>
             <p id={`pieces-hint-${draft.id}`} className="text-xs text-muted">
-              {t("Mostrato sulla scheda del modello. Lascia vuoto per non mostrarlo.")} {t("Con 0 pezzi il modello viene nascosto dal sito e non è acquistabile.")}
+              {t("Visibile solo qui, non sul sito. Lascia vuoto per non contare i pezzi.")} {t("Con 0 pezzi il modello appare Esaurito e non è acquistabile.")}
             </p>
           </fieldset>
         </div>

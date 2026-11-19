@@ -76,10 +76,10 @@ export type PriceBand = (typeof PRICE_BANDS)[number]['id']
 export const SORTS = ['featured', 'price-asc', 'price-desc', 'name'] as const
 export type SortKey = (typeof SORTS)[number]
 
-/** Public state of a model: a watch with no pieces left is hidden whatever its setting, until the admin sets a positive count. */
+/** Public state of a model: a watch with no pieces left is out of stock whatever its setting, until the admin sets a positive count. */
 export function availabilityOf(model: Model): Availability {
   const availability = model.availability ?? 'no-buy'
-  return model.piecesRemaining === 0 ? 'hidden' : availability
+  return availability !== 'hidden' && model.piecesRemaining === 0 ? 'out-of-stock' : availability
 }
 
 /** Public availabilities, in the order the catalog groups them. */

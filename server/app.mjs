@@ -467,8 +467,10 @@ export function createApp(options = {}) {
   app.get('/api/catalog', (req, res) => {
     const body = catalog()
     if (!req.session?.admin) {
-      // A watch with no pieces left disappears from the site until the owner sets a positive count.
-      body.models = body.models.filter((m) => m.availability !== 'hidden' && m.piecesRemaining !== 0)
+      // The piece count is the owner's: the public only sees that a watch with none left is sold out.
+      body.models = body.models
+        .filter((m) => m.availability !== 'hidden')
+        .map(({ piecesRemaining, ...m }) => (piecesRemaining === 0 ? { ...m, availability: 'out-of-stock' } : m))
       body.perfumes = body.perfumes.filter((p) => p.availability !== 'hidden')
     }
     res.json(body)
@@ -921,7 +923,7 @@ export function createApp(options = {}) {
       const m = body.models.find((m) => m.id === id)
       if (!m) continue
       if (m.oneOfOne === true) {
-        m.availability = 'hidden'
+        m.availability = 'out-of-stock'
         changed = true
       }
       if (m.piecesRemaining == null) continue

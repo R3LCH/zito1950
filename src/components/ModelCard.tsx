@@ -51,13 +51,12 @@ export function Tags({ model, overlay = false, className = '' }: { model: Model;
   )
 }
 
-/** Remaining pieces of a watch, shown only while at least one is left; a 1 of 1 watch is the only piece, not the last. */
-export function PiecesNote({ model, className = '' }: { model: Model; className?: string }) {
-  const pieces = model.piecesRemaining
-  if (pieces == null || pieces < 1) return null
+/** «Only piece available» on a 1 of 1 watch until it sells; the remaining-pieces count is shown only in the admin. */
+export function OnlyPieceNote({ model, className = '' }: { model: Model; className?: string }) {
+  if (!model.oneOfOne || availabilityOf(model) === 'out-of-stock') return null
   return (
     <p className={`border-l-2 border-ink pl-2 font-sans text-xs font-medium uppercase leading-snug tracking-[0.12em] text-ink ${className}`}>
-      {pieces === 1 ? t(model.oneOfOne ? 'Unico pezzo disponibile' : 'Ultimo pezzo disponibile') : t('Ancora {count} pezzi', { count: pieces })}
+      {t('Unico pezzo disponibile')}
     </p>
   )
 }
@@ -123,7 +122,7 @@ export default function ModelCard({ model, onOpen }: Props) {
           <span className="sr-only">{site.labels.price}: </span>
           {view.price}
         </p>
-        <PiecesNote model={model} className="mt-2" />
+        <OnlyPieceNote model={model} className="mt-2" />
         <div className="-ml-3 mt-1">
           <Swatches
             model={model}

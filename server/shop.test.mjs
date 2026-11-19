@@ -711,10 +711,10 @@ test('a sold 1 of 1 watch becomes out of stock once, sells one unit only, and ca
   ])
   assert.deepEqual(results.map((r) => r.status).sort(), [200, 409])
   const sold = await model()
-  assert.equal(sold.availability, 'hidden')
+  assert.equal(sold.availability, 'out-of-stock')
   assert.equal(sold.oneOfOne, true)
-  // A sold single piece disappears from the public site.
-  assert.equal((await buyer.request('/catalog')).body.models.find((m) => m.id === 'n2'), undefined)
+  // A sold single piece stays on the public site as sold out.
+  assert.equal((await buyer.request('/catalog')).body.models.find((m) => m.id === 'n2').availability, 'out-of-stock')
   assert.equal((await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })).status, 409)
 
   // The owner can put it back on sale; other watches are untouched.
@@ -729,6 +729,10 @@ test('a piece count works on any watch: sales lower it, quantity is capped and 0
   const n2 = async () => (await admin.request('/catalog')).body.models.find((m) => m.id === 'n2')
   assert.equal((await n2()).limitedEdition, false)
   await savePieces(admin, 'n2', 2)
+  // The count is the owner's: the public catalog never carries it.
+  const listed = (await buyer.request('/catalog')).body.models.find((m) => m.id === 'n2')
+  assert.equal(Object.hasOwn(listed, 'piecesRemaining'), false)
+  assert.equal(listed.availability, 'buy')
   const tooMany = await buyer.request('/payments/orders', 'POST', { items: [{ ...one[0], quantity: 3 }], requestId: randomUUID() })
   assert.equal(tooMany.status, 409)
   assert.equal(tooMany.body.error, 'Pezzi disponibili insufficienti. Aggiorna il carrello.')
@@ -740,9 +744,12 @@ test('a piece count works on any watch: sales lower it, quantity is capped and 0
   const refused = await buyer.request('/payments/orders', 'POST', { items: one, requestId: randomUUID() })
   assert.equal(refused.status, 409)
   assert.equal(refused.body.error, 'Un prodotto non è più acquistabile. Aggiorna il carrello.')
-  // At 0 pieces the watch is gone from the public site but kept for the admin.
-  assert.equal((await buyer.request('/catalog')).body.models.find((m) => m.id === 'n2'), undefined)
+  // At 0 pieces the watch stays on the public site as sold out, without its count; the admin keeps the 0.
+  const soldOut = (await buyer.request('/catalog')).body.models.find((m) => m.id === 'n2')
+  assert.equal(soldOut.availability, 'out-of-stock')
+  assert.equal(Object.hasOwn(soldOut, 'piecesRemaining'), false)
   assert.equal((await n2()).piecesRemaining, 0)
+  assert.equal((await n2()).availability, 'buy')
 })
 
 const pngFile = async (background) =>

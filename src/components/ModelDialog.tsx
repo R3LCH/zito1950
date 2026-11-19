@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Picture from './Picture'
 import Recommended from './Recommended'
-import { PiecesNote, Tags, infoHref, priceClass, priceTone, statusTag } from './ModelCard'
+import { OnlyPieceNote, Tags, infoHref, priceClass, priceTone, statusTag } from './ModelCard'
 import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
 import { t, useContent } from '../lib/i18n'
 import { genderOf } from '../lib/catalogFilters'
@@ -181,7 +181,7 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
                     {t({ uomo: 'Uomo', donna: 'Donna', unisex: 'Unisex' }[genderOf(model)])}
                   </span>
                 </div>
-                <PiecesNote model={model} className="mt-3" />
+                <OnlyPieceNote model={model} className="mt-3" />
                 {model.engravable && <p className="mt-3 text-small text-muted">{t('Incisione sul retro della cassa disponibile: la scegli nel carrello.')}</p>}
                 {model.variants && model.variants.length > 1 && (
                   <div className="-ml-3 mt-3">
