@@ -79,7 +79,7 @@ export function BuyButton({
     return (
       <a
         href="#contatti"
-        className="btn mt-3 w-full"
+        className="btn btn-motion mt-3 w-full"
         onClick={(e) => {
           if (!beforeOpen) return
           // Inside the product dialog: close it first, then jump once the page is scrollable again.
@@ -97,7 +97,7 @@ export function BuyButton({
   if (availabilityOf(model) !== 'buy' || error) return null
   return (
     <button type="button"
-    className="btn mt-3 w-full"
+    className="btn btn-motion mt-3 w-full"
     onClick={() => {
       beforeOpen?.()
       add(model, variant)

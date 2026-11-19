@@ -70,12 +70,12 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
         {(canBuy || askInfo) && (
           <div className="mt-auto pt-8">
             {canBuy && (
-              <button type="button" className="btn w-full" onClick={() => addPerfume(profumo)}>
+              <button type="button" className="btn btn-motion w-full" onClick={() => addPerfume(profumo)}>
                 {t('Acquista')}
               </button>
             )}
             {askInfo && (
-              <a href={mailHref} className="btn w-full rounded-full sm:w-auto">
+              <a href={mailHref} className="btn btn-motion w-full rounded-full sm:w-auto">
                 {site.cta.info}
               </a>
             )}

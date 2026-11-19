@@ -15,7 +15,7 @@ export default function Hero() {
         <a
           href="#orologi"
           aria-label={site.cta.collection}
-          className="group flex min-h-[min(56vh,32rem)] items-center justify-center rounded-[2rem] focus-visible:outline-offset-4 md:order-2 md:col-span-7"
+          className={`group flex items-center justify-center rounded-[2rem] focus-visible:outline-offset-4 md:order-2 md:col-span-7 md:min-h-[min(56vh,32rem)] ${loaded ? '' : 'min-h-56'}`}
         >
           {/* The owner's photo comes from the server; until it arrives the slot stays empty, so the built-in photo never flashes. */}
           {loaded && (

@@ -130,6 +130,20 @@
     .btn:hover { background: var(--color-ink); color: var(--color-bg); }
   }
   .btn:active { transform: translateY(1px); }
+  /* Buy and contact buttons: 2px lift on hover (fine pointers), 0.97 press; colors and borders unchanged. */
+  .btn-motion {
+    transition:
+      background-color 200ms var(--ease-out-quint),
+      color 200ms var(--ease-out-quint),
+      transform 200ms var(--ease-out-quint);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-motion:hover { transform: translateY(-2px); }
+  }
+  .btn-motion:active { transform: scale(0.97); transition-duration: 200ms, 200ms, 120ms; }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-motion, .btn-motion:hover, .btn-motion:active { transform: none; }
+  }
   /* Header navigation pill: hairline at rest; the current section and hover get a bolder ink outline (inset shadow, no layout shift); small press. */
   .nav-pill {
     display: inline-flex;

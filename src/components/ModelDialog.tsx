@@ -219,7 +219,7 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
                   ))}
                 </ul>
                 <BuyButton modelId={model.id} variant={variant} beforeOpen={onClose} />
-                <a href={infoHref(model, view!.codes)} className="btn mt-8 w-full sm:w-auto">
+                <a href={infoHref(model, view!.codes)} className="btn btn-motion mt-8 w-full sm:w-auto">
                   {site.cta.info}
                 </a>
               </div>
