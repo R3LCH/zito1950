@@ -21,14 +21,17 @@ interface PanelProps {
   moreLabel?: string
   /** Runs right after the opened body rendered; use it to place the viewport on the new content. */
   onOpen?: () => void
+  /** Called with the body's open state whenever it opens or closes, however it was toggled. */
+  onOpenChange?: (open: boolean) => void
 }
 
 /** Page section separated by a hairline; the optional body stays `hidden` until opened. */
-export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyCollapsed = false, children, moreLabel, onOpen }: PanelProps) {
+export default function Panel({ id, eyebrow, title, intro, preview, previewOnlyCollapsed = false, children, moreLabel, onOpen, onOpenChange }: PanelProps) {
   const { site } = useContent()
   const ref = useReveal<HTMLElement>()
   const bodyRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
+  useEffect(() => onOpenChange?.(open), [open, onOpenChange])
   const bodyId = useId()
   const titleId = `${id}-title`
   const expandable = children != null

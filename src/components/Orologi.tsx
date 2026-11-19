@@ -7,6 +7,7 @@ import { t, useContent } from '../lib/i18n'
 import type { Model } from '../data/types'
 import { useShop } from '../lib/shop'
 import { EMPTY_FILTERS, availabilityOf, compareModels, facetIndex, matches, type FilterGender, type FilterState } from '../lib/catalogFilters'
+import { setCatalogLine } from '../lib/catalogLine'
 
 const LIMITED_HASH = '#edizioni-limitate'
 /** The navigation's "Orologi uomo" / "Orologi donna" links open the catalogue with one line picked. */
@@ -16,6 +17,12 @@ export default function Orologi() {
   const { orologi, site } = useContent()
   const [open, setOpen] = useState<{ model: Model; trigger: HTMLElement; variant: number; image: number } | null>(null)
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
+  const [catalogOpen, setCatalogOpen] = useState(false)
+  // The header marks "Orologi uomo/donna" while the open catalogue shows exactly that line.
+  useEffect(() => {
+    setCatalogLine(catalogOpen && filters.gender.length === 1 ? filters.gender[0] : null)
+  }, [catalogOpen, filters.gender])
+  useEffect(() => () => setCatalogLine(null), [])
   const { catalog: source, localizedCatalog: catalog, error, viewing, setViewing } = useShop()
   // Facets read the Italian source text; localized specs would miss the keywords.
   const facetsFor = useMemo(() => facetIndex(source.models), [source.models])
@@ -94,6 +101,7 @@ export default function Orologi() {
         previewOnlyCollapsed
         moreLabel={site.panel.fullCatalog}
         onOpen={handleCatalogOpen}
+        onOpenChange={setCatalogOpen}
         preview={
           <ul className={`${grid} ${featured.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
             {featured.map((m) => (

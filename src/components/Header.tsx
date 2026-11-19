@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { LanguageSelector, t, useContent } from '../lib/i18n'
 import { asset, sectionHref } from '../lib/asset'
 import { useShop } from '../lib/shop'
+import { useCatalogLine } from '../lib/catalogLine'
 
 const MENU_ID = 'menu-mobile'
 
@@ -12,7 +13,9 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const cartRef = useRef<HTMLButtonElement>(null)
-  const [active, setActive] = useState<string | null>(null)
+  // Current pill: the line the open catalogue is filtered to.
+  const line = useCatalogLine()
+  const active = line ? `#orologi-${line}` : null
   const buttonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLElement>(null)
@@ -24,26 +27,6 @@ export default function Header() {
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  // Active section: the one crossing the middle band of the viewport.
-  useEffect(() => {
-    const sections = site.nav
-      .map((item) => document.getElementById(item.href.slice(1)))
-      .filter((el): el is HTMLElement => el !== null)
-    if (sections.length === 0 || !('IntersectionObserver' in window)) return
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActive(`#${entry.target.id}`)
-          else setActive((cur) => (cur === `#${entry.target.id}` ? null : cur))
-        }
-      },
-      { rootMargin: '-45% 0px -50% 0px' },
-    )
-    sections.forEach((el) => io.observe(el))
-    return () => io.disconnect()
   }, [])
 
   // Mobile menu: scroll lock, Escape, focus trap, focus restore.
