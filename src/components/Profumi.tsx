@@ -81,12 +81,12 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
             <div id={detailsId} hidden={!expanded} className="mt-5">
               <More profumo={profumo} />
             </div>
-            <div className="mt-6">
+            <div className="mt-8 flex justify-center">
               <button
                 type="button"
                 aria-expanded={expanded}
                 aria-controls={detailsId}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-ink px-5 text-small"
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-ink bg-bg px-5 text-small font-medium text-ink transition-colors duration-200 hover:bg-ink hover:text-bg"
                 onClick={(event) => {
                   const button = event.currentTarget
                   const before = button.getBoundingClientRect().top
@@ -95,7 +95,9 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
                 }}
               >
                 {expanded ? site.panel.less : site.panel.more}
-                <span aria-hidden="true">{expanded ? '−' : '+'}</span>
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" className={`transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}>
+                  <path d="M3 5l4 4 4-4" />
+                </svg>
               </button>
             </div>
           </>
