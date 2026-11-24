@@ -37,12 +37,14 @@ export default function ProductEntry({ children }: { children: ReactNode }) {
   const home = `${asset('')}?lang=${locale}`
   const heading = loading ? 'Caricamento del prodotto…' : error ? 'Impossibile caricare il prodotto' : 'Prodotto non trovato'
   return (
-    <main id="contenuto" className="container-site flex min-h-dvh flex-col items-center py-8 text-center">
-      <div className="self-end"><LanguageSelector /></div>
-      <a href={home} aria-label={t('Torna alla pagina iniziale')} className="mt-12 block w-full max-w-[22rem]">
-        <img src={asset('logo.svg')} alt="ZITO1950®" width="352" height="112" className="h-auto w-full" />
-      </a>
-      <div className="my-auto w-full max-w-[38rem] py-16" aria-busy={loading}>
+    <main id="contenuto" className="container-site grid min-h-dvh grid-rows-[1fr_auto_1fr] justify-items-center text-center">
+      <header className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-y-3 self-start py-6">
+        <a href={home} aria-label={t('Torna alla pagina iniziale')} className="col-start-2 row-start-1 block w-32 sm:w-40">
+          <img src={asset('logo.svg')} alt="ZITO1950®" width="160" height="51" className="h-auto w-full" />
+        </a>
+        <div className="col-span-3 col-start-1 row-start-2 justify-self-end sm:col-span-1 sm:col-start-3 sm:row-start-1"><LanguageSelector /></div>
+      </header>
+      <div className="w-full max-w-[38rem] py-8" aria-busy={loading}>
         <h1 className="font-serif text-h2" role="status">{t(heading)}</h1>
         {!loading && <>
           <p className="mt-5 text-ink-2">{t(error ? 'Riprova tra poco oppure torna alla collezione.' : 'Questo prodotto non è disponibile nella collezione.')}</p>
@@ -52,6 +54,7 @@ export default function ProductEntry({ children }: { children: ReactNode }) {
           </div>
         </>}
       </div>
+      <div aria-hidden="true" className="min-h-24" />
     </main>
   )
 }
