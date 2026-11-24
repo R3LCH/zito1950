@@ -3,13 +3,14 @@ import Picture from './Picture'
 import Recommended from './Recommended'
 import { OnlyPieceNote, Tags, infoHref, priceClass, priceTone, statusTag } from './ModelCard'
 import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
-import { t, useContent } from '../lib/i18n'
+import { t, useContent, useLocale } from '../lib/i18n'
 import { genderOf } from '../lib/catalogFilters'
 import type { Model } from '../data/types'
 import { dims } from '../lib/imageMeta'
 import { isVideo, posterOf } from '../data/media'
 import ProductVideo from './ProductVideo'
 import { BuyButton } from './Cart'
+import { setProductUrl } from '../lib/productLinks'
 
 interface Props {
   model: Model | null
@@ -27,6 +28,7 @@ interface Props {
 
 export default function ModelDialog({ model, models, trigger, initialVariant, initialImage, onClose, onSelect }: Props) {
   const { orologi, site } = useContent()
+  const { locale } = useLocale()
   const ref = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const switched = useRef(false)
@@ -192,6 +194,7 @@ export default function ModelDialog({ model, models, trigger, initialVariant, in
                       onChange={(i) => {
                         setVariant(i)
                         setActive(0)
+                        setProductUrl('model', model.id, locale, model.variants?.[i]?.id)
                       }}
                     />
                   </div>

@@ -5,9 +5,10 @@ import Panel from './Panel'
 import { statusTag } from './ModelCard'
 import { Arrows, useSwipe } from './Gallery'
 import { dims } from '../lib/imageMeta'
-import { t, useContent } from '../lib/i18n'
+import { t, useContent, useLocale } from '../lib/i18n'
 import { useShop } from '../lib/shop'
 import type { Profumo } from '../data/types'
+import { productHref, setProductUrl } from '../lib/productLinks'
 
 /**
  * One perfume: gallery, description and specs, details toggle, then purchase/contact action.
@@ -15,6 +16,7 @@ import type { Profumo } from '../data/types'
  */
 function PerfumeCard({ profumo }: { profumo: Profumo }) {
   const { contatti, site, profumiSection } = useContent()
+  const { locale } = useLocale()
   const { addPerfume, error } = useShop()
   const availability = profumo.availability ?? 'no-buy'
   const soon = availability === 'coming-soon'
@@ -36,7 +38,7 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
   const askInfo = availability === 'no-buy' || (availability === 'buy' && !!error)
 
   return (
-    <article aria-labelledby={titleId} className="flex h-full flex-col scroll-mt-[calc(var(--header-h)+1.5rem)] outline-none">
+    <article onClickCapture={() => setProductUrl('perfume', profumo.id, locale)} aria-labelledby={titleId} className="flex h-full flex-col scroll-mt-[calc(var(--header-h)+1.5rem)] outline-none">
       {image && (
         <div className="relative aspect-square overflow-hidden rounded-[1.25rem] bg-bg" {...swipe}>
           <Picture
@@ -54,7 +56,7 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
       )}
       <div className="flex flex-1 flex-col pt-6">
         {soon && <p className="mb-3 text-small uppercase tracking-[0.18em] text-muted">{profumiSection.soon}</p>}
-        <h3 id={titleId} className="font-serif text-h3">{profumo.name}</h3>
+        <h3 id={titleId} className="font-serif text-h3"><a href={productHref('perfume', profumo.id, locale)}>{profumo.name}</a></h3>
         {profumo.line?.trim() && <p className="mt-1 font-serif text-lg italic text-ink-2">{profumo.line}</p>}
         {availability === 'out-of-stock' && <p className="mt-4"><span className={statusTag}>{t('Esaurito')}</span></p>}
         {!soon && (

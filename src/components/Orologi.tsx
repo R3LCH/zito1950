@@ -3,11 +3,12 @@ import ModelCard from './ModelCard'
 import ModelDialog from './ModelDialog'
 import CatalogFilters from './CatalogFilters'
 import Panel from './Panel'
-import { t, useContent } from '../lib/i18n'
+import { t, useContent, useLocale } from '../lib/i18n'
 import type { Model } from '../data/types'
 import { useShop } from '../lib/shop'
 import { EMPTY_FILTERS, availabilityOf, compareModels, facetIndex, matches, type FilterGender, type FilterState } from '../lib/catalogFilters'
 import { setCatalogLine } from '../lib/catalogLine'
+import { clearProductUrl, setProductUrl } from '../lib/productLinks'
 
 const LIMITED_HASH = '#edizioni-limitate'
 /** The navigation's "Orologi uomo" / "Orologi donna" links open the catalogue with one line picked. */
@@ -15,6 +16,7 @@ const GENDER_HASHES: Record<string, FilterGender> = { '#orologi-uomo': 'uomo', '
 
 export default function Orologi() {
   const { orologi, site } = useContent()
+  const { locale } = useLocale()
   const [open, setOpen] = useState<{ model: Model; trigger: HTMLElement; variant: number; image: number } | null>(null)
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
   const [catalogOpen, setCatalogOpen] = useState(false)
@@ -61,12 +63,18 @@ export default function Orologi() {
   }
 
   const handleOpen = useCallback(
-    (model: Model, trigger: HTMLElement, variant: number, image: number) => setOpen({ model, trigger, variant, image }),
-    [],
+    (model: Model, trigger: HTMLElement, variant: number, image: number) => {
+      setProductUrl('model', model.id, locale, model.variants?.[variant]?.id)
+      setOpen({ model, trigger, variant, image })
+    },
+    [locale],
   )
-  const handleClose = useCallback(() => setOpen(null), [])
+  const handleClose = useCallback(() => { setOpen(null); clearProductUrl() }, [])
   // Same trigger: focus returns to the card that opened the dialog in the first place.
-  const handleSelect = useCallback((model: Model) => setOpen((o) => o && { ...o, model, variant: 0, image: 0 }), [])
+  const handleSelect = useCallback((model: Model) => {
+    setProductUrl('model', model.id, locale, model.variants?.[0]?.id)
+    setOpen((o) => o && { ...o, model, variant: 0, image: 0 })
+  }, [locale])
   // A watch clicked in the cart opens here, at the finish in the cart; focus then returns to its card if it is on the page.
   useEffect(() => {
     if (viewing?.kind === 'perfume' || !viewing) return
@@ -76,8 +84,8 @@ export default function Orologi() {
     const variant = Math.max(0, model.variants?.findIndex((v) => v.id === viewing.variantId) ?? 0)
     const card = document.querySelector<HTMLElement>(`[aria-labelledby="model-${CSS.escape(model.id)}-name"] [aria-haspopup="dialog"]`)
     const trigger = card ?? (document.activeElement as HTMLElement | null) ?? document.body
-    setOpen({ model, trigger, variant, image: 0 })
-  }, [viewing, models, setViewing])
+    handleOpen(model, trigger, variant, 0)
+  }, [viewing, models, setViewing, handleOpen])
   // Opening the full catalogue: the second row lands under the sticky header, so the first row stays roughly where the preview was.
   // Runs after the body rendered synchronously and replaces any scroll-anchoring adjustment with one absolute position.
   const handleCatalogOpen = useCallback(() => {

@@ -2,11 +2,12 @@ import { useRef, useState } from 'react'
 import Picture from './Picture'
 import { Arrows, Swatches, resolveView, useSwipe } from './Gallery'
 import { contatti, orologi } from '../data/content'
-import { t, useContent } from '../lib/i18n'
+import { t, useContent, useLocale } from '../lib/i18n'
 import type { Model } from '../data/types'
 import { isVideo, posterOf } from '../data/media'
 import { availabilityOf } from '../lib/catalogFilters'
 import { BuyButton } from './Cart'
+import { productHref } from '../lib/productLinks'
 
 /** mailto link for an information request about a model (codes of the chosen variant). */
 export function infoHref(model: Model, codes: string[] = model.codes): string {
@@ -68,6 +69,7 @@ interface Props {
 
 export default function ModelCard({ model, onOpen }: Props) {
   const { orologi, site } = useContent()
+  const { locale } = useLocale()
   const [variant, setVariant] = useState(0)
   const [index, setIndex] = useState(0)
   const view = resolveView(model, variant)
@@ -111,7 +113,7 @@ export default function ModelCard({ model, onOpen }: Props) {
       </div>
       <div className="flex flex-1 flex-col border-b border-line pt-4 pb-4">
         <h3 id={titleId} className="font-serif text-lg leading-snug lg:text-xl">
-          {model.name}
+          <a href={productHref('model', model.id, locale, view.current?.id)}>{model.name}</a>
         </h3>
         <p className="mt-1 text-xs text-muted">
           <span className="sr-only">{view.codes.length > 1 ? site.labels.codes : site.labels.code}: </span>

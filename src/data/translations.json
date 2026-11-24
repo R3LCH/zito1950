@@ -1,5 +1,13 @@
 {
   "ru": {
+    "Riprova": "Повторить",
+    "Caricamento del prodotto…": "Загрузка товара…",
+    "Impossibile caricare il prodotto": "Не удалось загрузить товар",
+    "Prodotto non trovato": "Товар не найден",
+    "Riprova tra poco oppure torna alla collezione.": "Попробуйте позже или вернитесь к коллекции.",
+    "Questo prodotto non è disponibile nella collezione.": "Этот товар недоступен в коллекции.",
+    "Vai ai prodotti": "К товарам",
+    "Torna alla pagina iniziale": "На главную",
     "1957": "1957",
     "Scopri Scalea": "Откройте Скалею",
     "Cosa ci distingue": "Что нас отличает",
@@ -878,6 +886,14 @@
     "Etichetta «Solo in negozio» e pulsante Contatti al posto di Acquista.": "Метка «Только в магазине» и кнопка «Контакты» вместо «Купить»."
   },
   "en": {
+    "Riprova": "Try again",
+    "Caricamento del prodotto…": "Loading product…",
+    "Impossibile caricare il prodotto": "Unable to load product",
+    "Prodotto non trovato": "Product not found",
+    "Riprova tra poco oppure torna alla collezione.": "Try again shortly or return to the collection.",
+    "Questo prodotto non è disponibile nella collezione.": "This product is not available in the collection.",
+    "Vai ai prodotti": "Go to products",
+    "Torna alla pagina iniziale": "Back to home",
     "1957": "1957",
     "Scopri Scalea": "Discover Scalea",
     "Cosa ci distingue": "What sets us apart",
@@ -1756,6 +1772,14 @@
     "Etichetta «Solo in negozio» e pulsante Contatti al posto di Acquista.": "“In-store only” label and a Contact button instead of Buy."
   },
   "uk": {
+    "Riprova": "Спробувати ще раз",
+    "Caricamento del prodotto…": "Завантаження товару…",
+    "Impossibile caricare il prodotto": "Не вдалося завантажити товар",
+    "Prodotto non trovato": "Товар не знайдено",
+    "Riprova tra poco oppure torna alla collezione.": "Спробуйте пізніше або поверніться до колекції.",
+    "Questo prodotto non è disponibile nella collezione.": "Цей товар недоступний у колекції.",
+    "Vai ai prodotti": "До товарів",
+    "Torna alla pagina iniziale": "На головну",
     "1957": "1957",
     "Scopri Scalea": "Відкрийте Скалею",
     "Cosa ci distingue": "Що нас вирізняє",
@@ -2634,6 +2658,14 @@
     "Etichetta «Solo in negozio» e pulsante Contatti al posto di Acquista.": "Позначка «Лише в магазині» та кнопка «Контакти» замість «Купити»."
   },
   "de": {
+    "Riprova": "Erneut versuchen",
+    "Caricamento del prodotto…": "Produkt wird geladen…",
+    "Impossibile caricare il prodotto": "Produkt konnte nicht geladen werden",
+    "Prodotto non trovato": "Produkt nicht gefunden",
+    "Riprova tra poco oppure torna alla collezione.": "Versuchen Sie es später erneut oder kehren Sie zur Kollektion zurück.",
+    "Questo prodotto non è disponibile nella collezione.": "Dieses Produkt ist in der Kollektion nicht verfügbar.",
+    "Vai ai prodotti": "Zu den Produkten",
+    "Torna alla pagina iniziale": "Zur Startseite",
     "1957": "1957",
     "Scopri Scalea": "Scalea entdecken",
     "Cosa ci distingue": "Was uns auszeichnet",
@@ -3512,6 +3544,14 @@
     "Etichetta «Solo in negozio» e pulsante Contatti al posto di Acquista.": "Kennzeichnung „Nur im Geschäft“ und Schaltfläche „Kontakt“ anstelle von „Kaufen“."
   },
   "pl": {
+    "Riprova": "Spróbuj ponownie",
+    "Caricamento del prodotto…": "Ładowanie produktu…",
+    "Impossibile caricare il prodotto": "Nie udało się załadować produktu",
+    "Prodotto non trovato": "Nie znaleziono produktu",
+    "Riprova tra poco oppure torna alla collezione.": "Spróbuj ponownie za chwilę lub wróć do kolekcji.",
+    "Questo prodotto non è disponibile nella collezione.": "Ten produkt nie jest dostępny w kolekcji.",
+    "Vai ai prodotti": "Przejdź do produktów",
+    "Torna alla pagina iniziale": "Wróć na stronę główną",
     "1957": "1957",
     "Scopri Scalea": "Odkryj Scaleę",
     "Cosa ci distingue": "Co nas wyróżnia",
