@@ -729,6 +729,28 @@ function ProductEditor({
                     onChange={(e) => setVariant(index, { swatch: [e.target.value, ...v.swatch.slice(1)] })}
                   />
                 </label>
+                <label className="flex min-h-11 items-center gap-3 text-small">
+                  <input
+                    type="checkbox"
+                    name={`two-colours-${v.id}`}
+                    className="accent-ink"
+                    checked={v.swatch.length === 2}
+                    onChange={(e) => setVariant(index, { swatch: e.target.checked ? [v.swatch[0], v.swatch[0]] : [v.swatch[0]] })}
+                  />
+                  {t("Due colori")}
+                </label>
+                {v.swatch.length === 2 && (
+                  <label className="shop-label">
+                    {t("Secondo colore")}
+                    <input
+                      type="color"
+                      name={`second-colour-${v.id}`}
+                      className="shop-input w-full"
+                      value={v.swatch[1]}
+                      onChange={(e) => setVariant(index, { swatch: [v.swatch[0], e.target.value] })}
+                    />
+                  </label>
+                )}
               </div>
               <Field label={t("Caratteristiche variante (una per riga; vuoto usa quelle del prodotto)")} busy={translating} onTranslate={() => translate(language, variantField(v, 'specs'))}>
                 {id => <textarea

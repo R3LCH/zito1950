@@ -1,14 +1,16 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import Picture from './Picture'
 import Panel from './Panel'
 import { statusTag } from './ModelCard'
+import { Arrows, useSwipe } from './Gallery'
 import { dims } from '../lib/imageMeta'
 import { t, useContent } from '../lib/i18n'
 import { useShop } from '../lib/shop'
 import type { Profumo } from '../data/types'
 
 /**
- * One perfume as a vertical card: photo, name, line, code, price, opening text, action and plain-text specs.
+ * One perfume: gallery, description and its details toggle, purchase/contact action, then plain-text specs.
  * coming-soon shows the «Prossimamente» eyebrow, all its text and no code, price or button.
  */
 function PerfumeCard({ profumo }: { profumo: Profumo }) {
@@ -17,8 +19,18 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
   const availability = profumo.availability ?? 'no-buy'
   const soon = availability === 'coming-soon'
   const mailHref = `mailto:${contatti.email}?subject=${encodeURIComponent(`${profumo.labels.mailSubject} – ${profumo.name}${profumo.code ? ` (${profumo.code})` : ''}`)}`
-  const [image] = profumo.images
+  const [imageIndex, setImageIndex] = useState(0)
+  const count = profumo.images.length
+  const active = Math.min(imageIndex, Math.max(0, count - 1))
+  const image = profumo.images[active]
   const size = image && dims(image.src)
+  const swipe = useSwipe((dir) => {
+    if (count > 1) setImageIndex((active + dir + count) % count)
+  })
+  const [expanded, setExpanded] = useState(false)
+  const paragraphs = profumo.paragraphs.filter((p) => p.trim())
+  const hasMore = !soon && (paragraphs.length > 1 || profumo.ingredients.length > 0 || !!profumo.quote.text.trim())
+  const detailsId = `profumo-${profumo.id}-details`
   const titleId = `profumo-${profumo.id}`
   const canBuy = availability === 'buy' && !error
   const askInfo = availability === 'no-buy' || (availability === 'buy' && !!error)
@@ -26,15 +38,19 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
   return (
     <article aria-labelledby={titleId} className="flex h-full flex-col scroll-mt-[calc(var(--header-h)+1.5rem)] outline-none">
       {image && (
-        <Picture
-          src={image.src}
-          alt={image.alt}
-          width={size?.w}
-          height={size?.h}
-          sizes="(min-width: 640px) 46vw, 100vw"
-          pictureClassName="block aspect-square overflow-hidden rounded-[1.25rem] bg-bg"
-          className="h-full w-full object-contain"
-        />
+        <div className="relative aspect-square overflow-hidden rounded-[1.25rem] bg-bg" {...swipe}>
+          <Picture
+            key={image.src}
+            src={image.src}
+            alt={image.alt}
+            width={size?.w}
+            height={size?.h}
+            sizes="(min-width: 640px) 46vw, 100vw"
+            pictureClassName="block h-full w-full"
+            className="h-full w-full object-contain"
+          />
+          <Arrows count={count} index={active} onChange={setImageIndex} label={profumo.name} />
+        </div>
       )}
       <div className="flex flex-1 flex-col pt-6">
         {soon && <p className="mb-3 text-small uppercase tracking-[0.18em] text-muted">{profumiSection.soon}</p>}
@@ -57,11 +73,35 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
             )}
           </dl>
         )}
-        {soon
-          ? profumo.paragraphs.map((p) => <p key={p} className="mt-5 max-w-[60ch] text-ink-2">{p}</p>)
-          : profumo.paragraphs[0] && <p className="mt-5 max-w-[60ch] text-ink-2">{profumo.paragraphs[0]}</p>}
+        {(soon ? paragraphs : paragraphs.slice(0, 1)).map((p, i) => (
+          <p key={i} className="mt-5 max-w-[60ch] whitespace-pre-line text-ink-2">{p}</p>
+        ))}
+        {hasMore && (
+          <>
+            <div id={detailsId} hidden={!expanded} className="mt-5">
+              <More profumo={profumo} />
+            </div>
+            <div className="mt-6">
+              <button
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={detailsId}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-ink px-5 text-small"
+                onClick={(event) => {
+                  const button = event.currentTarget
+                  const before = button.getBoundingClientRect().top
+                  flushSync(() => setExpanded(!expanded))
+                  if (expanded) window.scrollBy({ top: button.getBoundingClientRect().top - before, behavior: 'instant' })
+                }}
+              >
+                {expanded ? site.panel.less : site.panel.more}
+                <span aria-hidden="true">{expanded ? '−' : '+'}</span>
+              </button>
+            </div>
+          </>
+        )}
         {(canBuy || askInfo) && (
-          <div className="mt-auto pt-8">
+          <div className="pt-6">
             {canBuy && (
               <button type="button" className="btn btn-motion w-full" onClick={() => addPerfume(profumo)}>
                 {t('Acquista')}
@@ -86,14 +126,12 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
   )
 }
 
-/** A perfume's quote, the rest of its text and its ingredients, shown when the section is opened. */
+/** Details remain in their own card, above its toggle and purchase action. */
 function More({ profumo }: { profumo: Profumo }) {
-  const rest = profumo.paragraphs.slice(1)
+  const rest = profumo.paragraphs.filter((p) => p.trim()).slice(1)
   const quote = profumo.quote.text.trim()
   return (
-    <div className="mt-10 border-t border-line pt-8 first:mt-0 first:border-t-0 first:pt-0 md:grid md:grid-cols-12 md:gap-x-10">
-      <p className="font-serif text-h3 md:col-span-4">{profumo.name}</p>
-      <div className="mt-4 max-w-[60ch] md:col-span-8 md:mt-0">
+    <div className="max-w-[60ch]">
         {quote && (
           <blockquote className={rest.length > 0 ? 'mb-6' : ''}>
             <p className="font-serif text-h3 italic text-ink-2">«{profumo.quote.text}»</p>
@@ -101,8 +139,8 @@ function More({ profumo }: { profumo: Profumo }) {
           </blockquote>
         )}
         <div className="space-y-5 text-ink-2">
-          {rest.map((p) => (
-            <p key={p}>{p}</p>
+          {rest.map((p, i) => (
+            <p key={i} className="whitespace-pre-line">{p}</p>
           ))}
         </div>
         {profumo.ingredients.length > 0 && (
@@ -111,7 +149,6 @@ function More({ profumo }: { profumo: Profumo }) {
             <p className="mt-2 text-small text-muted">{profumo.ingredients.join(', ')}</p>
           </div>
         )}
-      </div>
     </div>
   )
 }
@@ -138,10 +175,6 @@ export default function Profumi() {
     )
   }, [viewing, setViewing])
   if (perfumes.length === 0) return null
-  // Coming-soon perfumes show all their text on the card and never a quote, so they add nothing to More.
-  const extra = perfumes.filter(
-    (p) => (p.availability ?? 'no-buy') !== 'coming-soon' && (p.paragraphs.length > 1 || p.ingredients.length > 0 || !!p.quote.text.trim()),
-  )
 
   return (
     <Panel
@@ -158,8 +191,6 @@ export default function Profumi() {
           ))}
         </ul>
       }
-    >
-      {extra.length > 0 ? extra.map((p) => <More key={p.id} profumo={p} />) : undefined}
-    </Panel>
+    />
   )
 }

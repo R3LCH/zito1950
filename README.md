@@ -222,3 +222,5 @@ The script pulls `main`, rebuilds the image, restarts the container and waits fo
 
 - Corrected Italian certificate wording to «Certificato di proprietà e garanzia» in the cart, order page and emails; personalization behavior is unchanged.
 - Perfume purchase/contact actions now precede the specs on desktop and mobile. Specs use plain wrapping text instead of outlined pills so they no longer resemble buttons.
+- Perfume descriptions now expand inside each perfume card, above its show-all toggle and purchase action; previously paragraphs after the first appeared below the purchase buttons. Blank leading paragraphs no longer hide the introduction. Every uploaded perfume photo is reachable through the existing watch arrows, dots and touch swipe.
+- Variant admin now exposes the already-supported second swatch colour through **Due colori** and **Secondo colore**. Saving retains both colours; disabling the option keeps the first. Storefront circles show equal diagonal halves without changing variant identity or pricing.
