@@ -167,7 +167,7 @@ function Personalization({
           onClick={() => setCertificateOpen(!certificateShown)}
         >
           <span>
-            {t('Certificato della proprietà e garanzia')} <span className="font-normal text-muted">{certificateIncomplete ? t('(da completare)') : t('(facoltativo)')}</span>
+            {t('Certificato di proprietà e garanzia')} <span className="font-normal text-muted">{certificateIncomplete ? t('(da completare)') : t('(facoltativo)')}</span>
           </span>
           <span aria-hidden="true">{certificateShown ? '−' : '+'}</span>
         </button>

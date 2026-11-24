@@ -94,7 +94,7 @@ export const engravingWords = (text: string) => text.trim().split(/\s+/).filter(
 
 /** Optional per cart line / order line: both fields null = not personalized. */
 export interface LinePersonalization {
-  /** "Certificato della proprietà e garanzia" holder; null = no personalized certificate. */
+  /** "Certificato di proprietà e garanzia" holder; null = no personalized certificate. */
   certificate: CertificateHolder | null
   /** Trimmed engraving text, 1..10 words; null = no engraving. */
   engraving: string | null

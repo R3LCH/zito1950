@@ -117,7 +117,7 @@ const perfumeSchema = z.object({
   images: z.array(image).max(30),
   translations,
 })
-// Optional per-line "Certificato della proprietà e garanzia" holder; no PayPal-name fallback.
+// Optional per-line "Certificato di proprietà e garanzia" holder; no PayPal-name fallback.
 const certificateSchema = z
   .object({ firstName: text.min(1).max(80), lastName: text.min(1).max(80), email: z.string().trim().email().max(254) })
   .strict()

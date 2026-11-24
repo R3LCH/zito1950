@@ -8,7 +8,7 @@ import { useShop } from '../lib/shop'
 import type { Profumo } from '../data/types'
 
 /**
- * One perfume as a vertical card: photo, name, line, code, price, opening text, size and its action.
+ * One perfume as a vertical card: photo, name, line, code, price, opening text, action and plain-text specs.
  * coming-soon shows the «Prossimamente» eyebrow, all its text and no code, price or button.
  */
 function PerfumeCard({ profumo }: { profumo: Profumo }) {
@@ -60,13 +60,6 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
         {soon
           ? profumo.paragraphs.map((p) => <p key={p} className="mt-5 max-w-[60ch] text-ink-2">{p}</p>)
           : profumo.paragraphs[0] && <p className="mt-5 max-w-[60ch] text-ink-2">{profumo.paragraphs[0]}</p>}
-        {profumo.specs.length > 0 && (
-          <ul className="mt-5 flex flex-wrap gap-2 text-small" aria-label={site.labels.specs}>
-            {profumo.specs.map((s) => (
-              <li key={s} className="rounded-full border border-line px-3 py-1">{s}</li>
-            ))}
-          </ul>
-        )}
         {(canBuy || askInfo) && (
           <div className="mt-auto pt-8">
             {canBuy && (
@@ -80,6 +73,13 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
               </a>
             )}
           </div>
+        )}
+        {profumo.specs.length > 0 && (
+          <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-1 text-small text-ink-2" aria-label={site.labels.specs}>
+            {profumo.specs.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ul>
         )}
       </div>
     </article>

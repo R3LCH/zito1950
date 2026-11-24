@@ -34,7 +34,7 @@ export interface CartLine {
   quantity: number
   /** Stable per-line id, so differently personalized lines of one product coexist; assigned when missing. */
   id?: string
-  /** Optional "Certificato della proprietà e garanzia" holder; null = none. Fields may be blank while the buyer is typing. */
+  /** Optional "Certificato di proprietà e garanzia" holder; null = none. Fields may be blank while the buyer is typing. */
   certificate?: CertificateHolder | null
   /** Optional engraving as typed; null or blank = none. */
   engraving?: string | null

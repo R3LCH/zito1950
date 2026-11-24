@@ -168,7 +168,7 @@ function OrderDetails({ order, preview, date }: { order: PublicOrder; preview: b
               </p>
               {item.certificate && (
                 <p className="mt-3 text-small">
-                  <span className="text-muted">{t('Certificato della proprietà e garanzia')}:</span>{' '}
+                  <span className="text-muted">{t('Certificato di proprietà e garanzia')}:</span>{' '}
                   <span className="[overflow-wrap:anywhere]">
                     {item.certificate.firstName} {item.certificate.lastName} · {item.certificate.email}
                   </span>

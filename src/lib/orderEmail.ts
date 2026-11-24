@@ -51,7 +51,7 @@ const paragraphs = (message: string) =>
 
 const certificateLine = (item: OrderItemView) => {
   const c = item.certificate
-  return c ? `Certificato della proprietà e garanzia: ${`${c.firstName} ${c.lastName}`.trim()} · ${c.email}` : null
+  return c ? `Certificato di proprietà e garanzia: ${`${c.firstName} ${c.lastName}`.trim()} · ${c.email}` : null
 }
 const engravingLine = (item: OrderItemView) => (item.engraving ? `${item.kind === 'perfume' ? 'Incisione' : 'Incisione sul retro'}: «${item.engraving}»` : null)
 
