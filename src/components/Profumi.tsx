@@ -10,7 +10,7 @@ import { useShop } from '../lib/shop'
 import type { Profumo } from '../data/types'
 
 /**
- * One perfume: gallery, description and its details toggle, purchase/contact action, then plain-text specs.
+ * One perfume: gallery, description and specs, details toggle, then purchase/contact action.
  * coming-soon shows the «Prossimamente» eyebrow, all its text and no code, price or button.
  */
 function PerfumeCard({ profumo }: { profumo: Profumo }) {
@@ -76,6 +76,13 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
         {(soon ? paragraphs : paragraphs.slice(0, 1)).map((p, i) => (
           <p key={i} className="mt-5 max-w-[60ch] whitespace-pre-line text-ink-2">{p}</p>
         ))}
+        {profumo.specs.length > 0 && (
+          <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-1 text-small text-ink-2" aria-label={site.labels.specs}>
+            {profumo.specs.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ul>
+        )}
         {hasMore && (
           <>
             <div id={detailsId} hidden={!expanded} className="mt-5">
@@ -115,13 +122,6 @@ function PerfumeCard({ profumo }: { profumo: Profumo }) {
               </a>
             )}
           </div>
-        )}
-        {profumo.specs.length > 0 && (
-          <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-1 text-small text-ink-2" aria-label={site.labels.specs}>
-            {profumo.specs.map((s) => (
-              <li key={s}>{s}</li>
-            ))}
-          </ul>
         )}
       </div>
     </article>
