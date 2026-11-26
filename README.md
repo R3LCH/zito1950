@@ -228,3 +228,7 @@ The script pulls `main`, rebuilds the image, restarts the container and waits fo
 - Fixed the shared perfume specification block being rendered after BUY in every language. It now precedes the details toggle and purchase action in DOM order, including long admin-entered text. Catalogue edits and locale-specific content filtering are not layout fixes; saved content stays untouched.
 - Added address-bar product links in `src/lib/productLinks.ts` and `ProductEntry`: stable catalogue IDs support admin-created watches/perfumes without rebuilding, preserving language and watch variant. Product names link directly; opening watch details or interacting with perfume cards updates the address bar without extra share controls. Direct loads wait for the current catalogue and reject hidden/deleted/unknown IDs with branded recovery; network errors offer retry instead of pretending the product is missing. Query URLs also work under the GitHub Pages preview base path (preview contains only its bundled sample catalogue).
 - Recovery screen now uses a compact, horizontally centred top logo and a viewport-centred message/action group. Previously the oversized logo occupied a separate block above the message, pushing it below centre (`ProductEntry.tsx`).
+
+## Change record — 2026-11-26
+
+- Renamed the Italian watch engraving section in the cart to «Incisione Fondello orologio». Perfume labels, other languages, and engraving behavior are unchanged.
