@@ -256,7 +256,7 @@ function Personalization({
           onClick={() => setEngravingOpen(!engravingShown)}
         >
           <span>
-            {perfume ? t('Incisione') : t('Incisione sul retro')} <span className="font-normal text-muted">{engravingIncomplete ? t('(da completare)') : t('(facoltativo)')}</span>
+            {perfume ? t('Incisione') : t('Incisione Fondello orologio')} <span className="font-normal text-muted">{engravingIncomplete ? t('(da completare)') : t('(facoltativo)')}</span>
           </span>
           <span aria-hidden="true">{engravingShown ? '−' : '+'}</span>
         </button>
