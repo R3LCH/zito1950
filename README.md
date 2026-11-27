@@ -232,3 +232,5 @@ The script pulls `main`, rebuilds the image, restarts the container and waits fo
 ## Change record — 2026-11-26
 
 - Renamed the Italian watch engraving section in the cart to «Incisione Fondello orologio». Perfume labels, other languages, and engraving behavior are unchanged.
+- Made the Perché ZITO1950® photo replaceable under **Fotografie del sito**, including in existing catalogues. The editorial image was missing from the replacement list.
+- **Traduci** now accepts the same per-field text length as the product editor. The fallback uses bounded requests for long copy and keeps blank entries and paragraph order.

@@ -8,7 +8,7 @@ import { randomBytes, createHash, timingSafeEqual, randomUUID } from 'node:crypt
 import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { z } from 'zod'
-import { models, site, storia, profumo, tesoroDiAlarico, officina, territorio } from '../src/data/content.ts'
+import { models, site, storia, profumo, tesoroDiAlarico, officina, territorio, perche } from '../src/data/content.ts'
 import {
   AVAILABILITIES,
   GENDERS,
@@ -47,7 +47,8 @@ const PAYPAL_BUYER_ISSUES = {
   PAYER_ACTION_REQUIRED: 'Il pagamento non è ancora stato approvato su PayPal. Torna al carrello e riprova.',
   ORDER_NOT_APPROVED: 'Il pagamento non è ancora stato approvato su PayPal. Torna al carrello e riprova.',
 }
-const text = z.string().trim().max(12000)
+const MAX_TEXT_LENGTH = 12000
+const text = z.string().trim().max(MAX_TEXT_LENGTH)
 const id = z.string().regex(/^[a-z0-9-]{1,80}$/)
 const cents = z.number().int().min(1).max(100000000)
 const textTranslation = z.object({
@@ -356,7 +357,10 @@ export function createApp(options = {}) {
   const catalog = () => {
     const row = db.prepare('SELECT * FROM catalog WHERE id=1').get()
     // `videos` (upload library) and `texts` (owner edits to section copy) arrived after catalogVersion 10; absent means empty.
-    return { videos: [], texts: {}, ...JSON.parse(row.body), revision: row.revision }
+    const body = JSON.parse(row.body)
+    // Register the editorial slot for existing catalogues without rewriting saved data on startup.
+    if (!body.siteImages.some((slot) => slot.src === perche.image.src)) body.siteImages.push(seedImageTranslations(perche.image))
+    return { videos: [], texts: {}, ...body, revision: row.revision }
   }
   const save = (body, revision) => {
     delete body.revision
@@ -479,7 +483,7 @@ export function createApp(options = {}) {
   const translateRequest = z.object({
     source: z.enum(LOCALES),
     target: z.enum(LOCALES),
-    texts: z.array(z.string().max(5000)).min(1).max(50),
+    texts: z.array(z.string().max(MAX_TEXT_LENGTH)).min(1).max(50),
   }).strict()
   app.post('/api/admin/translate', admin, csrf, async (req, res) => {
     const { source, target, texts } = translateRequest.parse(req.body)

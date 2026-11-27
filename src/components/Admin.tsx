@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } fr
 import { AVAILABILITIES, DEFAULT_EMAIL_TEMPLATES, FULFILLMENT_LABELS, FULFILLMENT_STATUSES, GENDERS, PERFUME_AVAILABILITIES, type Availability, type CertificateHolder, type EmailTemplate, type EmailTemplates, type FulfillmentStatus, type Gender, type Img, type Model, type OrderItemView, type PerfumeAvailability, type Profumo, type PublicOrder, type Variant, type TextTranslation } from '../data/types'
 import { renderCustomerEmail } from '../lib/orderEmail'
 import { api, euro, getSession, STATIC_PREVIEW, useShop, type Catalog } from '../lib/shop'
-import { officina, profumo as originalPerfume, storia, territorio } from '../data/content'
+import { officina, perche, profumo as originalPerfume, storia, territorio } from '../data/content'
 import { asset } from '../lib/asset'
 import { t, LanguageSelector, useLocale } from '../lib/i18n'
 import { LOCALES, LANGUAGE_NAMES, LANGUAGE_TAGS, missingTranslationFields, type Locale } from '../data/localization'
@@ -24,6 +24,7 @@ const SITE_SECTIONS: Record<string, string> = Object.fromEntries([
   ...storia.chapters.flatMap((c) => (c.image ? [[c.image.src, 'Storia']] : [])),
   [officina.image.src, 'Officina'],
   [territorio.image.src, 'Scopri il territorio'],
+  [perche.image.src, 'Perché ZITO1950®'],
 ])
 /** Lowercase ASCII id from a name, unique among `taken`. */
 function slugId(name: string, taken: string[]) {

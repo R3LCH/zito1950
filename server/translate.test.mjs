@@ -64,7 +64,7 @@ test('falls back to Google on MyMemory quota warnings, HTTP errors and network f
     await t.test(name, async () => {
       const { calls, fetch } = recorder({
         'api.mymemory.translated.net': failure,
-        'translate.googleapis.com': (_url, init) => google(`G:${new URLSearchParams(init.body).get('q')}`),
+        'translate.googleapis.com': (url) => google(`G:${url.searchParams.get('q')}`),
       })
       assert.equal(await createTranslator({ fetch })('ciao', 'it', 'de'), 'G:ciao')
       assert.deepEqual(calls.map((c) => c.host), ['api.mymemory.translated.net', 'translate.googleapis.com'])

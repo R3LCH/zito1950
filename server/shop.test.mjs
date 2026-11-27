@@ -70,8 +70,12 @@ async function fixture(t, paypal = false, legacyBody = null, transcodeVideo = un
     legacy.prepare('INSERT INTO catalog VALUES (1, 1, ?)').run(JSON.stringify(legacyBody))
     legacy.close()
   }
-  const translateFetch = async (url, init) =>
-    Response.json([[[`[${new URL(url).searchParams.get('tl')}] ${new URLSearchParams(init.body).get('q')}`, 'x']]])
+  const translateFetch = async (url) => {
+    const { searchParams, hostname } = new URL(url)
+    if (hostname !== 'translate.googleapis.com') return new Response(null, { status: 503 })
+    const input = searchParams.get('q')
+    return Response.json([[[input.replaceAll('Il quadrante è bianco.', 'The dial is white.'), input]]])
+  }
   // Never real SMTP in tests: the fake records every message, or throws while mail.fail is set.
   const mail = { sent: [], fail: false }
   const mailer = {
@@ -171,8 +175,38 @@ test('translation route requires admin session and CSRF, keeps blank lines', asy
   assert.equal((await admin.request('/admin/translate', 'POST', { ...payload, target: 'it' })).status, 400)
   const ok = await admin.request('/admin/translate', 'POST', payload)
   assert.equal(ok.status, 200)
-  // MyMemory gets the Google-shaped fake body, rejects it, and the fallback answers.
-  assert.deepEqual(ok.body.texts, ['[en] Ciao', ''])
+  assert.deepEqual(ok.body.texts, ['Ciao', ''])
+})
+
+test('translation route accepts long product text and preserves blank lines', async (t) => {
+  const { admin } = await fixture(t)
+  const source = 'Il quadrante è bianco.'
+  const description = Array(520).fill(source).join(' ')
+  const result = await admin.request('/admin/translate', 'POST', { source: 'it', target: 'en', texts: [description, '  ', source] })
+  assert.equal(result.status, 200)
+  assert.deepEqual(result.body.texts, [Array(520).fill('The dial is white.').join(' '), '  ', 'The dial is white.'])
+})
+
+test('Why ZITO1950 photo can be replaced in fresh and existing catalogues', async (t) => {
+  const fresh = await fixture(t)
+  const source = 'img/storia/perche-zito.jpg'
+  const original = (await fresh.admin.request('/catalog')).body
+  const legacy = { ...original, siteImages: original.siteImages.filter(slot => slot.src !== source) }
+  const existing = await fixture(t, false, legacy)
+  for (const { admin, buyer } of [fresh, existing]) {
+    const { body: before } = await admin.request('/catalog')
+    assert.equal(before.siteImages.filter(slot => slot.src === source).length, 1)
+    const replacement = { src: 'img/models/tutus-ab-uno.jpg', alt: 'Editorial replacement' }
+    const saved = await admin.request('/admin/images/replace', 'PUT', {
+      revision: before.revision, replacements: [{ source, image: replacement }],
+    })
+    assert.equal(saved.status, 200)
+    const { body: after } = await buyer.request('/catalog')
+    assert.equal(after.imageOverrides[source].src, replacement.src)
+    const { [source]: _, ...otherOverrides } = after.imageOverrides
+    assert.deepEqual(otherOverrides, before.imageOverrides)
+    assert.equal(after.hero.src, before.hero.src)
+  }
 })
 
 test('catalog mutations persist, reject stale revisions, and protect used uploads', async (t) => {
@@ -973,7 +1007,7 @@ test('version-3 catalog turns the single perfume into a list once, and a removed
   ])
   assert.deepEqual(catalog.featured, [])
   // v5 drops the Scalea slots and adds the missing page photos; the workshop portrait keeps its replacement and the uploaded file stays in the library.
-  assert.deepEqual(catalog.siteImages.map((im) => im.src), [territorio.image.src, storia.image.src, officina.image.src])
+  assert.deepEqual(catalog.siteImages.map((im) => im.src), [territorio.image.src, storia.image.src, officina.image.src, 'img/storia/perche-zito.jpg'])
   assert.equal(catalog.siteImages[0].alt, 'Mare già presente')
   assert.deepEqual(Object.keys(catalog.imageOverrides), [officina.image.src])
   assert.equal(catalog.imageOverrides[officina.image.src].src, 'uploads/00000000-0000-0000-0000-000000000000.webp')
@@ -1113,7 +1147,7 @@ test('version-5 catalog adds Tesoro di Alarico once, defaults perfume availabili
   const tesoro = catalog.perfumes[1]
   assert.equal(tesoro.line, 'Pepe Nero')
   assert.ok(tesoro.translations && tesoro.images[0].altTranslations)
-  assert.deepEqual(catalog.siteImages.map((im) => im.src), [officina.image.src])
+  assert.deepEqual(catalog.siteImages.map((im) => im.src), [officina.image.src, 'img/storia/perche-zito.jpg'])
   assert.deepEqual(catalog.imageOverrides, {})
   assert.deepEqual(catalog.photos.map((p) => p.src), [upload])
   const reopened = createApp({ env: migrated.env, dataDir: migrated.dir })
@@ -1170,7 +1204,7 @@ test('version-6 catalog swaps the old N°7 Oud photo for the new one once, keepi
   assert.equal(oud.images[0].alt, profumo.images[0].alt)
   assert.ok(oud.images[0].altTranslations)
   assert.equal(oud.images[1].alt, journal.alt)
-  assert.deepEqual(catalog.siteImages.map((im) => im.src), [officina.image.src, newSrc, journal.src])
+  assert.deepEqual(catalog.siteImages.map((im) => im.src), [officina.image.src, newSrc, journal.src, 'img/storia/perche-zito.jpg'])
   assert.deepEqual(catalog.imageOverrides, {})
   assert.deepEqual(catalog.photos.map((p) => p.src), [upload])
   const reopened = createApp({ env: migrated.env, dataDir: migrated.dir })
@@ -1283,7 +1317,7 @@ test('version-11 migration frees the main photo from Tutus ab uno once, and repl
   assert.equal(catalog.catalogVersion, 11)
   assert.equal(catalog.revision, 2)
   assert.equal(catalog.hero.src, owner.src)
-  assert.deepEqual(catalog.siteImages.map((s) => s.src), [storia.image.src])
+  assert.deepEqual(catalog.siteImages.map((s) => s.src), [storia.image.src, 'img/storia/perche-zito.jpg'])
   assert.equal(Object.hasOwn(catalog.imageOverrides, shared.src), false)
   const tutus = catalog.models.find((m) => m.id === 'tutus-ab-uno')
   assert.deepEqual(tutus.images.map((im) => im.src), models.find((m) => m.id === 'tutus-ab-uno').images.map((im) => im.src))

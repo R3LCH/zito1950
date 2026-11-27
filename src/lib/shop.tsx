@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { models, officina, profumo, site, storia, tesoroDiAlarico, territorio } from '../data/content'
+import { models, officina, perche, profumo, site, storia, tesoroDiAlarico, territorio } from '../data/content'
 import type { CertificateHolder, Img, Model, Profumo } from '../data/types'
 import type { SiteTexts } from '../data/siteTexts'
 import { ENGRAVING_MAX_CHARS } from '../data/types'
@@ -99,7 +99,7 @@ const initial: Catalog = {
   videos: [],
   imageOverrides: {},
   texts: {},
-  siteImages: [storia.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), officina.image, territorio.image, ...profumo.images],
+  siteImages: [storia.image, ...storia.chapters.flatMap(chapter => chapter.image ? [chapter.image] : []), officina.image, territorio.image, perche.image, ...profumo.images],
 }
 interface ShopState {
   catalog: Catalog

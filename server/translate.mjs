@@ -5,6 +5,8 @@ const MYMEMORY_URL = 'https://api.mymemory.translated.net/get'
 const GOOGLE_URL = 'https://translate.googleapis.com/translate_a/single'
 // MyMemory rejects queries above 500 bytes of UTF-8; longer texts go straight to Google.
 const MYMEMORY_MAX_BYTES = 500
+// Budget the encoded URL, not characters: non-Latin prose can expand considerably.
+const GOOGLE_MAX_URL_LENGTH = 6500
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 
 // MyMemory HTML-escapes its output (e.g. `it&#39;s`), but the admin stores plain text.
@@ -36,14 +38,29 @@ export function createTranslator({ fetch, email, timeoutMs = 10000 }) {
     return decodeEntities(translated)
   }
   async function google(text, source, target) {
-    const query = new URLSearchParams({ client: 'gtx', sl: source, tl: target, dt: 't' })
-    // POST keeps long Cyrillic paragraphs out of the URL length limit.
-    const response = await fetch(`${GOOGLE_URL}?${query}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-      body: new URLSearchParams({ q: text }).toString(),
-      signal: AbortSignal.timeout(timeoutMs),
-    })
+    if (!text.trim()) return text
+    const query = new URLSearchParams({ client: 'gtx', sl: source, tl: target, dt: 't', q: text })
+    const url = `${GOOGLE_URL}?${query}`
+    if (url.length > GOOGLE_MAX_URL_LENGTH) {
+      const chars = Array.from(text)
+      const middle = Math.floor(chars.length / 2)
+      // Prefer sentence boundaries, then word boundaries, without creating a tiny chunk.
+      const floor = Math.floor(middle / 2)
+      let split = middle
+      while (split > floor && !(/\s/u.test(chars[split]) && /[.!?。！？]/u.test(chars[split - 1]))) split--
+      if (split === floor) {
+        split = middle
+        while (split > floor && !/\s/u.test(chars[split])) split--
+        if (split === floor) split = middle
+      }
+      const left = chars.slice(0, split).join('')
+      const right = chars.slice(split).join('')
+      const gap = right.match(/^\s+/u)?.[0] ?? ''
+      const part = left.trimEnd()
+      return await google(part, source, target) + left.slice(part.length) + gap
+        + await google(right.slice(gap.length), source, target)
+    }
+    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
     if (!response.ok) throw new Error(`Google HTTP ${response.status}`)
     const body = await response.json()
     // Shape: [[["translated sentence", "source sentence", …], …], …]; sentences join back into the text.
